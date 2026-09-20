@@ -26,6 +26,28 @@ async function api<T>(path: string): Promise<T> {
 export const getWallets = () => api<Wallet[]>("/api/wallets");
 export const getRuns = (addr: string) =>
   api<Run[]>(`/api/wallets/${addr}/runs`);
+export type WalletSummary = {
+  wallet: string;
+  consensus_strategy: string;
+  key_params: string;
+  disagreements: string[];
+  model_count: number;
+  strategy_report_count: number;
+  no_strategy_count: number;
+  confidence: string;
+  generated_by: string;
+  generated_at: string;
+};
+
+export const getSummary = (addr: string) =>
+  api<WalletSummary | null>(`/api/wallets/${addr}/summary`);
+
+export async function genSummary(addr: string) {
+  const res = await fetch(`/api/wallets/${addr}/summary`, { method: "POST" });
+  if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+  return res.json() as Promise<WalletSummary>;
+}
+
 export const getRun = (id: number) => api<RunDetail>(`/api/runs/${id}`);
 
 export async function rate(runId: number, value: -1 | 1) {

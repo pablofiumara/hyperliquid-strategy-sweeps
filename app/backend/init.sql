@@ -17,6 +17,19 @@ CREATE TABLE IF NOT EXISTS runs (
     UNIQUE (wallet, label)
 );
 
+CREATE TABLE IF NOT EXISTS wallet_summaries (
+    wallet       TEXT PRIMARY KEY REFERENCES wallets(address) ON DELETE CASCADE,
+    consensus_strategy TEXT,
+    key_params         TEXT,
+    disagreements      JSONB,
+    model_count        INT,
+    strategy_report_count INT,
+    no_strategy_count  INT,
+    confidence         TEXT CHECK (confidence IN ('high', 'medium', 'low')),
+    generated_by       TEXT,
+    generated_at       TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 -- one rating per run (single user); value: +1 interesting, -1 not
 CREATE TABLE IF NOT EXISTS ratings (
     run_id     INT PRIMARY KEY REFERENCES runs(id) ON DELETE CASCADE,

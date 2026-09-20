@@ -9,6 +9,15 @@ import db
 from importer import DATA_DIR, import_all
 
 
+def _norm_summary(row):
+    if not row:
+        return None
+    row = dict(row)
+    if hasattr(row.get("generated_at"), "isoformat"):
+        row["generated_at"] = row["generated_at"].isoformat()
+    return row
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     try:
@@ -126,3 +135,22 @@ def leaderboard():
         ORDER BY score DESC, positives DESC, r.model
         """
     )
+
+
+@app.get("/api/wallets/{address}/summary")
+def wallet_summary(address: str):
+    return _norm_summary(db.get_summary(address))
+
+
+@app.post("/api/wallets/{address}/summary")
+def generate_wallet_summary(address: str):
+    from summary import generate_summary
+
+    wdir = DATA_DIR / address
+    if not wdir.is_dir():
+        raise HTTPException(404, "wallet not found")
+    data = generate_summary(wdir)
+    if data.get("error"):
+        raise HTTPException(502, f"Ollama failed: {data['error']}")
+    db.save_summary(data)
+    return _norm_summary(db.get_summary(address))

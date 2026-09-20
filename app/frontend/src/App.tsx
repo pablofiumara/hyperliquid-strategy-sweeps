@@ -1,12 +1,15 @@
 import { useEffect, useState } from "react";
 import {
+  genSummary,
   getRun,
   getRuns,
+  getSummary,
   getWallets,
   rate,
   type Run,
   type RunDetail,
   type Wallet,
+  type WalletSummary,
 } from "./api";
 
 type View =
@@ -81,16 +84,83 @@ function RunList({
 }) {
   const [runs, setRuns] = useState<Run[] | null>(null);
   const [err, setErr] = useState("");
+  const [summary, setSummary] = useState<WalletSummary | null | undefined>(undefined);
+  const [sumErr, setSumErr] = useState("");
+  const [generating, setGenerating] = useState(false);
   useEffect(() => {
     getRuns(wallet).then(setRuns).catch((e) => setErr(String(e)));
+    getSummary(wallet)
+      .then(setSummary)
+      .catch((e) => setSumErr(String(e)));
   }, [wallet]);
   if (err) return <p className="dim">{err}</p>;
   if (!runs) return <p className="loading">loading…</p>;
+
+  async function onGenerate() {
+    setGenerating(true);
+    setSumErr("");
+    try {
+      const s = await genSummary(wallet);
+      setSummary(s);
+    } catch (e) {
+      setSumErr(String(e));
+    } finally {
+      setGenerating(false);
+    }
+  }
+
   return (
     <>
       <p className="dim mono" style={{ cursor: "pointer" }} onClick={onBack}>
         ← {wallet}
       </p>
+      <div className="card" style={{ cursor: "default" }}>
+        <div style={{ flex: 1 }}>
+          <div>
+            🧠 Wallet summary{" "}
+            <span className="dim" style={{ fontSize: 12 }}>
+              {summary === undefined
+                ? "loading…"
+                : summary
+                  ? `· ${summary.strategy_report_count}/${summary.model_count} strategy reports · ${summary.confidence} confidence · ${summary.generated_by}`
+                  : "· none yet"}
+            </span>
+          </div>
+          {summary === undefined ? (
+            <p className="dim" style={{ fontSize: 13 }}>loading…</p>
+          ) : summary ? (
+            <>
+              <p style={{ fontSize: 14 }}>{summary.consensus_strategy}</p>
+              {summary.key_params ? (
+                <p className="dim" style={{ fontSize: 12 }}>{summary.key_params}</p>
+              ) : null}
+              {summary.disagreements.length ? (
+                <div className="dim" style={{ fontSize: 12 }}>
+                  ⚠ disagreements:
+                  <ul>
+                    {summary.disagreements.map((d, i) => (
+                      <li key={i}>{d}</li>
+                    ))}
+                  </ul>
+                </div>
+              ) : (
+                <p className="dim" style={{ fontSize: 12 }}>no disagreements — models agree.</p>
+              )}
+            </>
+          ) : (
+            <p className="dim" style={{ fontSize: 13 }}>
+              No summary yet — generate one with the local free LLM{sumErr ? `: ${sumErr}` : "."}
+            </p>
+          )}
+        </div>
+        <button
+          style={{ alignSelf: "flex-start" }}
+          disabled={generating}
+          onClick={onGenerate}
+        >
+          {generating ? "Generating… (~30s)" : summary ? "↻ Regenerate" : "Generate summary"}
+        </button>
+      </div>
       {runs.map((r) => (
         <div key={r.id} className="card" onClick={() => onOpen(r.id)}>
           <div>

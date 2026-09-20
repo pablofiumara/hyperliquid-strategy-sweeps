@@ -39,3 +39,45 @@ def execute(sql, args=None):
             conn.commit()
     finally:
         pool().putconn(conn)
+
+
+def get_summary(wallet: str):
+    return query(
+        "SELECT * FROM wallet_summaries WHERE wallet = %s", (wallet,), one=True
+    )
+
+
+def save_summary(data: dict) -> None:
+    import json as _json
+
+    execute(
+        """
+        INSERT INTO wallet_summaries
+            (wallet, consensus_strategy, key_params, disagreements,
+             model_count, strategy_report_count, no_strategy_count,
+             confidence, generated_by, generated_at)
+        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,COALESCE(NULLIF(%s,'')::timestamptz, now()))
+        ON CONFLICT (wallet) DO UPDATE SET
+            consensus_strategy    = EXCLUDED.consensus_strategy,
+            key_params            = EXCLUDED.key_params,
+            disagreements         = EXCLUDED.disagreements,
+            model_count           = EXCLUDED.model_count,
+            strategy_report_count = EXCLUDED.strategy_report_count,
+            no_strategy_count     = EXCLUDED.no_strategy_count,
+            confidence            = EXCLUDED.confidence,
+            generated_by          = EXCLUDED.generated_by,
+            generated_at          = EXCLUDED.generated_at
+        """,
+        (
+            data.get("wallet"),
+            data.get("consensus_strategy", ""),
+            data.get("key_params", ""),
+            _json.dumps(data.get("disagreements", [])),
+            data.get("model_count", 0),
+            data.get("strategy_report_count", 0),
+            data.get("no_strategy_count", 0),
+            data.get("confidence", "low"),
+            data.get("generated_by", ""),
+            data.get("generated_at", ""),
+        ),
+    )
