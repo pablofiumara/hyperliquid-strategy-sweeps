@@ -1,14 +1,15 @@
 {
+ "wallet": "0x0bb81e516c88881c54529e1790470cb5e9f8740d",
  "label": "unverified-kilo-nemotron-3.5-lightning",
  "tool": "kilo",
  "model": "kilo/nvidia/nemotron-3.5-lightning:free",
  "variant": "thinking",
  "free_gate": "ok",
- "probe": "OK",
- "status": "FAILED",
- "exit": 1,
- "duration_s": 618.0,
- "bytes": 234,
+ "probe": "skipped",
+ "status": "DONE",
+ "exit": 0,
+ "duration_s": 770.0,
+ "bytes": 3114,
  "extra": "",
  "prompt_file": "prompt.txt"
 }
