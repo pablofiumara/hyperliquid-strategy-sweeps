@@ -21,7 +21,7 @@ services:
     environment:
       DATABASE_URL: postgresql://hl:hl@db:5432/hl
       DATA_DIR: /data
-      OLLAMA_URL: http://host.docker.internal:11434/api/chat
+      OLLAMA_BASE_URL: http://host.docker.internal:11434/v1
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:

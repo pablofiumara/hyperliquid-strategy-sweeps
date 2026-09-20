@@ -1,101 +1,39 @@
-import json
 import os
-import re
 import time
-import urllib.request
+from enum import Enum
 from pathlib import Path
 from typing import Any, Optional
 
-OLLAMA_URL = os.environ.get(
-    "OLLAMA_URL", "http://host.docker.internal:11434/api/chat"
+from pydantic import BaseModel, Field
+
+OLLAMA_BASE_URL = os.environ.get(
+    "OLLAMA_BASE_URL", "http://host.docker.internal:11434/v1"
 )
 PRIMARY_MODEL = "llama3.2:3b"   # ~10s, fast
 FALLBACK_MODEL = "qwen3:8b"      # ~80s, higher quality
 
-SUMMARY_SCHEMA = {
-    "type": "object",
-    "properties": {
-        "consensus_strategy": {
-            "type": "string",
-            "description": "One-sentence consensus on the trading strategy across all strategy reports",
-        },
-        "key_params": {
-            "type": "string",
-            "description": "Key parameters: entry rule, exit rule, coin, direction, position sizing, leverage",
-        },
-        "disagreements": {
-            "type": "array",
-            "items": {"type": "string"},
-            "description": "Points where strategy reports disagree or contradict each other",
-        },
-        "model_count": {
-            "type": "integer",
-            "description": "Total number of strategy_report.md files analyzed (including NO STRATEGY)",
-        },
-        "strategy_report_count": {
-            "type": "integer",
-            "description": "Number of reports that contain an actual strategy (exclude NO STRATEGY)",
-        },
-        "no_strategy_count": {
-            "type": "integer",
-            "description": "Number of reports that say NO STRATEGY",
-        },
-        "confidence": {
-            "type": "string",
-            "enum": ["high", "medium", "low"],
-            "description": "Confidence in the consensus",
-        },
-    },
-    "required": [
-        "consensus_strategy",
-        "model_count",
-        "strategy_report_count",
-        "no_strategy_count",
-        "confidence",
-    ],
-}
+
+class Confidence(str, Enum):
+    high = "high"
+    medium = "medium"
+    low = "low"
 
 
-def _call_ollama(
-    model: str,
-    messages: list[dict[str, str]],
-    timeout: int = 120,
-) -> Optional[str]:
-    payload = json.dumps(
-        {
-            "model": model,
-            "format": SUMMARY_SCHEMA,
-            "messages": messages,
-            "stream": False,
-            "options": {"temperature": 0.0, "num_ctx": 8192, "max_tokens": 2048},
-        }
-    ).encode()
-    req = urllib.request.Request(
-        OLLAMA_URL,
-        data=payload,
-        headers={"Content-Type": "application/json"},
+class SummaryOutput(BaseModel):
+    """Structured wallet summary — the agent's output_type."""
+
+    consensus_strategy: str = Field(
+        description="One-sentence consensus on the trading strategy across all strategy reports"
     )
-    try:
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
-            data = json.load(resp)
-    except Exception as exc:
-        return None
-    content = data.get("message", {}).get("content", "")
-    if not content.strip().startswith("{"):
-        return None
-    return content
-
-
-def _parse_json(text: str) -> Optional[dict[str, Any]]:
-    for t in [
-        text,
-        re.sub(r",\s*([}\]])", r"\1", text),
-    ]:
-        if t.strip().startswith("{"):
-            try:
-                return json.loads(t)
-            except json.JSONDecodeError:
-                continue
+    key_params: str = Field(
+        default="",
+        description="Key parameters: entry rule, exit rule, coin, direction, position sizing, leverage",
+    )
+    disagreements: list[str] = Field(
+        default_factory=list,
+        description="Points where strategy reports disagree or contradict each other",
+    )
+    confidence: Confidence = Field(description="Confidence in the consensus")
 
 def _read_reports(wallet_dir: Path) -> tuple[list[tuple[str, str]], int, int]:
     """Return (label, text) pairs, strategy count, no-strategy count."""
@@ -117,7 +55,7 @@ def _build_prompt(
     total: int,
     strategy_count: int,
     no_strategy: int,
-) -> list[dict[str, str]]:
+) -> str:
     def compact(text: str, max_chars: int = 600) -> str:
         return text.replace("\n", " ").replace("\r", " ")[:max_chars]
 
@@ -129,7 +67,7 @@ def _build_prompt(
         else:
             strategy_blocks.append(f"=== {label} ===\n{compact(text)}")
 
-    user = (
+    return (
         f"You are a quant analyst summarizing trading-bot strategy reports for one wallet.\n\n"
         f"Total reports: {total}. Strategy reports: {strategy_count}. "
         f"Reports saying NO STRATEGY: {no_strategy} "
@@ -137,23 +75,32 @@ def _build_prompt(
         f"Read the {strategy_count} STRATEGY reports below and extract:\n"
         f"1. consensus_strategy: ONE sentence the majority agrees on\n"
         f"2. key_params: entry rule, exit rule, coin, direction, sizing, leverage\n"
-        f"3. disagreements: list of specific factual contradictions (empty array if none)\n"
+        f"3. disagreements: list of specific factual contradictions (empty list if none)\n"
         f"4. confidence: 'high' if >=70% of strategy reports agree on core points, "
         f"'medium' if mixed, 'low' if fewer than {max(1, strategy_count // 3)} strategy reports\n\n"
-        f"JSON schema:\n{json.dumps(SUMMARY_SCHEMA, indent=2)}\n\n"
         f"STRATEGY REPORTS (compact):\n" + "\n\n".join(strategy_blocks)
     )
-    return [
-        {
-            "role": "system",
-            "content": (
-                "Output ONLY a valid JSON object matching the schema. "
-                "No markdown, no surrounding text, no explanation. "
-                "Be accurate — do not invent facts; use only what is in the reports."
-            ),
-        },
-        {"role": "user", "content": user},
-    ]
+
+
+def _run_agent(model_name: str, prompt: str) -> SummaryOutput:
+    """Run a pydantic-ai Agent against the Ollama provider (sync wrapper)."""
+    import anyio
+
+    from pydantic_ai import Agent
+    from pydantic_ai.models.ollama import OllamaModel
+    from pydantic_ai.providers.ollama import OllamaProvider
+
+    provider = OllamaProvider(base_url=OLLAMA_BASE_URL)
+    agent = Agent(
+        OllamaModel(model_name, provider=provider),
+        output_type=SummaryOutput,
+        system_prompt=(
+            "Output ONLY the structured summary matching the schema. "
+            "Be accurate — do not invent facts; use only what is in the reports."
+        ),
+    )
+    result = anyio.run(agent.run, prompt)
+    return result.output
 
 
 def generate_summary(
@@ -181,32 +128,24 @@ def generate_summary(
             "generated_at": "1970-01-01T00:00:00Z",
         }
 
-    messages = _build_prompt(pairs, total, strategy_count, no_strategy)
+    prompt = _build_prompt(pairs, total, strategy_count, no_strategy)
 
     last_err: Optional[str] = None
     for m in [model, FALLBACK_MODEL]:
         try:
-            raw = _call_ollama(m, messages, timeout=90 if m == PRIMARY_MODEL else 180)
-            if raw is None:
-                last_err = f"{m} returned no valid response"
-                continue
-            parsed = _parse_json(raw)
-            if parsed is None:
-                last_err = f"{m} returned unparseable JSON"
-                continue
-            missing = [k for k in SUMMARY_SCHEMA["required"] if k not in parsed]
-            if missing:
-                last_err = f"{m} missing fields: {missing}"
-                continue
-            parsed["model_count"] = total
-            parsed["strategy_report_count"] = strategy_count
-            parsed["no_strategy_count"] = no_strategy
-            parsed.setdefault("disagreements", [])
-            parsed.setdefault("key_params", "")
-            parsed["generated_by"] = m
-            parsed["generated_at"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
-            parsed["wallet"] = wallet_dir.name
-            return parsed
+            out = _run_agent(m, prompt)
+            return {
+                "wallet": wallet_dir.name,
+                "consensus_strategy": out.consensus_strategy,
+                "key_params": out.key_params,
+                "disagreements": list(out.disagreements),
+                "model_count": total,
+                "strategy_report_count": strategy_count,
+                "no_strategy_count": no_strategy,
+                "confidence": out.confidence.value,
+                "generated_by": m,
+                "generated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+            }
         except Exception as exc:
             last_err = f"{m} error: {exc}"
             continue
@@ -227,6 +166,7 @@ def generate_summary(
 
 
 if __name__ == "__main__":
+    import json
     import sys
 
     wallet = sys.argv[1] if len(sys.argv) > 1 else "0x0bb81e516c88881c54529e1790470cb5e9f8740d"
