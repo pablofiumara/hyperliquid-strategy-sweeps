@@ -1,0 +1,1498 @@
+[0m
+> code · nvidia/nemotron-3-ultra-550b-a55b:free
+[0m
+[0m% [0mWebFetch https://hyperx.trade/hyperliquid/trader?address=0x0bb81e516c88881c54529e1790470cb5e9f8740d
+The page shows "No trading data available" for this address. Let me try fetching data from Hyperliquid's API directly or search for alternative sources.
+[0m◈ [0mExa Web Search "hyperliquid trader 0x0bb81e516c88881c54529e1790470cb5e9f8740d trading history"
+[0m✗ [0mWebFetch https://api.hyperliquid.xyz/info failed
+[91m[1mError: [0mStatusCode: non 2xx status code (405 GET https://api.hyperliquid.xyz/info)
+[0m
+[0m$ [0mcurl -X POST https://api.hyperliquid.xyz/info -H "Content-Type: application/json" -d '{"type": "userFills", "user": "0x0bb81e516c88881c54529e1790470cb5e9f8740d"}'
+...output truncated...
+
+Full output saved to: /home/paf/.local/share/kilo/tool-output/tool_0bec3c246001vfuxEPrg4Odzq0
+
+(no output)
+[0m
+[0m→ [0mRead /home/paf/.local/share/kilo/tool-output/tool_0bec3c246001vfuxEPrg4Odzq0
+[0m
+[0m$ [0mcurl -X POST https://api.hyperliquid.xyz/info -H "Content-Type: application/json" -d '{"type": "userFills", "user": "0x0bb81e516c88881c54529e1790470cb5e9f8740d"}' -o /tmp/trades.json
+% Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0 13  617k   13 83939  100    75  73676     65  0:00:08  0:00:01  0:00:07 73696100  617k  100  617k  100    75   296k     35  0:00:02  0:00:02 --:--:--  296k
+[0m
+[0m→ [0mRead /tmp/trades.json
+[0m
+[0m$ [0mpython3 << 'EOF'
+import json
+from datetime import datetime
+
+with open('/tmp/trades.json') as f:
+    trades = json.load(f)
+
+print(f"Total trades: {len(trades)}")
+
+# Group by coin
+coins = {}
+for t in trades:
+    coin = t['coin']
+    if coin not in coins:
+        coins[coin] = []
+    coins[coin].append(t)
+
+for coin, ts in coins.items():
+    print(f"\n{coin}: {len(ts)} trades")
+    
+# Analyze HYPE trades in detail
+hype_trades = coins.get('HYPE', [])
+if hype_trades:
+    print("\n=== HYPE Trade Analysis ===")
+    
+    # Convert timestamps
+    for t in hype_trades:
+        t['dt'] = datetime.fromtimestamp(t['time']/1000)
+        t['px'] = float(t['px'])
+        t['sz'] = float(t['sz'])
+        t['closedPnl'] = float(t['closedPnl'])
+        t['fee'] = float(t['fee'])
+    
+    # Sort by time
+    hype_trades.sort(key=lambda x: x['time'])
+    
+    # Track position
+    position = 0
+    entry_price = 0
+    total_pnl = 0
+    total_fees = 0
+    
+    for i, t in enumerate(hype_trades):
+        side = t['side']
+        sz = t['sz']
+        px = t['px']
+        dir = t['dir']
+        pnl = t['closedPnl']
+        fee = t['fee']
+        
+        total_fees += fee
+        total_pnl += pnl
+        
+        if 'Open' in dir:
+            if position == 0:
+                entry_price = px
+            elif (position > 0 and side == 'B') or (position < 0 and side == 'A'):
+                # Adding to position
+                entry_price = (entry_price * abs(position) + px * sz) / (abs(position) + sz)
+            position += sz if side == 'B' else -sz
+        else:  # Close
+            position += sz if side == 'B' else -sz
+            if position == 0:
+                entry_price = 0
+        
+        pos_str = f"{position:.2f}" if position != 0 else "FLAT"
+        print(f"{t['dt']} | {dir:12} | {side} {sz:>6.2f} @ {px:>7.2f} | PnL: {pnl:>8.2f} | Fee: {fee:.4f} | Pos: {pos_str}")
+
+    print(f"\nTotal realized PnL: {total_pnl:.2f}")
+    print(f"Total fees: {total_fees:.2f}")
+    print(f"Net PnL: {total_pnl - total_fees:.2f}")
+
+# Check other coins
+for coin, ts in coins.items():
+    if coin != 'HYPE':
+        print(f"\n=== {coin} ({len(ts)} trades) ===")
+        for t in ts[:10]:
+            dt = datetime.fromtimestamp(t['time']/1000)
+            print(f"  {dt} | {t['dir']} | {t['side']} {t['sz']} @ {t['px']} | PnL: {t['closedPnl']}")
+        if len(ts) > 10:
+            print(f"  ... and {len(ts)-10} more")
+
+EOF
+...output truncated...
+
+Full output saved to: /home/paf/.local/share/kilo/tool-output/tool_0bec44afe0018Lj5vXY3s5Q4fS
+
+
+2026-09-11 10:59:18.079000 | Close Long   | A   4.07 @   83.35 | PnL:     2.82 | Fee: 0.0489 | Pos: -4.16
+2026-09-11 10:59:54.870000 | Open Long    | B   4.03 @   83.42 | PnL:     0.00 | Fee: 0.1452 | Pos: -0.13
+2026-09-11 11:11:36.414000 | Open Long    | B   2.02 @   82.61 | PnL:     0.00 | Fee: 0.0240 | Pos: 1.89
+2026-09-11 12:54:34.175000 | Open Long    | B   2.02 @   81.78 | PnL:     0.00 | Fee: 0.0238 | Pos: 3.91
+2026-09-11 15:03:17.027000 | Open Long    | B   3.63 @   80.94 | PnL:     0.00 | Fee: 0.0423 | Pos: 7.54
+2026-09-11 15:52:13.701000 | Open Long    | B   3.63 @   80.11 | PnL:     0.00 | Fee: 0.0419 | Pos: 11.17
+2026-09-12 01:46:28.253000 | Open Long    | B  12.90 @   78.44 | PnL:     0.00 | Fee: 0.1457 | Pos: 24.07
+2026-09-13 10:26:42.694000 | Open Long    | B  24.18 @   76.77 | PnL:     0.00 | Fee: 0.2673 | Pos: 48.25
+2026-09-13 23:46:45.162000 | Close Long   | A  52.41 @   79.29 | PnL:    34.63 | Fee: 0.5984 | Pos: -4.16
+2026-09-13 23:47:01.334000 | Open Long    | B   4.26 @   79.34 | PnL:     0.00 | Fee: 0.1460 | Pos: 0.10
+2026-09-14 00:30:18.890000 | Close Long   | A   4.26 @   80.01 | PnL:     2.84 | Fee: 0.0491 | Pos: -4.16
+2026-09-14 00:30:46.083000 | Open Long    | B   4.23 @   79.97 | PnL:     0.00 | Fee: 0.1461 | Pos: 0.07
+2026-09-14 06:39:16.250000 | Open Long    | B   2.12 @   79.18 | PnL:     0.00 | Fee: 0.0242 | Pos: 2.19
+2026-09-14 08:30:20.223000 | Close Long   | A   6.35 @   80.37 | PnL:     4.25 | Fee: 0.0735 | Pos: -4.16
+2026-09-14 08:30:51.500000 | Open Long    | B   4.21 @   80.32 | PnL:     0.00 | Fee: 0.1461 | Pos: 0.05
+2026-09-14 10:04:45.605000 | Open Long    | B   2.10 @   79.50 | PnL:     0.00 | Fee: 0.0240 | Pos: 2.15
+2026-09-14 10:47:20.058000 | Close Long   | A   6.31 @   80.72 | PnL:     4.24 | Fee: 0.0733 | Pos: -4.16
+2026-09-14 10:47:45.845000 | Open Long    | B   0.34 @   80.71 | PnL:     0.00 | Fee: 0.0119 | Pos: -3.82
+2026-09-14 10:47:45.845000 | Open Long    | B   1.85 @   80.71 | PnL:     0.00 | Fee: 0.0645 | Pos: -1.97
+2026-09-14 10:47:45.845000 | Open Long    | B   2.00 @   80.71 | PnL:     0.00 | Fee: 0.0697 | Pos: 0.03
+2026-09-14 11:26:36.421000 | Open Long    | B   2.10 @   79.90 | PnL:     0.00 | Fee: 0.0242 | Pos: 2.13
+2026-09-14 14:49:21.651000 | Close Long   | A   6.29 @   81.11 | PnL:     4.25 | Fee: 0.0735 | Pos: -4.16
+2026-09-14 14:49:55.554000 | Open Long    | B   3.89 @   81.06 | PnL:     0.00 | Fee: 0.1362 | Pos: -0.27
+2026-09-14 14:49:55.554000 | Open Long    | B   0.29 @   81.06 | PnL:     0.00 | Fee: 0.0102 | Pos: 0.02
+2026-09-14 15:09:10.933000 | Close Long   | A   4.18 @   81.74 | PnL:     2.85 | Fee: 0.0492 | Pos: -4.16
+2026-09-14 15:09:29.307000 | Open Long    | B   4.15 @   81.74 | PnL:     0.00 | Fee: 0.1465 | Pos: -0.01
+2026-09-14 17:30:16.299000 | Close Long   | A   4.15 @   82.43 | PnL:     2.85 | Fee: 0.0493 | Pos: -4.16
+2026-09-14 17:30:52.971000 | Open Long    | B   4.11 @   82.39 | PnL:     0.00 | Fee: 0.1463 | Pos: -0.05
+2026-09-14 17:55:20.127000 | Open Long    | B   0.82 @   81.59 | PnL:     0.00 | Fee: 0.0096 | Pos: 0.77
+2026-09-14 17:55:20.196000 | Open Long    | B   1.24 @   81.59 | PnL:     0.00 | Fee: 0.0146 | Pos: 2.01
+2026-09-14 18:02:15.009000 | Open Long    | B   2.06 @   80.77 | PnL:     0.00 | Fee: 0.0240 | Pos: 4.07
+2026-09-14 20:00:10.335000 | Open Long    | B   3.70 @   79.94 | PnL:     0.00 | Fee: 0.0426 | Pos: 7.77
+2026-09-15 02:10:46.560000 | Open Long    | B   3.70 @   79.12 | PnL:     0.00 | Fee: 0.0422 | Pos: 11.47
+2026-09-15 11:36:17.995000 | Open Long    | B  13.15 @   77.47 | PnL:     0.00 | Fee: 0.1467 | Pos: 24.62
+2026-09-15 15:45:41.848000 | Open Long    | B  24.66 @   75.82 | PnL:     0.00 | Fee: 0.2692 | Pos: 49.28
+2026-09-16 08:02:53.499000 | Close Long   | A  53.44 @   78.31 | PnL:    34.84 | Fee: 0.6026 | Pos: -4.16
+2026-09-16 08:03:11.855000 | Open Long    | B   4.34 @   78.38 | PnL:     0.00 | Fee: 0.1470 | Pos: 0.18
+2026-09-16 08:11:39.147000 | Close Long   | A   4.34 @   79.04 | PnL:     2.86 | Fee: 0.0494 | Pos: -4.16
+2026-09-16 08:12:06.216000 | Open Long    | B   4.31 @   78.92 | PnL:     0.00 | Fee: 0.1469 | Pos: 0.15
+2026-09-16 08:43:44.947000 | Close Long   | A   4.31 @   79.59 | PnL:     2.86 | Fee: 0.0494 | Pos: -4.16
+2026-09-16 08:44:17.546000 | Open Long    | B   4.28 @   79.56 | PnL:     0.00 | Fee: 0.1471 | Pos: 0.12
+2026-09-16 09:10:53.052000 | Open Long    | B   2.14 @   78.78 | PnL:     0.00 | Fee: 0.0243 | Pos: 2.26
+2026-09-16 10:08:35.261000 | Open Long    | B   2.14 @   77.99 | PnL:     0.00 | Fee: 0.0240 | Pos: 4.40
+2026-09-16 15:06:33.423000 | Close Long   | A   8.56 @   79.64 | PnL:     5.68 | Fee: 0.0982 | Pos: -4.16
+2026-09-16 15:07:02.879000 | Open Long    | B   2.45 @   79.36 | PnL:     0.00 | Fee: 0.0840 | Pos: -1.71
+2026-09-16 15:07:02.879000 | Open Long    | B   0.57 @   79.36 | PnL:     0.00 | Fee: 0.0195 | Pos: -1.14
+2026-09-16 15:07:02.879000 | Open Long    | B   1.27 @   79.35 | PnL:     0.00 | Fee: 0.0435 | Pos: 0.13
+2026-09-16 15:08:16.968000 | Close Long   | A   4.29 @   80.02 | PnL:     2.86 | Fee: 0.0494 | Pos: -4.16
+2026-09-16 15:08:49.079000 | Open Long    | B   4.26 @   80.05 | PnL:     0.00 | Fee: 0.1473 | Pos: 0.10
+2026-09-16 15:31:22.084000 | Open Long    | B   2.13 @   79.28 | PnL:     0.00 | Fee: 0.0243 | Pos: 2.23
+2026-09-16 15:35:42.183000 | Open Long    | B   2.13 @   78.48 | PnL:     0.00 | Fee: 0.0241 | Pos: 4.36
+2026-09-16 15:43:00.299000 | Close Long   | A   8.52 @   80.13 | PnL:     5.69 | Fee: 0.0983 | Pos: -4.16
+2026-09-16 15:43:15.119000 | Open Long    | B   2.25 @   80.23 | PnL:     0.00 | Fee: 0.0780 | Pos: -1.91
+2026-09-16 15:43:15.119000 | Open Long    | B   2.00 @   80.23 | PnL:     0.00 | Fee: 0.0693 | Pos: 0.09
+2026-09-16 15:46:23.010000 | Open Long    | B   2.12 @   79.52 | PnL:     0.00 | Fee: 0.0243 | Pos: 2.21
+2026-09-16 15:57:26.322000 | Open Long    | B   2.12 @   78.72 | PnL:     0.00 | Fee: 0.0240 | Pos: 4.33
+2026-09-16 16:23:25.670000 | Open Long    | B   3.83 @   77.92 | PnL:     0.00 | Fee: 0.0430 | Pos: 8.16
+2026-09-16 16:26:27.731000 | Open Long    | B   3.83 @   77.11 | PnL:     0.00 | Fee: 0.0425 | Pos: 11.99
+2026-09-16 22:37:23.406000 | Close Long   | A  11.53 @   79.31 | PnL:     7.62 | Fee: 0.1317 | Pos: 0.46
+2026-09-16 22:37:23.406000 | Close Long   | A   4.62 @   79.31 | PnL:     3.05 | Fee: 0.0528 | Pos: -4.16
+2026-09-16 22:37:56.674000 | Open Long    | B   4.31 @   79.24 | PnL:     0.00 | Fee: 0.1475 | Pos: 0.15
+2026-09-17 05:04:26.087000 | Close Long   | A   4.31 @   79.91 | PnL:     2.87 | Fee: 0.0496 | Pos: -4.16
+2026-09-17 05:04:42.877000 | Open Long    | B   2.27 @   79.95 | PnL:     0.00 | Fee: 0.0784 | Pos: -1.89
+2026-09-17 05:04:42.877000 | Open Long    | B   2.00 @   79.95 | PnL:     0.00 | Fee: 0.0691 | Pos: 0.11
+2026-09-17 06:08:45.936000 | Close Long   | A   0.08 @   80.62 | PnL:     0.05 | Fee: 0.0009 | Pos: 0.03
+2026-09-17 06:08:46.403000 | Close Long   | A   4.19 @   80.62 | PnL:     2.82 | Fee: 0.0486 | Pos: -4.16
+2026-09-17 06:09:07.903000 | Open Long    | B   1.04 @   80.69 | PnL:     0.00 | Fee: 0.0363 | Pos: -3.12
+2026-09-17 06:09:07.903000 | Open Long    | B   3.20 @   80.68 | PnL:     0.00 | Fee: 0.1115 | Pos: 0.08
+2026-09-17 06:59:11.123000 | Open Long    | B   2.12 @   79.86 | PnL:     0.00 | Fee: 0.0244 | Pos: 2.20
+2026-09-17 09:58:02.180000 | Close Long   | A   6.36 @   81.08 | PnL:     4.30 | Fee: 0.0743 | Pos: -4.16
+2026-09-17 09:58:15.075000 | Open Long    | B   4.22 @   80.98 | PnL:     0.00 | Fee: 0.1476 | Pos: 0.06
+2026-09-17 10:01:30.994000 | Close Long   | A   4.22 @   81.66 | PnL:     2.87 | Fee: 0.0496 | Pos: -4.16
+2026-09-17 10:02:04.986000 | Open Long    | B   4.18 @   81.95 | PnL:     0.00 | Fee: 0.1480 | Pos: 0.02
+2026-09-17 10:13:29.996000 | Open Long    | B   1.83 @   81.01 | PnL:     0.00 | Fee: 0.0213 | Pos: 1.85
+2026-09-17 10:13:30.054000 | Open Long    | B   0.10 @   81.01 | PnL:     0.00 | Fee: 0.0012 | Pos: 1.95
+2026-09-17 10:13:30.054000 | Open Long    | B   0.16 @   81.01 | PnL:     0.00 | Fee: 0.0019 | Pos: 2.11
+2026-09-17 10:20:54.983000 | Close Long   | A   6.27 @   82.32 | PnL:     4.30 | Fee: 0.0743 | Pos: -4.16
+2026-09-17 10:21:14.121000 | Open Long    | B   3.58 @   82.27 | PnL:     0.00 | Fee: 0.1272 | Pos: -0.58
+2026-09-17 10:21:14.121000 | Open Long    | B   0.56 @   82.19 | PnL:     0.00 | Fee: 0.0199 | Pos: -0.02
+2026-09-17 10:21:35.340000 | Open Long    | B   2.07 @   81.81 | PnL:     0.00 | Fee: 0.0244 | Pos: 2.05
+2026-09-17 10:22:30.208000 | Close Long   | A   6.21 @   82.80 | PnL:     4.28 | Fee: 0.0740 | Pos: -4.16
+2026-09-17 10:22:55.824000 | Open Long    | B   4.13 @   82.80 | PnL:     0.00 | Fee: 0.1477 | Pos: -0.03
+2026-09-17 10:26:40.264000 | Open Long    | B   2.06 @   82.04 | PnL:     0.00 | Fee: 0.0243 | Pos: 2.03
+2026-09-17 11:31:49.101000 | Close Long   | A   6.19 @   83.24 | PnL:     4.29 | Fee: 0.0742 | Pos: -4.16
+2026-09-17 11:32:17.716000 | Open Long    | B   4.12 @   83.12 | PnL:     0.00 | Fee: 0.1479 | Pos: -0.04
+2026-09-17 11:57:53.284000 | Open Long    | B   2.06 @   82.28 | PnL:     0.00 | Fee: 0.0244 | Pos: 2.02
+2026-09-17 17:11:16.725000 | Close Long   | A   6.18 @   83.53 | PnL:     4.30 | Fee: 0.0743 | Pos: -4.16
+2026-09-17 17:11:45.466000 | Open Long    | B   4.10 @   83.56 | PnL:     0.00 | Fee: 0.1480 | Pos: -0.06
+2026-09-17 20:01:50.903000 | Close Long   | A   4.10 @   84.26 | PnL:     2.88 | Fee: 0.0497 | Pos: -4.16
+2026-09-17 20:02:20.741000 | Open Long    | B   4.07 @   84.30 | PnL:     0.00 | Fee: 0.1482 | Pos: -0.09
+2026-09-17 20:54:17.502000 | Close Long   | A   4.07 @   85.01 | PnL:     2.88 | Fee: 0.0498 | Pos: -4.16
+2026-09-17 20:54:51.576000 | Open Long    | B   4.03 @   85.02 | PnL:     0.00 | Fee: 0.1480 | Pos: -0.13
+2026-09-17 21:16:27.410000 | Close Long   | A   4.03 @   85.73 | PnL:     2.88 | Fee: 0.0498 | Pos: -4.16
+2026-09-17 21:16:54.818000 | Open Long    | B   4.00 @   85.75 | PnL:     0.00 | Fee: 0.1482 | Pos: -0.16
+2026-09-17 22:02:13.785000 | Close Long   | A   4.00 @   86.47 | PnL:     2.88 | Fee: 0.0498 | Pos: -4.16
+2026-09-17 22:02:38.869000 | Open Long    | B   1.01 @   86.67 | PnL:     0.00 | Fee: 0.0378 | Pos: -3.15
+2026-09-17 22:02:38.869000 | Open Long    | B   2.95 @   86.67 | PnL:     0.00 | Fee: 0.1105 | Pos: -0.20
+2026-09-18 02:05:02.594000 | Close Long   | A   3.96 @   87.40 | PnL:     2.88 | Fee: 0.0498 | Pos: -4.16
+2026-09-18 02:05:33.863000 | Open Long    | B   3.93 @   87.41 | PnL:     0.00 | Fee: 0.1484 | Pos: -0.23
+2026-09-18 04:43:46.019000 | Close Long   | A   3.93 @   88.14 | PnL:     2.88 | Fee: 0.0499 | Pos: -4.16
+2026-09-18 04:44:22.086000 | Open Long    | B   3.89 @   88.31 | PnL:     0.00 | Fee: 0.1484 | Pos: -0.27
+2026-09-18 07:01:50.512000 | Close Long   | A   3.89 @   89.05 | PnL:     2.89 | Fee: 0.0499 | Pos: -4.16
+2026-09-18 07:02:07.815000 | Open Long    | B   2.60 @   89.02 | PnL:     0.00 | Fee: 0.1000 | Pos: -1.56
+2026-09-18 07:02:07.815000 | Open Long    | B   1.26 @   89.02 | PnL:     0.00 | Fee: 0.0485 | Pos: -0.30
+2026-09-18 07:25:08.676000 | Close Long   | A   3.86 @   89.77 | PnL:     2.89 | Fee: 0.0499 | Pos: -4.16
+2026-09-18 07:25:28.513000 | Open Long    | B   3.82 @   89.87 | PnL:     0.00 | Fee: 0.1483 | Pos: -0.34
+2026-09-18 07:31:59.813000 | Close Long   | A   3.82 @   90.63 | PnL:     2.88 | Fee: 0.0499 | Pos: -4.16
+2026-09-18 07:32:15.890000 | Open Long    | B   3.79 @   90.59 | PnL:     0.00 | Fee: 0.1483 | Pos: -0.37
+2026-09-18 08:25:17.733000 | Open Long    | B   1.90 @   89.73 | PnL:     0.00 | Fee: 0.0245 | Pos: 1.53
+2026-09-18 09:34:04.367000 | Close Long   | A   5.69 @   91.06 | PnL:     4.31 | Fee: 0.0746 | Pos: -4.16
+2026-09-18 09:34:19.174000 | Open Long    | B   3.77 @   91.12 | PnL:     0.00 | Fee: 0.1484 | Pos: -0.39
+2026-09-18 09:38:38.708000 | Close Long   | A   3.77 @   91.89 | PnL:     2.88 | Fee: 0.0499 | Pos: -4.16
+2026-09-18 09:38:59.735000 | Open Long    | B   3.74 @   91.89 | PnL:     0.00 | Fee: 0.1485 | Pos: -0.42
+2026-09-18 09:52:43.081000 | Open Long    | B   1.87 @   90.97 | PnL:     0.00 | Fee: 0.0245 | Pos: 1.45
+2026-09-18 11:45:01.072000 | Close Long   | A   5.61 @   92.35 | PnL:     4.31 | Fee: 0.0746 | Pos: -4.16
+2026-09-18 11:45:21.595000 | Open Long    | B   3.73 @   92.37 | PnL:     0.00 | Fee: 0.1488 | Pos: -0.43
+2026-09-18 12:32:34.041000 | Open Long    | B   1.86 @   91.44 | PnL:     0.00 | Fee: 0.0245 | Pos: 1.43
+2026-09-18 20:00:19.765000 | Close Long   | A   5.59 @   92.83 | PnL:     4.32 | Fee: 0.0747 | Pos: -4.16
+2026-09-18 20:00:58.099000 | Open Long    | B   1.13 @   92.94 | PnL:     0.00 | Fee: 0.0454 | Pos: -3.03
+2026-09-18 20:00:58.099000 | Open Long    | B   2.57 @   92.92 | PnL:     0.00 | Fee: 0.1032 | Pos: -0.46
+2026-09-18 22:07:38.455000 | Close Long   | A   3.70 @   93.71 | PnL:     2.89 | Fee: 0.0499 | Pos: -4.16
+2026-09-18 22:08:02.182000 | Open Long    | B   3.67 @   93.65 | PnL:     0.00 | Fee: 0.1485 | Pos: -0.49
+2026-09-18 22:18:34.581000 | Open Long    | B   1.83 @   92.80 | PnL:     0.00 | Fee: 0.0245 | Pos: 1.34
+2026-09-18 23:53:00.667000 | Close Long   | A   5.50 @   94.15 | PnL:     4.31 | Fee: 0.0746 | Pos: -4.16
+2026-09-18 23:53:28.601000 | Open Long    | B   3.66 @   94.12 | PnL:     0.00 | Fee: 0.1488 | Pos: -0.50
+2026-09-19 01:31:13.529000 | Open Long    | B   1.83 @   93.16 | PnL:     0.00 | Fee: 0.0245 | Pos: 1.33
+2026-09-19 01:34:37.968000 | Open Long    | B   1.83 @   92.22 | PnL:     0.00 | Fee: 0.0243 | Pos: 3.16
+2026-09-19 18:13:39.551000 | Open Long    | B   3.29 @   91.28 | PnL:     0.00 | Fee: 0.0432 | Pos: 6.45
+2026-09-19 23:54:05.564000 | Open Long    | B   3.29 @   90.34 | PnL:     0.00 | Fee: 0.0428 | Pos: 9.74
+
+Total realized PnL: 3428.49
+Total fees: 168.45
+Net PnL: 3260.03
+[0m
+[0m$ [0mpython3 << 'EOF'
+import json
+from datetime import datetime
+
+with open('/tmp/trades.json') as f:
+    trades = json.load(f)
+
+# Focus on HYPE
+hype_trades = [t for t in trades if t['coin'] == 'HYPE']
+for t in hype_trades:
+    t['dt'] = datetime.fromtimestamp(t['time']/1000)
+    t['px'] = float(t['px'])
+    t['sz'] = float(t['sz'])
+    t['closedPnl'] = float(t['closedPnl'])
+    t['fee'] = float(t['fee'])
+
+hype_trades.sort(key=lambda x: x['time'])
+
+# Analyze position cycles
+position = 0
+cycles = []
+current_cycle = {"start": None, "trades": [], "peak_pos": 0, "net_pnl": 0}
+
+for t in hype_trades:
+    side = t['side']
+    sz = t['sz']
+    px = t['px']
+    dir = t['dir']
+    pnl = t['closedPnl']
+    
+    if current_cycle["start"] is None:
+        current_cycle["start"] = t['dt']
+    
+    current_cycle["trades"].append(t)
+    current_cycle["net_pnl"] += pnl
+    
+    if 'Open' in dir:
+        position += sz if side == 'B' else -sz
+    else:
+        position += sz if side == 'B' else -sz
+    
+    current_cycle["peak_pos"] = max(current_cycle["peak_pos"], abs(position))
+    
+    # Detect cycle completion: position returns to near -4.16 (the consistent residual)
+    if abs(position - (-4.16)) < 0.5 and len(current_cycle["trades"]) > 2:
+        cycles.append(current_cycle)
+        current_cycle = {"start": None, "trades": [], "peak_pos": 0, "net_pnl": 0}
+
+print(f"Number of cycles detected: {len(cycles)}")
+print()
+
+for i, c in enumerate(cycles):
+    start = c["start"]
+    end = c["trades"][-1]['dt']
+    duration = end - start
+    n_trades = len(c["trades"])
+    peak = c["peak_pos"]
+    pnl = c["net_pnl"]
+    
+    # Get entry and exit prices
+    opens = [t for t in c["trades"] if 'Open' in t['dir']]
+    closes = [t for t in c["trades"] if 'Close' in t['dir']]
+    
+    avg_entry = sum(t['px'] * t['sz'] for t in opens) / sum(t['sz'] for t in opens) if opens else 0
+    avg_exit = sum(t['px'] * t['sz'] for t in closes) / sum(t['sz'] for t in closes) if closes else 0
+    
+    print(f"Cycle {i+1}: {start} to {end} ({duration})")
+    print(f"  Trades: {n_trades}, Peak pos: {peak:.2f}, PnL: {pnl:.2f}")
+    print(f"  Avg entry: {avg_entry:.2f}, Avg exit: {avg_exit:.2f}, Spread: {avg_exit - avg_entry:.2f}")
+    print()
+
+# Also check time patterns - how often they trade
+print("\n=== Time between trades ===")
+for i in range(1, min(50, len(hype_trades))):
+    dt = hype_trades[i]['dt'] - hype_trades[i-1]['dt']
+    if dt.total_seconds() < 3600:  # less than 1 hour
+        print(f"  {hype_trades[i-1]['dt']} -> {hype_trades[i]['dt']}: {dt.total_seconds():.0f}s, {hype_trades[i-1]['dir']} -> {hype_trades[i]['dir']}")
+
+EOF
+...output truncated...
+
+Full output saved to: /home/paf/.local/share/kilo/tool-output/tool_0bec50b07001PYwO17NHblrKVu
+
+  Trades: 3, Peak pos: 4.16, PnL: 2.75
+  Avg entry: 58.89, Avg exit: 59.39, Spread: 0.49
+
+Cycle 119: 2026-06-07 19:14:18.252000 to 2026-06-07 21:12:59.124000 (1:58:40.872000)
+  Trades: 5, Peak pos: 4.16, PnL: 6.87
+  Avg entry: 59.42, Avg exit: 59.92, Spread: 0.50
+
+Cycle 120: 2026-06-07 21:13:17.865000 to 2026-06-07 21:20:35.954000 (0:07:18.089000)
+  Trades: 4, Peak pos: 4.16, PnL: 5.51
+  Avg entry: 60.24, Avg exit: 60.75, Spread: 0.51
+
+Cycle 121: 2026-06-07 21:20:54.427000 to 2026-06-07 21:28:13.648000 (0:07:19.221000)
+  Trades: 3, Peak pos: 4.16, PnL: 4.12
+  Avg entry: 60.81, Avg exit: 61.33, Spread: 0.51
+
+Cycle 122: 2026-06-07 21:28:32.359000 to 2026-06-07 23:26:37.903000 (1:58:05.544000)
+  Trades: 8, Peak pos: 15.98, PnL: 13.00
+  Avg entry: 60.71, Avg exit: 61.22, Spread: 0.51
+
+Cycle 123: 2026-06-07 23:27:03.012000 to 2026-06-08 00:22:04.017000 (0:55:01.005000)
+  Trades: 4, Peak pos: 4.16, PnL: 5.51
+  Avg entry: 61.35, Avg exit: 61.86, Spread: 0.52
+
+Cycle 124: 2026-06-08 00:22:14.793000 to 2026-06-08 03:00:28.508000 (2:38:13.715000)
+  Trades: 5, Peak pos: 11.15, PnL: 7.87
+  Avg entry: 61.21, Avg exit: 61.72, Spread: 0.51
+
+Cycle 125: 2026-06-08 03:00:40.143000 to 2026-06-08 03:43:34.735000 (0:42:54.592000)
+  Trades: 5, Peak pos: 4.16, PnL: 5.51
+  Avg entry: 62.13, Avg exit: 62.65, Spread: 0.52
+
+Cycle 126: 2026-06-08 03:43:57.495000 to 2026-06-08 09:57:58.664000 (6:14:01.169000)
+  Trades: 4, Peak pos: 6.25, PnL: 5.46
+  Avg entry: 62.45, Avg exit: 62.98, Spread: 0.52
+
+Cycle 127: 2026-06-08 09:58:08.733000 to 2026-06-08 10:22:31.798000 (0:24:23.065000)
+  Trades: 4, Peak pos: 4.16, PnL: 5.51
+  Avg entry: 63.28, Avg exit: 63.81, Spread: 0.53
+
+Cycle 128: 2026-06-08 10:22:48.670000 to 2026-06-08 10:42:14.389000 (0:19:25.719000)
+  Trades: 4, Peak pos: 4.16, PnL: 4.12
+  Avg entry: 63.95, Avg exit: 64.48, Spread: 0.54
+
+Cycle 129: 2026-06-08 10:42:27.925000 to 2026-06-08 12:14:55.008000 (1:32:27.083000)
+  Trades: 3, Peak pos: 4.16, PnL: 2.75
+  Avg entry: 64.55, Avg exit: 65.09, Spread: 0.54
+
+Cycle 130: 2026-06-08 12:15:19.775000 to 2026-06-10 11:08:41.313000 (1 day, 22:53:21.538000)
+  Trades: 12, Peak pos: 217.45, PnL: 110.35
+  Avg entry: 58.01, Avg exit: 58.50, Spread: 0.49
+
+Cycle 131: 2026-06-10 11:08:50.958000 to 2026-06-11 00:59:29.094000 (13:50:38.136000)
+  Trades: 8, Peak pos: 71.36, PnL: 34.86
+  Avg entry: 54.91, Avg exit: 55.37, Spread: 0.46
+
+Cycle 132: 2026-06-11 00:59:47.718000 to 2026-06-11 02:53:43.883000 (1:53:56.165000)
+  Trades: 3, Peak pos: 5.08, PnL: 4.27
+  Avg entry: 55.01, Avg exit: 55.47, Spread: 0.46
+
+Cycle 133: 2026-06-11 02:54:04.618000 to 2026-06-11 05:37:37.709000 (2:43:33.091000)
+  Trades: 5, Peak pos: 4.96, PnL: 7.13
+  Avg entry: 55.65, Avg exit: 56.12, Spread: 0.47
+
+Cycle 134: 2026-06-11 05:38:11.919000 to 2026-06-11 08:03:29.594000 (2:25:17.675000)
+  Trades: 6, Peak pos: 4.93, PnL: 4.27
+  Avg entry: 55.99, Avg exit: 56.46, Spread: 0.47
+
+Cycle 135: 2026-06-11 08:04:05.558000 to 2026-06-11 08:11:30.181000 (0:07:24.623000)
+  Trades: 5, Peak pos: 4.16, PnL: 2.86
+  Avg entry: 56.42, Avg exit: 56.89, Spread: 0.47
+
+Cycle 136: 2026-06-11 08:11:46.798000 to 2026-06-11 10:46:51.940000 (2:35:05.142000)
+  Trades: 4, Peak pos: 7.83, PnL: 5.68
+  Avg entry: 56.46, Avg exit: 56.94, Spread: 0.47
+
+Cycle 137: 2026-06-11 10:47:25.606000 to 2026-06-11 14:30:55.273000 (3:43:29.667000)
+  Trades: 4, Peak pos: 7.77, PnL: 5.69
+  Avg entry: 56.74, Avg exit: 57.22, Spread: 0.48
+
+Cycle 138: 2026-06-11 14:31:23.276000 to 2026-06-11 14:47:14.714000 (0:15:51.438000)
+  Trades: 4, Peak pos: 4.16, PnL: 5.73
+  Avg entry: 57.42, Avg exit: 57.90, Spread: 0.48
+
+Cycle 139: 2026-06-11 14:47:45.221000 to 2026-06-11 16:16:26.733000 (1:28:41.512000)
+  Trades: 6, Peak pos: 7.48, PnL: 8.57
+  Avg entry: 58.21, Avg exit: 58.70, Spread: 0.49
+
+Cycle 140: 2026-06-11 16:16:39.437000 to 2026-06-11 16:29:28.084000 (0:12:48.647000)
+  Trades: 6, Peak pos: 4.16, PnL: 2.87
+  Avg entry: 58.76, Avg exit: 59.25, Spread: 0.49
+
+Cycle 141: 2026-06-11 16:29:54.216000 to 2026-06-11 20:37:36.345000 (4:07:42.129000)
+  Trades: 3, Peak pos: 4.49, PnL: 4.29
+  Avg entry: 59.01, Avg exit: 59.51, Spread: 0.50
+
+Cycle 142: 2026-06-11 20:38:07.222000 to 2026-06-12 06:21:17.805000 (9:43:10.583000)
+  Trades: 6, Peak pos: 17.69, PnL: 10.69
+  Avg entry: 58.30, Avg exit: 58.79, Spread: 0.49
+
+Cycle 143: 2026-06-12 06:21:45.935000 to 2026-06-12 09:07:10.897000 (2:45:24.962000)
+  Trades: 5, Peak pos: 4.49, PnL: 7.18
+  Avg entry: 59.03, Avg exit: 59.52, Spread: 0.50
+
+Cycle 144: 2026-06-12 09:07:32.930000 to 2026-06-12 09:52:28.332000 (0:44:55.402000)
+  Trades: 4, Peak pos: 4.16, PnL: 5.76
+  Avg entry: 59.91, Avg exit: 60.41, Spread: 0.50
+
+Cycle 145: 2026-06-12 09:52:48.386000 to 2026-06-12 12:13:17.782000 (2:20:29.396000)
+  Trades: 4, Peak pos: 7.15, PnL: 5.73
+  Avg entry: 60.26, Avg exit: 60.76, Spread: 0.51
+
+Cycle 146: 2026-06-12 12:13:30.595000 to 2026-06-12 13:29:13.217000 (1:15:42.622000)
+  Trades: 4, Peak pos: 7.12, PnL: 5.72
+  Avg entry: 60.42, Avg exit: 60.93, Spread: 0.51
+
+Cycle 147: 2026-06-12 13:29:37.159000 to 2026-06-12 14:29:47.924000 (1:00:10.765000)
+  Trades: 4, Peak pos: 4.16, PnL: 5.77
+  Avg entry: 61.38, Avg exit: 61.90, Spread: 0.52
+
+Cycle 148: 2026-06-12 14:30:22.166000 to 2026-06-13 09:32:40.098000 (19:02:17.932000)
+  Trades: 9, Peak pos: 67.60, PnL: 35.42
+  Avg entry: 58.71, Avg exit: 59.20, Spread: 0.49
+
+Cycle 149: 2026-06-13 09:33:09.451000 to 2026-06-13 11:15:16.094000 (1:42:06.643000)
+  Trades: 5, Peak pos: 4.54, PnL: 7.24
+  Avg entry: 59.25, Avg exit: 59.75, Spread: 0.50
+
+Cycle 150: 2026-06-13 11:15:41.562000 to 2026-06-13 18:42:06.192000 (7:26:24.630000)
+  Trades: 7, Peak pos: 7.28, PnL: 8.66
+  Avg entry: 59.94, Avg exit: 60.44, Spread: 0.50
+
+Cycle 151: 2026-06-13 18:42:17.051000 to 2026-06-13 22:18:12.770000 (3:35:55.719000)
+  Trades: 3, Peak pos: 4.16, PnL: 2.91
+  Avg entry: 60.50, Avg exit: 61.01, Spread: 0.51
+
+Cycle 152: 2026-06-13 22:18:40.152000 to 2026-06-14 07:22:14.395000 (9:03:34.243000)
+  Trades: 4, Peak pos: 7.17, PnL: 5.77
+  Avg entry: 60.57, Avg exit: 61.08, Spread: 0.51
+
+Cycle 153: 2026-06-14 07:22:34.985000 to 2026-06-14 18:17:32.759000 (10:54:57.774000)
+  Trades: 8, Peak pos: 12.16, PnL: 11.22
+  Avg entry: 60.75, Avg exit: 61.26, Spread: 0.51
+
+Cycle 154: 2026-06-14 18:17:53.372000 to 2026-06-14 18:24:13.615000 (0:06:20.243000)
+  Trades: 3, Peak pos: 4.16, PnL: 2.91
+  Avg entry: 61.16, Avg exit: 61.67, Spread: 0.51
+
+Cycle 155: 2026-06-14 18:24:43.019000 to 2026-06-14 18:41:14.244000 (0:16:31.225000)
+  Trades: 4, Peak pos: 4.16, PnL: 6.05
+  Avg entry: 62.06, Avg exit: 62.60, Spread: 0.54
+
+Cycle 156: 2026-06-14 18:41:50.465000 to 2026-06-14 19:37:29.864000 (0:55:39.399000)
+  Trades: 3, Peak pos: 4.16, PnL: 4.37
+  Avg entry: 62.91, Avg exit: 63.44, Spread: 0.53
+
+Cycle 157: 2026-06-14 19:37:46.398000 to 2026-06-14 23:23:34.698000 (3:45:48.300000)
+  Trades: 5, Peak pos: 4.16, PnL: 7.27
+  Avg entry: 63.57, Avg exit: 64.10, Spread: 0.53
+
+Cycle 158: 2026-06-14 23:23:54.556000 to 2026-06-15 01:00:11.009000 (1:36:16.453000)
+  Trades: 4, Peak pos: 4.16, PnL: 5.83
+  Avg entry: 64.48, Avg exit: 65.03, Spread: 0.54
+
+Cycle 159: 2026-06-15 01:00:32.864000 to 2026-06-15 04:16:51.574000 (3:16:18.710000)
+  Trades: 3, Peak pos: 4.16, PnL: 4.37
+  Avg entry: 65.08, Avg exit: 65.63, Spread: 0.55
+
+Cycle 160: 2026-06-15 04:17:13.688000 to 2026-06-15 06:10:03.105000 (1:52:49.417000)
+  Trades: 3, Peak pos: 4.16, PnL: 2.92
+  Avg entry: 65.61, Avg exit: 66.16, Spread: 0.55
+
+Cycle 161: 2026-06-15 06:10:20.644000 to 2026-06-15 07:09:55.558000 (0:59:34.914000)
+  Trades: 3, Peak pos: 4.16, PnL: 2.92
+  Avg entry: 66.20, Avg exit: 66.76, Spread: 0.56
+
+Cycle 162: 2026-06-15 07:10:19.477000 to 2026-06-15 07:53:36.383000 (0:43:16.906000)
+  Trades: 5, Peak pos: 4.16, PnL: 5.85
+  Avg entry: 67.08, Avg exit: 67.64, Spread: 0.56
+
+Cycle 163: 2026-06-15 07:54:10.865000 to 2026-06-15 12:50:56.005000 (4:56:45.140000)
+  Trades: 6, Peak pos: 6.01, PnL: 8.72
+  Avg entry: 67.84, Avg exit: 68.41, Spread: 0.57
+
+Cycle 164: 2026-06-15 12:51:13.461000 to 2026-06-16 00:05:06.712000 (11:13:53.251000)
+  Trades: 5, Peak pos: 10.63, PnL: 8.38
+  Avg entry: 67.37, Avg exit: 67.93, Spread: 0.57
+
+Cycle 165: 2026-06-16 00:05:29.960000 to 2026-06-16 00:25:37.911000 (0:20:07.951000)
+  Trades: 4, Peak pos: 4.16, PnL: 5.87
+  Avg entry: 68.21, Avg exit: 68.78, Spread: 0.57
+
+Cycle 166: 2026-06-16 00:25:54.679000 to 2026-06-16 01:57:51.106000 (1:31:56.427000)
+  Trades: 4, Peak pos: 4.16, PnL: 5.87
+  Avg entry: 69.19, Avg exit: 69.78, Spread: 0.58
+
+Cycle 167: 2026-06-16 01:58:14.595000 to 2026-06-16 02:02:22.141000 (0:04:07.546000)
+  Trades: 6, Peak pos: 4.16, PnL: 2.94
+  Avg entry: 70.10, Avg exit: 70.69, Spread: 0.59
+
+Cycle 168: 2026-06-16 02:02:55.566000 to 2026-06-16 02:05:06.547000 (0:02:10.981000)
+  Trades: 4, Peak pos: 4.16, PnL: 2.94
+  Avg entry: 70.89, Avg exit: 71.49, Spread: 0.60
+
+Cycle 169: 2026-06-16 02:05:29.580000 to 2026-06-16 03:43:39.322000 (1:38:09.742000)
+  Trades: 5, Peak pos: 4.16, PnL: 5.87
+  Avg entry: 71.70, Avg exit: 72.30, Spread: 0.60
+
+Cycle 170: 2026-06-16 03:44:09.303000 to 2026-06-16 05:47:10.775000 (2:03:01.472000)
+  Trades: 4, Peak pos: 4.16, PnL: 5.89
+  Avg entry: 72.75, Avg exit: 73.36, Spread: 0.61
+
+Cycle 171: 2026-06-16 05:47:36.408000 to 2026-06-16 07:20:14.975000 (1:32:38.567000)
+  Trades: 3, Peak pos: 4.16, PnL: 2.94
+  Avg entry: 73.60, Avg exit: 74.21, Spread: 0.62
+
+Cycle 172: 2026-06-16 07:20:50.591000 to 2026-06-16 07:51:12.116000 (0:30:21.525000)
+  Trades: 4, Peak pos: 4.16, PnL: 5.88
+  Avg entry: 74.78, Avg exit: 75.41, Spread: 0.63
+
+Cycle 173: 2026-06-16 07:51:26.546000 to 2026-06-16 09:40:01.885000 (1:48:35.339000)
+  Trades: 7, Peak pos: 5.07, PnL: 8.80
+  Avg entry: 75.63, Avg exit: 76.26, Spread: 0.64
+
+Cycle 174: 2026-06-16 09:40:28.536000 to 2026-06-16 22:49:59.162000 (13:09:30.626000)
+  Trades: 9, Peak pos: 27.83, PnL: 22.78
+  Avg entry: 74.14, Avg exit: 74.76, Spread: 0.62
+
+Cycle 175: 2026-06-16 22:50:32.348000 to 2026-06-17 12:28:47.498000 (13:38:15.150000)
+  Trades: 11, Peak pos: 28.68, PnL: 22.83
+  Avg entry: 72.38, Avg exit: 72.99, Spread: 0.61
+
+Cycle 176: 2026-06-17 12:28:56.047000 to 2026-06-17 12:36:25.175000 (0:07:29.128000)
+  Trades: 3, Peak pos: 4.16, PnL: 2.96
+  Avg entry: 72.72, Avg exit: 73.33, Spread: 0.61
+
+Cycle 177: 2026-06-17 12:36:36.802000 to 2026-06-17 12:57:29.715000 (0:20:52.913000)
+  Trades: 4, Peak pos: 4.16, PnL: 5.93
+  Avg entry: 73.62, Avg exit: 74.24, Spread: 0.62
+
+Cycle 178: 2026-06-17 12:59:18.246000 to 2026-06-17 13:09:26.886000 (0:10:08.640000)
+  Trades: 4, Peak pos: 4.16, PnL: 5.93
+  Avg entry: 74.63, Avg exit: 75.26, Spread: 0.63
+
+Cycle 179: 2026-06-17 13:10:20.904000 to 2026-06-17 13:32:43.295000 (0:22:22.391000)
+  Trades: 4, Peak pos: 4.16, PnL: 5.94
+  Avg entry: 75.76, Avg exit: 76.40, Spread: 0.64
+
+Cycle 180: 2026-06-17 13:33:44.378000 to 2026-06-17 15:43:31.852000 (2:09:47.474000)
+  Trades: 6, Peak pos: 13.48, PnL: 11.05
+  Avg entry: 74.59, Avg exit: 75.21, Spread: 0.63
+
+Cycle 181: 2026-06-17 15:44:01.760000 to 2026-06-17 22:08:22.485000 (6:24:20.725000)
+  Trades: 7, Peak pos: 28.74, PnL: 19.99
+  Avg entry: 72.36, Avg exit: 72.97, Spread: 0.61
+
+Cycle 182: 2026-06-17 22:08:38.464000 to 2026-06-18 03:53:12.651000 (5:44:34.187000)
+  Trades: 7, Peak pos: 29.79, PnL: 20.08
+  Avg entry: 70.37, Avg exit: 70.96, Spread: 0.59
+
+Cycle 183: 2026-06-18 03:53:19.307000 to 2026-06-18 05:28:57.662000 (1:35:38.355000)
+  Trades: 4, Peak pos: 4.16, PnL: 5.98
+  Avg entry: 71.29, Avg exit: 71.89, Spread: 0.60
+
+Cycle 184: 2026-06-18 05:29:13.645000 to 2026-06-19 10:43:18.510000 (1 day, 5:14:04.865000)
+  Trades: 8, Peak pos: 59.80, PnL: 36.56
+  Avg entry: 68.08, Avg exit: 68.66, Spread: 0.57
+
+Cycle 185: 2026-06-19 10:43:41.697000 to 2026-06-19 12:43:13.311000 (1:59:31.614000)
+  Trades: 6, Peak pos: 4.16, PnL: 7.49
+  Avg entry: 68.87, Avg exit: 69.45, Spread: 0.58
+
+Cycle 186: 2026-06-19 19:37:08.165000 to 2026-06-20 01:54:11.582000 (6:17:03.417000)
+  Trades: 4, Peak pos: 6.07, PnL: 5.96
+  Avg entry: 69.43, Avg exit: 70.01, Spread: 0.58
+
+Cycle 187: 2026-06-20 01:54:26.607000 to 2026-06-20 07:04:53.885000 (5:10:27.278000)
+  Trades: 5, Peak pos: 4.16, PnL: 7.50
+  Avg entry: 70.22, Avg exit: 70.81, Spread: 0.59
+
+Cycle 188: 2026-06-20 07:05:20.577000 to 2026-06-20 11:46:35.587000 (4:41:15.010000)
+  Trades: 5, Peak pos: 10.46, PnL: 8.60
+  Avg entry: 70.06, Avg exit: 70.65, Spread: 0.59
+
+Cycle 189: 2026-06-20 11:46:49.485000 to 2026-06-20 19:41:41.299000 (7:54:51.814000)
+  Trades: 4, Peak pos: 5.99, PnL: 5.98
+  Avg entry: 70.17, Avg exit: 70.76, Spread: 0.59
+
+Cycle 190: 2026-06-20 19:42:01.431000 to 2026-06-22 04:27:08.704000 (1 day, 8:45:07.273000)
+  Trades: 12, Peak pos: 61.75, PnL: 36.88
+  Avg entry: 66.67, Avg exit: 67.22, Spread: 0.56
+
+Cycle 191: 2026-06-22 04:27:16.132000 to 2026-06-22 08:48:50.513000 (4:21:34.381000)
+  Trades: 4, Peak pos: 4.16, PnL: 6.05
+  Avg entry: 67.39, Avg exit: 67.96, Spread: 0.57
+
+Cycle 192: 2026-06-22 08:49:09.772000 to 2026-06-22 10:24:42.778000 (1:35:33.006000)
+  Trades: 5, Peak pos: 4.16, PnL: 2.67
+  Avg entry: 68.23, Avg exit: 68.81, Spread: 0.57
+
+Cycle 193: 2026-06-22 10:25:19.117000 to 2026-06-22 15:09:46.408000 (4:44:27.291000)
+  Trades: 8, Peak pos: 13.24, PnL: 12.59
+  Avg entry: 68.09, Avg exit: 68.66, Spread: 0.57
+
+Cycle 194: 2026-06-22 15:10:05.024000 to 2026-06-24 20:20:34.259000 (2 days, 5:10:29.235000)
+  Trades: 12, Peak pos: 106.49, PnL: 61.37
+  Avg entry: 63.40, Avg exit: 63.93, Spread: 0.53
+
+Cycle 195: 2026-06-24 20:21:02.711000 to 2026-06-25 03:11:21.475000 (6:50:18.764000)
+  Trades: 4, Peak pos: 5.88, PnL: 5.35
+  Avg entry: 63.44, Avg exit: 63.98, Spread: 0.53
+
+Cycle 196: 2026-06-25 03:11:55.303000 to 2026-06-25 11:33:35.164000 (8:21:39.861000)
+  Trades: 10, Peak pos: 60.58, PnL: 35.74
+  Avg entry: 61.01, Avg exit: 61.52, Spread: 0.51
+
+Cycle 197: 2026-06-25 11:34:18.482000 to 2026-06-25 12:09:20.793000 (0:35:02.311000)
+  Trades: 5, Peak pos: 4.16, PnL: 4.05
+  Avg entry: 60.86, Avg exit: 61.37, Spread: 0.51
+
+Cycle 198: 2026-06-25 12:09:46.709000 to 2026-06-25 12:36:23.599000 (0:26:36.890000)
+  Trades: 4, Peak pos: 4.16, PnL: 4.04
+  Avg entry: 60.82, Avg exit: 61.33, Spread: 0.51
+
+Cycle 199: 2026-06-25 12:36:40.920000 to 2026-06-25 12:58:28.987000 (0:21:48.067000)
+  Trades: 5, Peak pos: 4.16, PnL: 2.71
+  Avg entry: 61.25, Avg exit: 61.76, Spread: 0.51
+
+Cycle 200: 2026-06-25 12:58:51.776000 to 2026-06-25 14:25:38.608000 (1:26:46.832000)
+  Trades: 6, Peak pos: 6.20, PnL: 8.10
+  Avg entry: 61.90, Avg exit: 62.42, Spread: 0.52
+
+Cycle 201: 2026-06-25 14:26:11.220000 to 2026-06-25 14:59:37.806000 (0:33:26.586000)
+  Trades: 5, Peak pos: 4.16, PnL: 2.72
+  Avg entry: 62.52, Avg exit: 63.05, Spread: 0.53
+
+Cycle 202: 2026-06-25 15:00:18.433000 to 2026-06-25 17:00:12.893000 (1:59:54.460000)
+  Trades: 3, Peak pos: 4.16, PnL: 4.07
+  Avg entry: 63.10, Avg exit: 63.63, Spread: 0.53
+
+Cycle 203: 2026-06-25 17:00:43.766000 to 2026-06-25 18:31:34.925000 (1:30:51.159000)
+  Trades: 3, Peak pos: 4.16, PnL: 4.07
+  Avg entry: 63.62, Avg exit: 64.16, Spread: 0.53
+
+Cycle 204: 2026-06-25 18:32:07.824000 to 2026-06-25 20:27:59.725000 (1:55:51.901000)
+  Trades: 6, Peak pos: 5.84, PnL: 8.11
+  Avg entry: 64.24, Avg exit: 64.78, Spread: 0.54
+
+Cycle 205: 2026-06-25 20:28:16.492000 to 2026-06-26 04:39:54.752000 (8:11:38.260000)
+  Trades: 8, Peak pos: 14.71, PnL: 12.83
+  Avg entry: 64.04, Avg exit: 64.58, Spread: 0.54
+
+Cycle 206: 2026-06-26 04:40:07.491000 to 2026-06-26 10:48:28.504000 (6:08:21.013000)
+  Trades: 9, Peak pos: 30.84, PnL: 21.07
+  Avg entry: 62.66, Avg exit: 63.19, Spread: 0.53
+
+Cycle 207: 2026-06-26 10:48:40.967000 to 2026-06-26 11:00:59.329000 (0:12:18.362000)
+  Trades: 4, Peak pos: 4.16, PnL: 5.46
+  Avg entry: 63.12, Avg exit: 63.65, Spread: 0.53
+
+Cycle 208: 2026-06-26 11:01:37.499000 to 2026-06-26 12:25:59.006000 (1:24:21.507000)
+  Trades: 5, Peak pos: 4.16, PnL: 6.82
+  Avg entry: 64.09, Avg exit: 64.62, Spread: 0.54
+
+Cycle 209: 2026-06-26 12:26:30.349000 to 2026-06-26 16:40:41.989000 (4:14:11.640000)
+  Trades: 6, Peak pos: 5.84, PnL: 8.17
+  Avg entry: 64.68, Avg exit: 65.22, Spread: 0.54
+
+Cycle 210: 2026-06-26 16:40:55.465000 to 2026-06-27 12:11:13.029000 (19:30:17.564000)
+  Trades: 6, Peak pos: 14.84, PnL: 10.20
+  Avg entry: 63.91, Avg exit: 64.45, Spread: 0.54
+
+Cycle 211: 2026-06-27 12:11:43.512000 to 2026-06-28 23:41:14.586000 (1 day, 11:29:31.074000)
+  Trades: 7, Peak pos: 31.33, PnL: 18.48
+  Avg entry: 61.96, Avg exit: 62.48, Spread: 0.52
+
+Cycle 212: 2026-06-28 23:41:48.931000 to 2026-06-29 02:56:27.774000 (3:14:38.843000)
+  Trades: 4, Peak pos: 4.16, PnL: 4.11
+  Avg entry: 62.27, Avg exit: 62.79, Spread: 0.52
+
+Cycle 213: 2026-06-29 02:56:54.896000 to 2026-06-29 09:07:01.176000 (6:10:06.280000)
+  Trades: 4, Peak pos: 4.16, PnL: 5.50
+  Avg entry: 63.17, Avg exit: 63.70, Spread: 0.53
+
+Cycle 214: 2026-06-29 09:07:32.989000 to 2026-06-29 10:14:05.285000 (1:06:32.296000)
+  Trades: 5, Peak pos: 4.16, PnL: 6.87
+  Avg entry: 64.19, Avg exit: 64.72, Spread: 0.54
+
+Cycle 215: 2026-06-29 10:14:41.807000 to 2026-06-29 12:34:13.438000 (2:19:31.631000)
+  Trades: 5, Peak pos: 5.96, PnL: 5.46
+  Avg entry: 64.27, Avg exit: 64.81, Spread: 0.54
+
+Cycle 216: 2026-06-29 12:34:30.563000 to 2026-06-29 14:13:38.764000 (1:39:08.201000)
+  Trades: 4, Peak pos: 4.16, PnL: 5.51
+  Avg entry: 65.00, Avg exit: 65.54, Spread: 0.55
+
+Cycle 217: 2026-06-29 14:14:20.253000 to 2026-06-29 14:56:24.978000 (0:42:04.725000)
+  Trades: 4, Peak pos: 4.16, PnL: 5.52
+  Avg entry: 65.89, Avg exit: 66.45, Spread: 0.55
+
+Cycle 218: 2026-06-29 14:56:50.753000 to 2026-06-29 16:38:14.572000 (1:41:23.819000)
+  Trades: 4, Peak pos: 5.69, PnL: 5.47
+  Avg entry: 66.22, Avg exit: 66.78, Spread: 0.56
+
+Cycle 219: 2026-06-29 16:38:39.840000 to 2026-06-30 23:31:22.103000 (1 day, 6:52:42.263000)
+  Trades: 9, Peak pos: 30.00, PnL: 21.33
+  Avg entry: 65.01, Avg exit: 65.56, Spread: 0.55
+
+Cycle 220: 2026-06-30 23:31:51.485000 to 2026-07-01 13:11:39.671000 (13:39:48.186000)
+  Trades: 11, Peak pos: 14.92, PnL: 13.09
+  Avg entry: 64.54, Avg exit: 65.08, Spread: 0.54
+
+Cycle 221: 2026-07-01 13:11:50.614000 to 2026-07-01 19:21:38.006000 (6:09:47.392000)
+  Trades: 6, Peak pos: 15.17, PnL: 10.32
+  Avg entry: 63.59, Avg exit: 64.12, Spread: 0.53
+
+Cycle 222: 2026-07-01 19:22:03.581000 to 2026-07-02 00:59:36.995000 (5:37:33.414000)
+  Trades: 5, Peak pos: 10.80, PnL: 7.93
+  Avg entry: 63.12, Avg exit: 63.65, Spread: 0.53
+
+Cycle 223: 2026-07-02 01:00:00.637000 to 2026-07-02 06:37:06.359000 (5:37:05.722000)
+  Trades: 3, Peak pos: 4.16, PnL: 4.15
+  Avg entry: 63.40, Avg exit: 63.93, Spread: 0.53
+
+Cycle 224: 2026-07-02 06:37:28.889000 to 2026-07-02 08:45:30.679000 (2:08:01.790000)
+  Trades: 5, Peak pos: 4.16, PnL: 5.56
+  Avg entry: 64.22, Avg exit: 64.76, Spread: 0.54
+
+Cycle 225: 2026-07-02 08:45:58.762000 to 2026-07-02 10:23:08.854000 (1:37:10.092000)
+  Trades: 4, Peak pos: 4.16, PnL: 2.78
+  Avg entry: 65.05, Avg exit: 65.60, Spread: 0.55
+
+Cycle 226: 2026-07-02 10:23:35.509000 to 2026-07-02 15:19:12.213000 (4:55:36.704000)
+  Trades: 6, Peak pos: 5.83, PnL: 8.31
+  Avg entry: 65.81, Avg exit: 66.36, Spread: 0.55
+
+Cycle 227: 2026-07-02 15:19:25.455000 to 2026-07-03 02:19:31.414000 (11:00:05.959000)
+  Trades: 6, Peak pos: 5.75, PnL: 8.32
+  Avg entry: 66.48, Avg exit: 67.04, Spread: 0.56
+
+Cycle 228: 2026-07-03 02:19:54.001000 to 2026-07-03 06:05:46.566000 (3:45:52.565000)
+  Trades: 4, Peak pos: 4.16, PnL: 5.58
+  Avg entry: 67.48, Avg exit: 68.04, Spread: 0.57
+
+Cycle 229: 2026-07-03 06:06:01.506000 to 2026-07-03 07:37:24.678000 (1:31:23.172000)
+  Trades: 3, Peak pos: 4.16, PnL: 4.17
+  Avg entry: 68.15, Avg exit: 68.72, Spread: 0.57
+
+Cycle 230: 2026-07-03 07:37:39.629000 to 2026-07-03 11:45:38.185000 (4:07:58.556000)
+  Trades: 5, Peak pos: 4.16, PnL: 5.59
+  Avg entry: 69.05, Avg exit: 69.63, Spread: 0.58
+
+Cycle 231: 2026-07-03 11:46:03.284000 to 2026-07-03 17:35:13.246000 (5:49:09.962000)
+  Trades: 7, Peak pos: 4.16, PnL: 6.98
+  Avg entry: 70.16, Avg exit: 70.75, Spread: 0.59
+
+Cycle 232: 2026-07-03 17:35:27.663000 to 2026-07-04 00:33:27.685000 (6:58:00.022000)
+  Trades: 4, Peak pos: 4.16, PnL: 4.18
+  Avg entry: 70.78, Avg exit: 71.38, Spread: 0.59
+
+Cycle 233: 2026-07-04 00:33:46.472000 to 2026-07-05 17:53:54.209000 (1 day, 17:20:07.737000)
+  Trades: 6, Peak pos: 13.53, PnL: 10.41
+  Avg entry: 70.13, Avg exit: 70.72, Spread: 0.59
+
+Cycle 234: 2026-07-05 17:54:05.546000 to 2026-07-05 21:02:33.865000 (3:08:28.319000)
+  Trades: 5, Peak pos: 4.16, PnL: 5.60
+  Avg entry: 70.91, Avg exit: 71.51, Spread: 0.60
+
+Cycle 235: 2026-07-05 21:03:10.300000 to 2026-07-06 16:29:13 (19:26:02.700000)
+  Trades: 8, Peak pos: 13.32, PnL: 13.23
+  Avg entry: 71.23, Avg exit: 71.83, Spread: 0.60
+
+Cycle 236: 2026-07-06 16:29:31.159000 to 2026-07-07 04:13:39.938000 (11:44:08.779000)
+  Trades: 6, Peak pos: 9.37, PnL: 8.03
+  Avg entry: 70.60, Avg exit: 71.19, Spread: 0.59
+
+Cycle 237: 2026-07-07 04:14:11.710000 to 2026-07-07 06:10:43.986000 (1:56:32.276000)
+  Trades: 3, Peak pos: 4.16, PnL: 4.20
+  Avg entry: 70.98, Avg exit: 71.57, Spread: 0.60
+
+Cycle 238: 2026-07-07 06:11:14.657000 to 2026-07-07 12:29:43.293000 (6:18:28.636000)
+  Trades: 5, Peak pos: 4.16, PnL: 7.01
+  Avg entry: 71.83, Avg exit: 72.44, Spread: 0.60
+
+Cycle 239: 2026-07-07 12:30:09.108000 to 2026-07-10 06:44:16.701000 (2 days, 18:14:07.593000)
+  Trades: 9, Peak pos: 55.64, PnL: 34.47
+  Avg entry: 68.63, Avg exit: 69.20, Spread: 0.58
+
+Cycle 240: 2026-07-10 06:44:42.594000 to 2026-07-14 18:03:30.317000 (4 days, 11:18:47.723000)
+  Trades: 10, Peak pos: 59.01, PnL: 34.50
+  Avg entry: 65.25, Avg exit: 65.80, Spread: 0.55
+
+Cycle 241: 2026-07-14 18:03:30.317000 to 2026-07-14 23:52:59.424000 (5:49:29.107000)
+  Trades: 4, Peak pos: 4.16, PnL: 4.37
+  Avg entry: 65.77, Avg exit: 66.31, Spread: 0.54
+
+Cycle 242: 2026-07-14 23:53:14.363000 to 2026-07-15 00:30:03.577000 (0:36:49.214000)
+  Trades: 5, Peak pos: 4.16, PnL: 5.67
+  Avg entry: 66.64, Avg exit: 67.20, Spread: 0.56
+
+Cycle 243: 2026-07-15 00:30:32.042000 to 2026-07-15 06:14:22.922000 (5:43:50.880000)
+  Trades: 3, Peak pos: 4.16, PnL: 4.24
+  Avg entry: 67.33, Avg exit: 67.89, Spread: 0.57
+
+Cycle 244: 2026-07-15 06:14:48.257000 to 2026-07-21 02:35:38.591000 (5 days, 20:20:50.334000)
+  Trades: 15, Peak pos: 114.41, PnL: 65.20
+  Avg entry: 62.81, Avg exit: 63.34, Spread: 0.53
+
+Cycle 245: 2026-07-21 02:36:07.780000 to 2026-07-22 17:20:15.855000 (1 day, 14:44:08.075000)
+  Trades: 8, Peak pos: 65.90, PnL: 35.03
+  Avg entry: 59.49, Avg exit: 59.99, Spread: 0.50
+
+Cycle 246: 2026-07-22 17:20:29.684000 to 2026-07-26 13:24:31.030000 (3 days, 20:04:01.346000)
+  Trades: 6, Peak pos: 17.50, PnL: 10.69
+  Avg entry: 58.80, Avg exit: 59.29, Spread: 0.49
+
+Cycle 247: 2026-07-26 13:24:54.707000 to 2026-07-26 19:36:26.726000 (6:11:32.019000)
+  Trades: 3, Peak pos: 4.49, PnL: 4.30
+  Avg entry: 59.15, Avg exit: 59.65, Spread: 0.50
+
+Cycle 248: 2026-07-26 19:37:02.555000 to 2026-07-27 01:04:47.687000 (5:27:45.132000)
+  Trades: 3, Peak pos: 4.16, PnL: 2.88
+  Avg entry: 59.64, Avg exit: 60.14, Spread: 0.50
+
+Cycle 249: 2026-07-27 01:05:11.283000 to 2026-07-30 16:49:46.869000 (3 days, 15:44:35.586000)
+  Trades: 14, Peak pos: 132.64, PnL: 63.04
+  Avg entry: 54.90, Avg exit: 55.36, Spread: 0.46
+
+Cycle 250: 2026-07-30 16:50:02.506000 to 2026-07-30 19:27:38.812000 (2:37:36.306000)
+  Trades: 3, Peak pos: 4.16, PnL: 2.90
+  Avg entry: 55.35, Avg exit: 55.81, Spread: 0.46
+
+Cycle 251: 2026-07-30 19:27:59.457000 to 2026-08-03 08:34:29.096000 (3 days, 13:06:29.639000)
+  Trades: 9, Peak pos: 76.18, PnL: 35.54
+  Avg entry: 52.61, Avg exit: 53.05, Spread: 0.44
+
+Cycle 252: 2026-08-03 08:34:44.200000 to 2026-08-03 10:56:11.318000 (2:21:27.118000)
+  Trades: 3, Peak pos: 4.16, PnL: 2.91
+  Avg entry: 53.05, Avg exit: 53.50, Spread: 0.45
+
+Cycle 253: 2026-08-03 10:56:29.209000 to 2026-08-03 12:47:15.230000 (1:50:46.021000)
+  Trades: 5, Peak pos: 4.16, PnL: 5.82
+  Avg entry: 53.70, Avg exit: 54.15, Spread: 0.45
+
+Cycle 254: 2026-08-03 12:47:43.626000 to 2026-08-04 04:27:04.628000 (15:39:21.002000)
+  Trades: 4, Peak pos: 5.41, PnL: 4.35
+  Avg entry: 54.17, Avg exit: 54.62, Spread: 0.46
+
+Cycle 255: 2026-08-04 04:27:26.709000 to 2026-08-04 09:06:57.428000 (4:39:30.719000)
+  Trades: 4, Peak pos: 4.16, PnL: 5.84
+  Avg entry: 54.87, Avg exit: 55.33, Spread: 0.46
+
+Cycle 256: 2026-08-04 09:08:05.480000 to 2026-08-04 23:17:56.826000 (14:09:51.346000)
+  Trades: 3, Peak pos: 5.20, PnL: 4.36
+  Avg entry: 55.45, Avg exit: 55.91, Spread: 0.47
+
+Cycle 257: 2026-08-04 23:18:08.325000 to 2026-08-05 02:07:32.697000 (2:49:24.372000)
+  Trades: 5, Peak pos: 5.09, PnL: 7.28
+  Avg entry: 56.06, Avg exit: 56.53, Spread: 0.47
+
+Cycle 258: 2026-08-05 02:07:59.793000 to 2026-08-05 05:13:51.154000 (3:05:51.361000)
+  Trades: 5, Peak pos: 4.96, PnL: 7.29
+  Avg entry: 56.91, Avg exit: 57.38, Spread: 0.48
+
+Cycle 259: 2026-08-05 05:14:21.885000 to 2026-08-05 13:20:56.278000 (8:06:34.393000)
+  Trades: 3, Peak pos: 4.91, PnL: 4.37
+  Avg entry: 57.30, Avg exit: 57.78, Spread: 0.48
+
+Cycle 260: 2026-08-05 13:21:30.645000 to 2026-08-10 17:05:30.538000 (5 days, 3:43:59.893000)
+  Trades: 12, Peak pos: 38.07, PnL: 19.68
+  Avg entry: 55.53, Avg exit: 56.00, Spread: 0.47
+
+Cycle 261: 2026-08-10 17:05:51.936000 to 2026-08-12 06:32:58.115000 (1 day, 13:27:06.179000)
+  Trades: 11, Peak pos: 19.53, PnL: 10.92
+  Avg entry: 54.84, Avg exit: 55.30, Spread: 0.46
+
+Cycle 262: 2026-08-12 06:33:07.907000 to 2026-08-12 10:06:44.027000 (3:33:36.120000)
+  Trades: 5, Peak pos: 4.16, PnL: 5.87
+  Avg entry: 55.52, Avg exit: 55.99, Spread: 0.47
+
+Cycle 263: 2026-08-12 10:07:03.779000 to 2026-08-12 12:59:52.168000 (2:52:48.389000)
+  Trades: 5, Peak pos: 5.17, PnL: 4.39
+  Avg entry: 56.07, Avg exit: 56.54, Spread: 0.47
+
+Cycle 264: 2026-08-12 19:58:00.933000 to 2026-08-13 02:06:42.065000 (6:08:41.132000)
+  Trades: 5, Peak pos: 4.16, PnL: 5.88
+  Avg entry: 56.26, Avg exit: 56.73, Spread: 0.47
+
+Cycle 265: 2026-08-13 02:07:19.561000 to 2026-08-13 10:45:27.054000 (8:38:07.493000)
+  Trades: 5, Peak pos: 4.16, PnL: 5.88
+  Avg entry: 57.27, Avg exit: 57.75, Spread: 0.48
+
+Cycle 266: 2026-08-13 10:45:48.201000 to 2026-08-15 16:44:36.585000 (2 days, 5:58:48.384000)
+  Trades: 6, Peak pos: 18.80, PnL: 10.95
+  Avg entry: 56.82, Avg exit: 57.30, Spread: 0.48
+
+Cycle 267: 2026-08-15 16:44:51.863000 to 2026-08-16 22:29:23.761000 (1 day, 5:44:31.898000)
+  Trades: 6, Peak pos: 4.95, PnL: 7.36
+  Avg entry: 57.47, Avg exit: 57.95, Spread: 0.48
+
+Cycle 268: 2026-08-16 22:29:41.543000 to 2026-08-17 00:56:32.444000 (2:26:50.901000)
+  Trades: 4, Peak pos: 4.16, PnL: 5.90
+  Avg entry: 58.38, Avg exit: 58.87, Spread: 0.49
+
+Cycle 269: 2026-08-17 00:57:05.913000 to 2026-08-17 04:55:08.928000 (3:58:03.015000)
+  Trades: 4, Peak pos: 4.16, PnL: 2.95
+  Avg entry: 59.11, Avg exit: 59.61, Spread: 0.50
+
+Cycle 270: 2026-08-17 04:55:31.496000 to 2026-08-18 03:29:41.430000 (22:34:09.934000)
+  Trades: 5, Peak pos: 7.64, PnL: 5.86
+  Avg entry: 59.16, Avg exit: 59.65, Spread: 0.50
+
+Cycle 271: 2026-08-18 03:30:13.614000 to 2026-08-19 11:55:11.959000 (1 day, 8:24:58.345000)
+  Trades: 7, Peak pos: 10.75, PnL: 10.02
+  Avg entry: 59.39, Avg exit: 59.89, Spread: 0.50
+
+Cycle 272: 2026-08-19 11:55:42.630000 to 2026-08-19 12:39:48.306000 (0:44:05.676000)
+  Trades: 9, Peak pos: 4.16, PnL: 6.48
+  Avg entry: 60.02, Avg exit: 60.52, Spread: 0.50
+
+Cycle 273: 2026-08-19 12:40:19.486000 to 2026-08-19 12:48:03.989000 (0:07:44.503000)
+  Trades: 4, Peak pos: 4.16, PnL: 5.20
+  Avg entry: 60.98, Avg exit: 61.50, Spread: 0.51
+
+Cycle 274: 2026-08-19 12:48:37.626000 to 2026-08-19 13:07:24.775000 (0:18:47.149000)
+  Trades: 4, Peak pos: 4.16, PnL: 5.21
+  Avg entry: 61.63, Avg exit: 62.15, Spread: 0.52
+
+Cycle 275: 2026-08-19 13:08:03.045000 to 2026-08-19 13:33:53.210000 (0:25:50.165000)
+  Trades: 4, Peak pos: 4.16, PnL: 3.89
+  Avg entry: 62.06, Avg exit: 62.58, Spread: 0.52
+
+Cycle 276: 2026-08-19 13:34:10.551000 to 2026-08-19 16:11:34.744000 (2:37:24.193000)
+  Trades: 4, Peak pos: 4.16, PnL: 3.90
+  Avg entry: 62.34, Avg exit: 62.86, Spread: 0.52
+
+Cycle 277: 2026-08-19 16:11:47.989000 to 2026-08-19 16:12:28.031000 (0:00:40.042000)
+  Trades: 6, Peak pos: 4.16, PnL: 3.69
+  Avg entry: 63.14, Avg exit: 63.89, Spread: 0.75
+
+Cycle 278: 2026-08-19 16:13:05.673000 to 2026-08-19 16:13:46.173000 (0:00:40.500000)
+  Trades: 3, Peak pos: 4.16, PnL: 12.68
+  Avg entry: 65.02, Avg exit: 67.67, Spread: 2.65
+
+Cycle 279: 2026-08-19 16:14:24.463000 to 2026-08-19 16:18:20.204000 (0:03:55.741000)
+  Trades: 8, Peak pos: 4.88, PnL: 9.79
+  Avg entry: 67.83, Avg exit: 68.55, Spread: 0.71
+
+Cycle 280: 2026-08-19 16:18:40.739000 to 2026-08-19 16:20:42.222000 (0:02:01.483000)
+  Trades: 5, Peak pos: 4.16, PnL: 10.96
+  Avg entry: 70.25, Avg exit: 71.48, Spread: 1.23
+
+Cycle 281: 2026-08-19 16:21:17.665000 to 2026-08-19 17:58:27.266000 (1:37:09.601000)
+  Trades: 6, Peak pos: 12.34, PnL: 9.75
+  Avg entry: 70.35, Avg exit: 70.94, Spread: 0.59
+
+Cycle 282: 2026-08-19 17:58:44.366000 to 2026-08-19 18:22:11.968000 (0:23:27.602000)
+  Trades: 3, Peak pos: 4.16, PnL: 3.92
+  Avg entry: 70.68, Avg exit: 71.27, Spread: 0.59
+
+Cycle 283: 2026-08-19 18:22:29.662000 to 2026-08-19 18:32:35.174000 (0:10:05.512000)
+  Trades: 4, Peak pos: 4.16, PnL: 5.26
+  Avg entry: 71.39, Avg exit: 71.99, Spread: 0.60
+
+Cycle 284: 2026-08-19 18:33:06.491000 to 2026-08-20 03:15:15.376000 (8:42:08.885000)
+  Trades: 6, Peak pos: 12.26, PnL: 9.78
+  Avg entry: 70.91, Avg exit: 71.50, Spread: 0.60
+
+Cycle 285: 2026-08-20 03:15:40.793000 to 2026-08-20 05:53:50.536000 (2:38:09.743000)
+  Trades: 6, Peak pos: 4.52, PnL: 7.84
+  Avg entry: 71.57, Avg exit: 72.17, Spread: 0.60
+
+Cycle 286: 2026-08-20 05:54:21.450000 to 2026-08-20 06:05:25.554000 (0:11:04.104000)
+  Trades: 4, Peak pos: 4.16, PnL: 5.27
+  Avg entry: 72.63, Avg exit: 73.24, Spread: 0.61
+
+Cycle 287: 2026-08-20 06:05:49.743000 to 2026-08-20 13:23:39.728000 (7:17:49.985000)
+  Trades: 8, Peak pos: 11.83, PnL: 12.45
+  Avg entry: 73.17, Avg exit: 73.78, Spread: 0.61
+
+Cycle 288: 2026-08-20 13:24:13.210000 to 2026-08-20 17:58:36.863000 (4:34:23.653000)
+  Trades: 7, Peak pos: 8.12, PnL: 10.20
+  Avg entry: 73.31, Avg exit: 73.93, Spread: 0.62
+
+Cycle 289: 2026-08-20 17:58:47.557000 to 2026-08-20 22:47:29.918000 (4:48:42.361000)
+  Trades: 5, Peak pos: 4.16, PnL: 6.59
+  Avg entry: 74.12, Avg exit: 74.74, Spread: 0.62
+
+Cycle 290: 2026-08-20 22:48:07.468000 to 2026-08-21 05:18:20.176000 (6:30:12.708000)
+  Trades: 6, Peak pos: 11.80, PnL: 9.84
+  Avg entry: 73.41, Avg exit: 74.02, Spread: 0.62
+
+Cycle 291: 2026-08-21 05:18:44.691000 to 2026-08-21 05:38:34.461000 (0:19:49.770000)
+  Trades: 4, Peak pos: 4.16, PnL: 2.65
+  Avg entry: 74.14, Avg exit: 74.77, Spread: 0.62
+
+Cycle 292: 2026-08-21 05:39:06.150000 to 2026-08-21 07:10:06.046000 (1:30:59.896000)
+  Trades: 7, Peak pos: 7.92, PnL: 10.22
+  Avg entry: 74.65, Avg exit: 75.27, Spread: 0.63
+
+Cycle 293: 2026-08-21 07:10:16.830000 to 2026-08-21 10:06:35.511000 (2:56:18.681000)
+  Trades: 4, Peak pos: 4.24, PnL: 5.27
+  Avg entry: 74.65, Avg exit: 75.28, Spread: 0.63
+
+Cycle 294: 2026-08-21 10:07:00.297000 to 2026-08-21 10:10:45.196000 (0:03:44.899000)
+  Trades: 3, Peak pos: 4.16, PnL: 2.66
+  Avg entry: 75.44, Avg exit: 76.08, Spread: 0.63
+
+Cycle 295: 2026-08-21 10:11:16.167000 to 2026-08-21 10:27:23.098000 (0:16:06.931000)
+  Trades: 3, Peak pos: 4.16, PnL: 2.66
+  Avg entry: 76.08, Avg exit: 76.68, Spread: 0.60
+
+Cycle 296: 2026-08-21 10:27:23.098000 to 2026-08-21 10:40:25.120000 (0:13:02.022000)
+  Trades: 4, Peak pos: 4.16, PnL: 3.98
+  Avg entry: 76.76, Avg exit: 77.41, Spread: 0.65
+
+Cycle 297: 2026-08-21 10:40:59.721000 to 2026-08-21 11:37:22.203000 (0:56:22.482000)
+  Trades: 5, Peak pos: 7.65, PnL: 7.60
+  Avg entry: 76.60, Avg exit: 77.25, Spread: 0.64
+
+Cycle 298: 2026-08-21 11:38:02.331000 to 2026-08-21 11:59:32.479000 (0:21:30.148000)
+  Trades: 4, Peak pos: 4.16, PnL: 2.65
+  Avg entry: 77.05, Avg exit: 77.69, Spread: 0.65
+
+Cycle 299: 2026-08-21 11:59:59.534000 to 2026-08-21 18:25:53.029000 (6:25:53.495000)
+  Trades: 6, Peak pos: 11.31, PnL: 9.89
+  Avg entry: 76.10, Avg exit: 76.74, Spread: 0.64
+
+Cycle 300: 2026-08-21 18:26:15.514000 to 2026-08-21 22:59:02.125000 (4:32:46.611000)
+  Trades: 5, Peak pos: 4.16, PnL: 5.29
+  Avg entry: 76.04, Avg exit: 76.68, Spread: 0.64
+
+Cycle 301: 2026-08-21 22:59:19.877000 to 2026-08-21 23:11:11.922000 (0:11:52.045000)
+  Trades: 4, Peak pos: 4.16, PnL: 5.34
+  Avg entry: 77.09, Avg exit: 77.74, Spread: 0.65
+
+Cycle 302: 2026-08-21 23:11:39.246000 to 2026-08-21 23:15:37.476000 (0:03:58.230000)
+  Trades: 5, Peak pos: 4.10, PnL: 2.63
+  Avg entry: 78.52, Avg exit: 79.18, Spread: 0.66
+
+Cycle 303: 2026-08-21 23:15:37.541000 to 2026-08-21 23:36:08.847000 (0:20:31.306000)
+  Trades: 5, Peak pos: 4.16, PnL: 2.70
+  Avg entry: 79.11, Avg exit: 79.77, Spread: 0.66
+
+Cycle 304: 2026-08-21 23:36:41.782000 to 2026-08-22 00:05:06.656000 (0:28:24.874000)
+  Trades: 5, Peak pos: 4.16, PnL: 6.66
+  Avg entry: 80.26, Avg exit: 80.93, Spread: 0.67
+
+Cycle 305: 2026-08-22 00:05:34.374000 to 2026-08-22 00:26:04.006000 (0:20:29.632000)
+  Trades: 3, Peak pos: 4.16, PnL: 3.99
+  Avg entry: 80.96, Avg exit: 81.64, Spread: 0.68
+
+Cycle 306: 2026-08-22 00:26:22.135000 to 2026-08-22 02:12:13.840000 (1:45:51.705000)
+  Trades: 8, Peak pos: 46.28, PnL: 32.71
+  Avg entry: 77.15, Avg exit: 77.80, Spread: 0.65
+
+Cycle 307: 2026-08-22 02:12:43.912000 to 2026-08-22 02:13:59.024000 (0:01:15.112000)
+  Trades: 4, Peak pos: 4.16, PnL: 2.68
+  Avg entry: 77.15, Avg exit: 77.80, Spread: 0.65
+
+Cycle 308: 2026-08-22 02:14:27.481000 to 2026-08-22 02:15:07.859000 (0:00:40.378000)
+  Trades: 3, Peak pos: 4.16, PnL: 3.94
+  Avg entry: 77.46, Avg exit: 78.42, Spread: 0.96
+
+Cycle 309: 2026-08-22 02:15:45.889000 to 2026-08-22 02:18:50.881000 (0:03:04.992000)
+  Trades: 5, Peak pos: 4.16, PnL: 5.34
+  Avg entry: 78.02, Avg exit: 78.67, Spread: 0.65
+
+Cycle 310: 2026-08-22 02:19:11.766000 to 2026-08-22 02:24:05.937000 (0:04:54.171000)
+  Trades: 4, Peak pos: 4.16, PnL: 4.02
+  Avg entry: 78.53, Avg exit: 79.19, Spread: 0.66
+
+Cycle 311: 2026-08-22 02:24:20.354000 to 2026-08-22 02:35:47.289000 (0:11:26.935000)
+  Trades: 3, Peak pos: 4.16, PnL: 4.01
+  Avg entry: 78.98, Avg exit: 79.65, Spread: 0.66
+
+Cycle 312: 2026-08-22 02:36:13.739000 to 2026-08-22 03:47:57.103000 (1:11:43.364000)
+  Trades: 6, Peak pos: 4.16, PnL: 5.34
+  Avg entry: 79.41, Avg exit: 80.07, Spread: 0.67
+
+Cycle 313: 2026-08-22 03:48:16.405000 to 2026-08-22 08:44:11.482000 (4:55:55.077000)
+  Trades: 7, Peak pos: 23.84, PnL: 18.13
+  Avg entry: 77.08, Avg exit: 77.73, Spread: 0.65
+
+Cycle 314: 2026-08-22 08:44:26.959000 to 2026-08-22 09:14:09.574000 (0:29:42.615000)
+  Trades: 3, Peak pos: 4.16, PnL: 2.70
+  Avg entry: 77.75, Avg exit: 78.40, Spread: 0.65
+
+Cycle 315: 2026-08-22 09:14:33.113000 to 2026-08-22 14:40:21.491000 (5:25:48.378000)
+  Trades: 3, Peak pos: 4.16, PnL: 4.03
+  Avg entry: 78.00, Avg exit: 78.66, Spread: 0.66
+
+Cycle 316: 2026-08-22 14:40:50.585000 to 2026-08-22 19:16:50.723000 (4:36:00.138000)
+  Trades: 6, Peak pos: 4.16, PnL: 8.06
+  Avg entry: 78.97, Avg exit: 79.63, Spread: 0.66
+
+Cycle 317: 2026-08-22 19:17:05.449000 to 2026-08-22 21:17:36.272000 (2:00:30.823000)
+  Trades: 3, Peak pos: 4.16, PnL: 4.04
+  Avg entry: 79.40, Avg exit: 80.06, Spread: 0.67
+
+Cycle 318: 2026-08-22 21:17:49.030000 to 2026-08-23 08:20:46.608000 (11:02:57.578000)
+  Trades: 8, Peak pos: 11.01, PnL: 12.78
+  Avg entry: 79.31, Avg exit: 79.98, Spread: 0.67
+
+Cycle 319: 2026-08-23 08:21:19.252000 to 2026-08-23 10:14:20.172000 (1:53:00.920000)
+  Trades: 4, Peak pos: 4.16, PnL: 5.42
+  Avg entry: 80.24, Avg exit: 80.92, Spread: 0.67
+
+Cycle 320: 2026-08-23 10:14:52.102000 to 2026-08-23 13:44:09.219000 (3:29:17.117000)
+  Trades: 7, Peak pos: 7.36, PnL: 7.75
+  Avg entry: 80.06, Avg exit: 80.74, Spread: 0.67
+
+Cycle 321: 2026-08-23 13:44:41.942000 to 2026-08-23 15:58:39.747000 (2:13:57.805000)
+  Trades: 3, Peak pos: 4.16, PnL: 4.05
+  Avg entry: 80.40, Avg exit: 81.07, Spread: 0.67
+
+Cycle 322: 2026-08-23 15:58:58.065000 to 2026-08-23 19:35:10.777000 (3:36:12.712000)
+  Trades: 4, Peak pos: 4.16, PnL: 5.43
+  Avg entry: 81.53, Avg exit: 82.21, Spread: 0.68
+
+Cycle 323: 2026-08-23 19:35:47.779000 to 2026-08-24 08:41:03.779000 (13:05:16)
+  Trades: 8, Peak pos: 23.14, PnL: 18.26
+  Avg entry: 79.64, Avg exit: 80.31, Spread: 0.67
+
+Cycle 324: 2026-08-24 08:41:12.982000 to 2026-08-24 11:36:30.555000 (2:55:17.573000)
+  Trades: 7, Peak pos: 7.46, PnL: 10.50
+  Avg entry: 79.86, Avg exit: 80.53, Spread: 0.67
+
+Cycle 325: 2026-08-24 11:36:53.269000 to 2026-08-24 21:43:46.626000 (10:06:53.357000)
+  Trades: 6, Peak pos: 11.20, PnL: 10.15
+  Avg entry: 78.67, Avg exit: 79.33, Spread: 0.66
+
+Cycle 326: 2026-08-24 21:44:17.959000 to 2026-08-24 23:06:39.207000 (1:22:21.248000)
+  Trades: 3, Peak pos: 4.16, PnL: 2.73
+  Avg entry: 79.39, Avg exit: 80.06, Spread: 0.67
+
+Cycle 327: 2026-08-24 23:06:56.603000 to 2026-08-24 23:42:15.287000 (0:35:18.684000)
+  Trades: 3, Peak pos: 4.16, PnL: 2.73
+  Avg entry: 80.01, Avg exit: 80.69, Spread: 0.67
+
+Cycle 328: 2026-08-24 23:42:34.743000 to 2026-08-25 06:39:03.119000 (6:56:28.376000)
+  Trades: 5, Peak pos: 4.16, PnL: 6.83
+  Avg entry: 81.09, Avg exit: 81.77, Spread: 0.68
+
+Cycle 329: 2026-08-25 06:39:16.583000 to 2026-08-25 11:28:36.432000 (4:49:19.849000)
+  Trades: 5, Peak pos: 7.36, PnL: 7.82
+  Avg entry: 80.78, Avg exit: 81.46, Spread: 0.68
+
+Cycle 330: 2026-08-25 11:28:51.076000 to 2026-08-25 13:01:36.711000 (1:32:45.635000)
+  Trades: 4, Peak pos: 4.16, PnL: 4.09
+  Avg entry: 81.07, Avg exit: 81.75, Spread: 0.68
+
+Cycle 331: 2026-08-25 13:02:05.095000 to 2026-08-25 15:10:13.242000 (2:08:08.147000)
+  Trades: 3, Peak pos: 4.16, PnL: 4.09
+  Avg entry: 81.52, Avg exit: 82.20, Spread: 0.68
+
+Cycle 332: 2026-08-25 15:10:26.084000 to 2026-08-25 23:46:36.248000 (8:36:10.164000)
+  Trades: 8, Peak pos: 10.79, PnL: 12.93
+  Avg entry: 81.46, Avg exit: 82.15, Spread: 0.68
+
+Cycle 333: 2026-08-25 23:46:56.643000 to 2026-08-26 02:39:00.564000 (2:52:03.921000)
+  Trades: 4, Peak pos: 4.16, PnL: 2.74
+  Avg entry: 81.97, Avg exit: 82.66, Spread: 0.69
+
+Cycle 334: 2026-08-26 02:39:20.235000 to 2026-08-26 07:28:46.569000 (4:49:26.334000)
+  Trades: 3, Peak pos: 4.16, PnL: 4.11
+  Avg entry: 82.42, Avg exit: 83.11, Spread: 0.69
+
+Cycle 335: 2026-08-26 07:29:03.551000 to 2026-08-26 18:50:13.965000 (11:21:10.414000)
+  Trades: 6, Peak pos: 10.82, PnL: 10.23
+  Avg entry: 81.34, Avg exit: 82.02, Spread: 0.68
+
+Cycle 336: 2026-08-26 18:50:26.232000 to 2026-08-27 06:21:01.805000 (11:30:35.573000)
+  Trades: 6, Peak pos: 4.16, PnL: 8.21
+  Avg entry: 82.07, Avg exit: 82.76, Spread: 0.69
+
+Cycle 337: 2026-08-27 06:21:14.295000 to 2026-08-27 11:26:06.120000 (5:04:51.825000)
+  Trades: 6, Peak pos: 4.16, PnL: 8.22
+  Avg entry: 82.77, Avg exit: 83.47, Spread: 0.69
+
+Cycle 338: 2026-08-27 11:26:27.853000 to 2026-08-27 11:37:09.228000 (0:10:41.375000)
+  Trades: 4, Peak pos: 4.16, PnL: 2.76
+  Avg entry: 83.44, Avg exit: 84.14, Spread: 0.70
+
+Cycle 339: 2026-08-27 11:37:32.900000 to 2026-08-27 13:49:16.354000 (2:11:43.454000)
+  Trades: 5, Peak pos: 4.16, PnL: 6.87
+  Avg entry: 84.47, Avg exit: 85.18, Spread: 0.71
+
+Cycle 340: 2026-08-27 13:49:48.393000 to 2026-08-27 14:15:59.270000 (0:26:10.877000)
+  Trades: 3, Peak pos: 4.16, PnL: 4.12
+  Avg entry: 85.15, Avg exit: 85.87, Spread: 0.72
+
+Cycle 341: 2026-08-27 14:16:31.794000 to 2026-08-27 16:03:55.658000 (1:47:23.864000)
+  Trades: 3, Peak pos: 4.16, PnL: 4.13
+  Avg entry: 85.76, Avg exit: 86.48, Spread: 0.72
+
+Cycle 342: 2026-08-27 16:04:08.303000 to 2026-08-29 00:28:35.338000 (1 day, 8:24:27.035000)
+  Trades: 8, Peak pos: 45.24, PnL: 33.81
+  Avg entry: 81.50, Avg exit: 82.18, Spread: 0.68
+
+Cycle 343: 2026-08-29 00:29:00.018000 to 2026-08-29 11:41:34.387000 (11:12:34.369000)
+  Trades: 3, Peak pos: 4.16, PnL: 4.14
+  Avg entry: 81.82, Avg exit: 82.51, Spread: 0.69
+
+Cycle 344: 2026-08-29 11:41:56.887000 to 2026-08-30 05:32:55.544000 (17:50:58.657000)
+  Trades: 4, Peak pos: 4.16, PnL: 5.55
+  Avg entry: 82.81, Avg exit: 83.51, Spread: 0.70
+
+Cycle 345: 2026-08-30 05:33:08.780000 to 2026-08-31 13:44:15.649000 (1 day, 8:11:06.869000)
+  Trades: 6, Peak pos: 10.82, PnL: 10.34
+  Avg entry: 82.14, Avg exit: 82.83, Spread: 0.69
+
+Cycle 346: 2026-08-31 13:44:33.091000 to 2026-08-31 13:45:14.680000 (0:00:41.589000)
+  Trades: 5, Peak pos: 4.16, PnL: 2.78
+  Avg entry: 83.62, Avg exit: 84.32, Spread: 0.70
+
+Cycle 347: 2026-08-31 13:45:50.292000 to 2026-08-31 18:46:43.765000 (5:00:53.473000)
+  Trades: 6, Peak pos: 4.16, PnL: 4.16
+  Avg entry: 84.47, Avg exit: 85.18, Spread: 0.71
+
+Cycle 348: 2026-08-31 18:46:57.407000 to 2026-09-03 12:02:49.045000 (2 days, 17:15:51.638000)
+  Trades: 6, Peak pos: 10.63, PnL: 10.37
+  Avg entry: 83.45, Avg exit: 84.15, Spread: 0.70
+
+Cycle 349: 2026-09-03 12:03:01.731000 to 2026-09-03 16:02:11.002000 (3:59:09.271000)
+  Trades: 3, Peak pos: 4.16, PnL: 4.16
+  Avg entry: 83.84, Avg exit: 84.54, Spread: 0.70
+
+Cycle 350: 2026-09-03 16:02:23.462000 to 2026-09-03 16:35:59.749000 (0:33:36.287000)
+  Trades: 3, Peak pos: 4.16, PnL: 2.79
+  Avg entry: 84.63, Avg exit: 85.34, Spread: 0.71
+
+Cycle 351: 2026-09-03 16:36:16.867000 to 2026-09-03 20:15:24.302000 (3:39:07.435000)
+  Trades: 5, Peak pos: 4.16, PnL: 6.96
+  Avg entry: 85.60, Avg exit: 86.32, Spread: 0.72
+
+Cycle 352: 2026-09-03 20:15:42.356000 to 2026-09-03 20:41:16.271000 (0:25:33.915000)
+  Trades: 5, Peak pos: 4.16, PnL: 5.57
+  Avg entry: 86.84, Avg exit: 87.57, Spread: 0.73
+
+Cycle 353: 2026-09-03 20:41:36.176000 to 2026-09-06 01:47:01.521000 (2 days, 5:05:25.345000)
+  Trades: 6, Peak pos: 10.20, PnL: 10.36
+  Avg entry: 85.97, Avg exit: 86.69, Spread: 0.72
+
+Cycle 354: 2026-09-06 01:47:26.885000 to 2026-09-06 08:23:48.078000 (6:36:21.193000)
+  Trades: 4, Peak pos: 4.16, PnL: 5.59
+  Avg entry: 87.06, Avg exit: 87.79, Spread: 0.73
+
+Cycle 355: 2026-09-06 08:24:19.291000 to 2026-09-08 20:53:01.298000 (2 days, 12:28:42.007000)
+  Trades: 13, Peak pos: 44.20, PnL: 37.04
+  Avg entry: 84.61, Avg exit: 85.32, Spread: 0.71
+
+Cycle 356: 2026-09-08 20:53:22.607000 to 2026-09-09 03:19:48.171000 (6:26:25.564000)
+  Trades: 5, Peak pos: 4.16, PnL: 5.61
+  Avg entry: 85.33, Avg exit: 86.05, Spread: 0.72
+
+Cycle 357: 2026-09-09 03:20:15.173000 to 2026-09-09 09:24:19.007000 (6:04:03.834000)
+  Trades: 5, Peak pos: 4.16, PnL: 4.21
+  Avg entry: 86.20, Avg exit: 86.92, Spread: 0.72
+
+Cycle 358: 2026-09-09 09:24:45.792000 to 2026-09-09 14:25:34.178000 (5:00:48.386000)
+  Trades: 5, Peak pos: 7.02, PnL: 8.05
+  Avg entry: 85.64, Avg exit: 86.36, Spread: 0.72
+
+Cycle 359: 2026-09-09 14:25:49.093000 to 2026-09-11 10:53:04.957000 (1 day, 20:27:15.864000)
+  Trades: 10, Peak pos: 45.91, PnL: 37.28
+  Avg entry: 82.30, Avg exit: 82.99, Spread: 0.69
+
+Cycle 360: 2026-09-11 10:53:27.433000 to 2026-09-13 23:46:45.162000 (2 days, 12:53:17.729000)
+  Trades: 10, Peak pos: 48.25, PnL: 37.45
+  Avg entry: 78.92, Avg exit: 79.58, Spread: 0.66
+
+Cycle 361: 2026-09-13 23:47:01.334000 to 2026-09-14 08:30:20.223000 (8:43:18.889000)
+  Trades: 5, Peak pos: 4.16, PnL: 7.09
+  Avg entry: 79.56, Avg exit: 80.23, Spread: 0.67
+
+Cycle 362: 2026-09-14 08:30:51.500000 to 2026-09-14 10:47:20.058000 (2:16:28.558000)
+  Trades: 3, Peak pos: 4.16, PnL: 4.24
+  Avg entry: 80.05, Avg exit: 80.72, Spread: 0.67
+
+Cycle 363: 2026-09-14 10:47:45.845000 to 2026-09-14 14:49:21.651000 (4:01:35.806000)
+  Trades: 5, Peak pos: 4.16, PnL: 4.25
+  Avg entry: 80.44, Avg exit: 81.11, Spread: 0.68
+
+Cycle 364: 2026-09-14 14:49:55.554000 to 2026-09-14 15:09:10.933000 (0:19:15.379000)
+  Trades: 3, Peak pos: 4.16, PnL: 2.85
+  Avg entry: 81.06, Avg exit: 81.74, Spread: 0.68
+
+Cycle 365: 2026-09-14 15:09:29.307000 to 2026-09-16 08:02:53.499000 (1 day, 16:53:24.192000)
+  Trades: 11, Peak pos: 49.28, PnL: 37.69
+  Avg entry: 77.95, Avg exit: 78.61, Spread: 0.65
+
+Cycle 366: 2026-09-16 08:03:11.855000 to 2026-09-16 08:43:44.947000 (0:40:33.092000)
+  Trades: 4, Peak pos: 4.16, PnL: 5.71
+  Avg entry: 78.65, Avg exit: 79.31, Spread: 0.66
+
+Cycle 367: 2026-09-16 08:44:17.546000 to 2026-09-16 15:06:33.423000 (6:22:15.877000)
+  Trades: 4, Peak pos: 4.40, PnL: 5.68
+  Avg entry: 78.97, Avg exit: 79.64, Spread: 0.66
+
+Cycle 368: 2026-09-16 15:07:02.879000 to 2026-09-16 15:08:16.968000 (0:01:14.089000)
+  Trades: 4, Peak pos: 4.16, PnL: 2.86
+  Avg entry: 79.35, Avg exit: 80.02, Spread: 0.67
+
+Cycle 369: 2026-09-16 15:08:49.079000 to 2026-09-16 15:43:00.299000 (0:34:11.220000)
+  Trades: 4, Peak pos: 4.36, PnL: 5.69
+  Avg entry: 79.46, Avg exit: 80.13, Spread: 0.67
+
+Cycle 370: 2026-09-16 15:43:15.119000 to 2026-09-16 22:37:23.406000 (6:54:08.287000)
+  Trades: 8, Peak pos: 11.99, PnL: 10.68
+  Avg entry: 78.65, Avg exit: 79.31, Spread: 0.66
+
+Cycle 371: 2026-09-16 22:37:56.674000 to 2026-09-17 06:08:46.403000 (7:30:49.729000)
+  Trades: 6, Peak pos: 4.16, PnL: 5.74
+  Avg entry: 79.59, Avg exit: 80.26, Spread: 0.67
+
+Cycle 372: 2026-09-17 06:09:07.903000 to 2026-09-17 09:58:02.180000 (3:48:54.277000)
+  Trades: 4, Peak pos: 4.16, PnL: 4.30
+  Avg entry: 80.41, Avg exit: 81.08, Spread: 0.68
+
+Cycle 373: 2026-09-17 09:58:15.075000 to 2026-09-17 10:20:54.983000 (0:22:39.908000)
+  Trades: 7, Peak pos: 4.16, PnL: 7.17
+  Avg entry: 81.37, Avg exit: 82.06, Spread: 0.68
+
+Cycle 374: 2026-09-17 10:21:14.121000 to 2026-09-17 10:22:30.208000 (0:01:16.087000)
+  Trades: 4, Peak pos: 4.16, PnL: 4.28
+  Avg entry: 82.11, Avg exit: 82.80, Spread: 0.69
+
+Cycle 375: 2026-09-17 10:22:55.824000 to 2026-09-17 11:31:49.101000 (1:08:53.277000)
+  Trades: 3, Peak pos: 4.16, PnL: 4.29
+  Avg entry: 82.55, Avg exit: 83.24, Spread: 0.69
+
+Cycle 376: 2026-09-17 11:32:17.716000 to 2026-09-17 17:11:16.725000 (5:38:59.009000)
+  Trades: 3, Peak pos: 4.16, PnL: 4.30
+  Avg entry: 82.84, Avg exit: 83.53, Spread: 0.70
+
+Cycle 377: 2026-09-17 17:11:45.466000 to 2026-09-17 20:54:17.502000 (3:42:32.036000)
+  Trades: 4, Peak pos: 4.16, PnL: 5.76
+  Avg entry: 83.93, Avg exit: 84.64, Spread: 0.70
+
+Cycle 378: 2026-09-17 20:54:51.576000 to 2026-09-17 22:02:13.785000 (1:07:22.209000)
+  Trades: 4, Peak pos: 4.16, PnL: 5.76
+  Avg entry: 85.38, Avg exit: 86.10, Spread: 0.72
+
+Cycle 379: 2026-09-17 22:02:38.869000 to 2026-09-18 02:05:02.594000 (4:02:23.725000)
+  Trades: 3, Peak pos: 4.16, PnL: 2.88
+  Avg entry: 86.67, Avg exit: 87.40, Spread: 0.73
+
+Cycle 380: 2026-09-18 02:05:33.863000 to 2026-09-18 07:01:50.512000 (4:56:16.649000)
+  Trades: 4, Peak pos: 4.16, PnL: 5.77
+  Avg entry: 87.86, Avg exit: 88.60, Spread: 0.74
+
+Cycle 381: 2026-09-18 07:02:07.815000 to 2026-09-18 07:25:08.676000 (0:23:00.861000)
+  Trades: 3, Peak pos: 4.16, PnL: 2.89
+  Avg entry: 89.02, Avg exit: 89.76, Spread: 0.75
+
+Cycle 382: 2026-09-18 07:25:28.513000 to 2026-09-18 09:34:04.367000 (2:08:35.854000)
+  Trades: 5, Peak pos: 4.16, PnL: 7.20
+  Avg entry: 90.13, Avg exit: 90.89, Spread: 0.76
+
+Cycle 383: 2026-09-18 09:34:19.174000 to 2026-09-18 11:45:01.072000 (2:10:41.898000)
+  Trades: 5, Peak pos: 4.16, PnL: 7.20
+  Avg entry: 91.40, Avg exit: 92.17, Spread: 0.77
+
+Cycle 384: 2026-09-18 11:45:21.595000 to 2026-09-18 20:00:19.765000 (8:14:58.170000)
+  Trades: 3, Peak pos: 4.16, PnL: 4.32
+  Avg entry: 92.06, Avg exit: 92.83, Spread: 0.77
+
+Cycle 385: 2026-09-18 20:00:58.099000 to 2026-09-18 22:07:38.455000 (2:06:40.356000)
+  Trades: 3, Peak pos: 4.16, PnL: 2.89
+  Avg entry: 92.93, Avg exit: 93.71, Spread: 0.78
+
+Cycle 386: 2026-09-18 22:08:02.182000 to 2026-09-18 23:53:00.667000 (1:44:58.485000)
+  Trades: 3, Peak pos: 4.16, PnL: 4.31
+  Avg entry: 93.37, Avg exit: 94.15, Spread: 0.78
+
+
+=== Time between trades ===
+  2026-05-22 10:41:08.354000 -> 2026-05-22 10:41:38.664000: 30s, Close Long -> Open Long
+  2026-05-22 10:41:38.664000 -> 2026-05-22 10:45:52.310000: 254s, Open Long -> Open Long
+  2026-05-22 10:45:52.310000 -> 2026-05-22 11:17:59.089000: 1927s, Open Long -> Open Long
+  2026-05-22 11:17:59.089000 -> 2026-05-22 11:18:22.999000: 24s, Open Long -> Open Long
+  2026-05-22 11:18:22.999000 -> 2026-05-22 11:46:12.430000: 1669s, Open Long -> Open Long
+  2026-05-22 11:46:12.430000 -> 2026-05-22 12:40:45.990000: 3274s, Open Long -> Open Long
+  2026-05-23 12:07:36.697000 -> 2026-05-23 12:07:54.407000: 18s, Close Long -> Open Long
+  2026-05-23 12:07:54.407000 -> 2026-05-23 12:07:54.407000: 0s, Open Long -> Open Long
+  2026-05-23 12:07:54.407000 -> 2026-05-23 12:24:13.743000: 979s, Open Long -> Close Long
+  2026-05-23 12:24:13.743000 -> 2026-05-23 12:24:33.835000: 20s, Close Long -> Open Long
+  2026-05-23 12:24:33.835000 -> 2026-05-23 12:31:17.815000: 404s, Open Long -> Open Long
+  2026-05-23 13:49:40.904000 -> 2026-05-23 13:50:08.199000: 27s, Close Long -> Open Long
+  2026-05-23 13:50:08.199000 -> 2026-05-23 14:26:29.773000: 2182s, Open Long -> Open Long
+  2026-05-23 14:26:29.773000 -> 2026-05-23 15:12:57.796000: 2788s, Open Long -> Close Long
+  2026-05-23 15:12:57.796000 -> 2026-05-23 15:13:36.152000: 38s, Close Long -> Open Long
+  2026-05-23 15:13:36.152000 -> 2026-05-23 15:13:36.152000: 0s, Open Long -> Open Long
+  2026-05-23 15:13:36.152000 -> 2026-05-23 15:37:09.517000: 1413s, Open Long -> Close Long
+  2026-05-23 15:37:09.517000 -> 2026-05-23 15:37:35.060000: 26s, Close Long -> Open Long
+  2026-05-23 17:33:05.933000 -> 2026-05-23 17:33:35.900000: 30s, Close Long -> Open Long
+  2026-05-23 17:33:35.900000 -> 2026-05-23 17:37:39.849000: 244s, Open Long -> Close Long
+  2026-05-23 17:37:39.849000 -> 2026-05-23 17:38:06.296000: 26s, Close Long -> Open Long
+  2026-05-23 17:38:06.296000 -> 2026-05-23 18:12:51.351000: 2085s, Open Long -> Open Long
+  2026-05-23 18:12:51.351000 -> 2026-05-23 18:41:13.354000: 1702s, Open Long -> Open Long
+  2026-05-23 18:41:13.354000 -> 2026-05-23 18:48:39.466000: 446s, Open Long -> Open Long
+  2026-05-23 21:30:40.515000 -> 2026-05-23 21:30:57.447000: 17s, Close Long -> Open Long
+  2026-05-23 21:30:57.447000 -> 2026-05-23 21:47:57.417000: 1020s, Open Long -> Close Long
+  2026-05-23 21:47:57.417000 -> 2026-05-23 21:48:31.679000: 34s, Close Long -> Open Long
+  2026-05-23 21:48:31.679000 -> 2026-05-23 21:48:31.679000: 0s, Open Long -> Open Long
+  2026-05-23 21:48:31.679000 -> 2026-05-23 22:05:06.172000: 994s, Open Long -> Close Long
+  2026-05-23 22:05:06.172000 -> 2026-05-23 22:05:37.677000: 32s, Close Long -> Open Long
+  2026-05-23 22:05:37.677000 -> 2026-05-23 22:15:09.478000: 572s, Open Long -> Close Long
+  2026-05-23 22:15:09.478000 -> 2026-05-23 22:15:41.946000: 32s, Close Long -> Open Long
+  2026-05-23 22:15:41.946000 -> 2026-05-23 22:32:52.404000: 1030s, Open Long -> Close Long
+  2026-05-23 22:32:52.404000 -> 2026-05-23 22:33:12.445000: 20s, Close Long -> Open Long
+  2026-05-23 22:33:12.445000 -> 2026-05-23 22:42:15.086000: 543s, Open Long -> Open Long
+  2026-05-23 22:42:15.086000 -> 2026-05-23 22:53:56.621000: 702s, Open Long -> Open Long
+  2026-05-23 22:53:56.621000 -> 2026-05-23 23:38:03.389000: 2647s, Open Long -> Open Long
+  2026-05-24 02:43:31.419000 -> 2026-05-24 02:43:46.475000: 15s, Close Long -> Open Long
+  2026-05-24 02:43:46.475000 -> 2026-05-24 02:43:46.475000: 0s, Open Long -> Open Long
+  2026-05-24 02:43:46.475000 -> 2026-05-24 03:22:35.110000: 2329s, Open Long -> Open Long
+  2026-05-24 03:22:35.110000 -> 2026-05-24 03:35:39.672000: 785s, Open Long -> Close Long
+  2026-05-24 03:35:39.672000 -> 2026-05-24 03:36:19.459000: 40s, Close Long -> Open Long
+[0m
+Based on my analysis of the full trade history (386 cycles, ~3,400 trades) for address `0x0bb81e516c88881c54529e1790470cb5e9f8740d`, here's the derived trading strategy:
+
+## **Strategy: HYPE Perpetual Grid/Accumulation with Residual Short Hedge**
+
+### **Core Pattern**
+- **Single asset**: Exclusively trades **HYPE** (Hyperliquid native token) perpetuals
+- **Directional bias**: **Net long** with a consistent **~4.16 HYPE residual short** position maintained after each cycle
+- **Cycle structure**: Build large long position (10-130+ HYPE) → Close most → Leave ~4.16 short → Immediately rebuild long
+
+### **Key Mechanics**
+
+| Aspect | Details |
+|--------|---------|
+| **Position sizing** | Scales from ~4 HYPE (small cycles) to 100+ HYPE (large cycles) |
+| **Entry style** | **Maker orders** (mostly `crossed: false`) - posts limit orders, earns maker rebates |
+| **Exit style** | Mix of maker/taker, closes in chunks |
+| **Avg hold time** | Minutes to days (small cycles: 5-30 min; large cycles: hours to days) |
+| **Profit target** | Consistently **~$0.50-0.80/HYPE spread** (entry vs exit) |
+| **Residual short** | **Exactly ~4.16 HYPE** maintained after every close - appears intentional |
+
+### **PnL Profile**
+- **Total realized PnL**: **$3,428** (from ~3,400 trades)
+- **Total fees**: **$168** (net **+$3,260** after fees)
+- **Win rate**: Near 100% on closed cycles (every cycle shows positive PnL)
+- **Risk**: Carries large directional exposure during build-up (up to 130+ HYPE ≈ $10k+ notional)
+
+### **Strategy Classification**
+This is a **market-making / inventory management strategy** with a twist:
+1. **Accumulates long inventory** via maker limit orders (earning spread + rebates)
+2. **Distributes inventory** by closing at slightly higher prices
+3. **Maintains a permanent ~4.16 HYPE short hedge** - likely for:
+   - Funding rate arbitrage (collecting funding on short while long)
+   - Delta-neutral positioning against spot holdings
+   - Maker rebate optimization on both sides
+
+### **Evidence of Automation**
+- Sub-second trade sequences (multiple orders at same timestamp)
+- Precise 4.16 HYPE residual every cycle
+- 24/7 operation across months
+- Consistent ~$0.50-0.80 spread capture regardless of price level ($55-$94 range)
+
+### **Risk Factors**
+- **Large drawdown risk** during accumulation phases (position grows 10-30x residual)
+- **Funding rate exposure** on large longs
+- **Single-asset concentration** (100% HYPE)
+- **Smart contract / oracle risk** on Hyperliquid
+
+This appears to be a **professional market-making bot** optimized for Hyperliquid's maker rebate structure and HYPE's funding rate dynamics.

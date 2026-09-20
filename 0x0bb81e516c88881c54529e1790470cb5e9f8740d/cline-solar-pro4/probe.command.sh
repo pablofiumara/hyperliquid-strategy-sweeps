@@ -1,0 +1,1 @@
+cline -P cline -m cline-free/solar-pro4 --auto-approve true -y -c /home/paf/Documents/code/misc/hyperliquid-strategy-sweeps/cline-solar-pro4/work --thinking xhigh -p Reply\ with\ exactly:\ OK

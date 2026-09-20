@@ -1,0 +1,1 @@
+opencode run -m opencode/nemotron-3.5-lightning-free --auto --dir /home/paf/Documents/code/misc/hyperliquid-strategy-sweeps/oc-nemotron-3.5-lightning/work --agent plan Reply\ with\ exactly:\ OK

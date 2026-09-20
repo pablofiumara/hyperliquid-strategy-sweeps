@@ -1,0 +1,14 @@
+{
+ "label": "cline-solar-pro4",
+ "tool": "cline",
+ "model": "cline-free/solar-pro4",
+ "variant": "xhigh",
+ "free_gate": "ok",
+ "probe": "OK",
+ "status": "FAILED",
+ "exit": 1,
+ "duration_s": 1185.0,
+ "bytes": 80914,
+ "extra": "",
+ "prompt_file": "prompt.txt"
+}

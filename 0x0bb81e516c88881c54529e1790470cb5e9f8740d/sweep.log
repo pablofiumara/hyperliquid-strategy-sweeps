@@ -1,0 +1,67 @@
+[09:14:51] models: /home/paf/Documents/code/misc/hyperliquid/models.tsv | prompt: derive the trading strategy or strategies used by https://hy...
+[09:14:51] loading free-model lists (metadata gate)
+[09:14:55]   free ids -> cline:5 kilo:19 opencode:8
+[09:14:55] SKIP kilo-north-mini-code (resume: previous result exists)
+[09:14:55] SKIP kilo-deepseek-v4-flash-0731 (resume: previous result exists)
+[09:14:55] SKIP kilo-dots-3-note-preview (resume: previous result exists)
+[09:15:10] DONE unverified-kilo-ling-3.0-flash-fin (7s, 467B)
+[09:15:48] DONE kilo-lfm-2.5-2.6b (32s, 3567B)
+[09:16:56] DONE unverified-kilo-ling-3.0-flash-sante (113s, 88268B)
+[09:17:43] DONE kilo-ling-3.0-flash-vl (159s, 111914B)
+[09:20:37] DONE kilo-nemotron-3-super (164s, 58308B)
+[09:21:37] DONE cline-muse-spark-1.3-contributor (398s, 9101B)
+[09:23:08] FAILED cline-deepseek-v4.1-flash (489s, 946777B)
+[09:23:59] DONE kilo-nemotron-3-ultra (181s, 74493B)
+[09:25:02] DONE unverified-kilo-nex-n2.5-mini (548s, 327425B)
+[09:26:39] FAILED unverified-kilo-nex-n2.5-pro (576s, 217047B)
+[09:28:02] SKIP unverified-kilo-qwen3.8-27b (probe: ERROR)
+[09:30:18] DONE kilo-step-3.7-flash (211s, 54642B)
+[09:31:02] SKIP unverified-kilo-inkling-small (probe: ERROR)
+[09:32:15] SKIP oc-jev-1.13 (probe: ERROR)
+[09:33:00] DONE oc-big-pickle (160s, 88652B)
+[09:33:10] FAILED unverified-kilo-nemotron-3.5-lightning (618s, 234B)
+[09:33:13] DONE oc-ling-3.0-flash-fin (55s, 59515B)
+[09:34:45] FAILED cline-solar-pro4 (1185s, 80914B)
+[09:35:00] DONE oc-nemotron-3-ultra (10s, 714B)
+[09:36:24] DONE oc-muse-spark-1.3 (187s, 55508B)
+[09:37:02] DONE oc-muse-spark-1.2 (228s, 183771B)
+[09:38:31] DONE oc-mimo-v2.5 (327s, 69019B)
+[09:39:59] TIMEOUT cline-glm-5.3-flash (1500s, 101733B)
+[09:39:59] TIMEOUT cline-laguna-s-2.1 (1500s, 453502B)
+[09:43:12] DONE oc-nemotron-3.5-lightning (419s, 8566B)
+[09:45:45] DONE kilo-laguna-s-2.1 (1350s, 189994B)
+[09:50:15] TIMEOUT kilo-laguna-xs-2.1 (1500s, 80581B)
+
+STATUS           LABEL                                  PROBE     VARIANT           SECS    BYTES
+DONE             cline-muse-spark-1.3-contributor       OK        xhigh            398.0     9101
+DONE             kilo-dots-3-note-preview               OK        thinking          90.0    40656
+DONE             kilo-laguna-s-2.1                      OK        thinking        1350.0   189994
+DONE             kilo-lfm-2.5-2.6b                      OK        thinking          32.0     3567
+DONE             kilo-ling-3.0-flash-vl                 OK        thinking         159.0   111914
+DONE             kilo-nemotron-3-super                  OK        medium           164.0    58308
+DONE             kilo-nemotron-3-ultra                  OK        high             181.0    74493
+DONE             kilo-north-mini-code                   OK        thinking          18.0     1821
+DONE             kilo-step-3.7-flash                    OK        high             211.0    54642
+DONE             oc-big-pickle                          OK        -                160.0    88652
+DONE             oc-ling-3.0-flash-fin                  OK        high              55.0    59515
+DONE             oc-mimo-v2.5                           OK        -                327.0    69019
+DONE             oc-muse-spark-1.2                      OK        xhigh            228.0   183771
+DONE             oc-muse-spark-1.3                      OK        xhigh            187.0    55508
+DONE             oc-nemotron-3-ultra                    OK        -                 10.0      714
+DONE             oc-nemotron-3.5-lightning              OK        -                419.0     8566
+DONE             unverified-kilo-ling-3.0-flash-fin     OK        thinking           7.0      467
+DONE             unverified-kilo-ling-3.0-flash-sante   OK        thinking         113.0    88268
+DONE             unverified-kilo-nex-n2.5-mini          OK        high             548.0   327425
+SKIPPED_NOT_FREE kilo-deepseek-v4-flash-0731            ERROR     max                0.0      960
+SKIPPED_NOT_FREE oc-jev-1.13                            ERROR     -                  0.0       76
+SKIPPED_NOT_FREE unverified-kilo-inkling-small          ERROR     max                0.0       56
+SKIPPED_NOT_FREE unverified-kilo-qwen3.8-27b            ERROR     xhigh              0.0       42
+TIMEOUT          cline-glm-5.3-flash                    OK        xhigh           1500.0   101733
+TIMEOUT          cline-laguna-s-2.1                     OK        xhigh           1500.0   453502
+TIMEOUT          kilo-laguna-xs-2.1                     OK        thinking        1500.0    80581
+FAILED           cline-deepseek-v4.1-flash              OK        xhigh            489.0   946777
+FAILED           cline-solar-pro4                       OK        xhigh           1185.0    80914
+FAILED           unverified-kilo-nemotron-3.5-lightning OK        thinking         618.0      234
+FAILED           unverified-kilo-nex-n2.5-pro           OK        high             576.0   217047
+
+19/30 produced a real answer; manifest -> manifest.tsv

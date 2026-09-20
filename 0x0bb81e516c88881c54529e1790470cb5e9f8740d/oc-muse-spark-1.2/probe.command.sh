@@ -1,0 +1,1 @@
+opencode run -m opencode/muse-spark-1.2-contributor-free --auto --dir /home/paf/Documents/code/misc/hyperliquid-strategy-sweeps/oc-muse-spark-1.2/work --variant xhigh --agent plan Reply\ with\ exactly:\ OK

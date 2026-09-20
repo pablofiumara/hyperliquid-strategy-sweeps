@@ -1,0 +1,1 @@
+kilo run -m kilo/cohere/north-mini-code:free --auto --dir /home/paf/Documents/code/misc/hyperliquid-strategy-sweeps/kilo-north-mini-code/work --variant thinking --agent plan Reply\ with\ exactly:\ OK

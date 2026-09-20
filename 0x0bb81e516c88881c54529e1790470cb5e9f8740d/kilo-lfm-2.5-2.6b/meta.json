@@ -1,0 +1,14 @@
+{
+ "label": "kilo-lfm-2.5-2.6b",
+ "tool": "kilo",
+ "model": "kilo/liquid/lfm-2.5-2.6b:free",
+ "variant": "thinking",
+ "free_gate": "ok",
+ "probe": "OK",
+ "status": "DONE",
+ "exit": 0,
+ "duration_s": 32.0,
+ "bytes": 3567,
+ "extra": "",
+ "prompt_file": "prompt.txt"
+}

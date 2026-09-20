@@ -1,0 +1,1 @@
+kilo run -m kilo/poolside/laguna-s-2.1:free --auto --dir /home/paf/Documents/code/misc/hyperliquid-strategy-sweeps/kilo-laguna-s-2.1/work --variant thinking --agent plan Reply\ with\ exactly:\ OK

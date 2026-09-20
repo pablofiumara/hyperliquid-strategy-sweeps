@@ -1,0 +1,3083 @@
+[0m
+> code · inclusionai/ling-3.0-flash-sante:free
+[0m
+[0m→ [0mRead .
+Let me start by examining the existing codebase and fetching the trader data.
+[0m% [0mWebFetch https://hyperx.trade/hyperliquid/trader?address=0x0bb81e516c88881c54529e1790470cb5e9f8740d
+The webpage shows no trading data for this address. Let me try fetching directly from HyperLiquid's API and also check if there's any data available through other endpoints.
+[0m
+[0m$ [0mcurl -s -X POST https://api.hyperliquid.xyz/info \
+  -H "Content-Type: application/json" \
+  -d '{"type":"userNonFundingLedgerUpdates","user":"0x0bb81e516c88881c54529e1790470cb5e9f8740d","limit":10}' 2>&1 | head -200
+[{"time":1786969663674,"hash":"0xf7482b144077e515f8c104425d6d8502041e00f9db7b03e89b10d666ff7bbf00","delta":{"type":"send","user":"0x0bb81e516c88881c54529e1790470cb5e9f8740d","destination":"0xafe62f929c84b4a7730ae98a3835a936fd86bde0","sourceDex":"spot","destinationDex":"spot","token":"USDC","amount":"1001.0","usdcValue":"1001.0","fee":"0.0","nativeTokenFee":"0.0","nonce":1786969639178,"feeToken":""}},{"time":1782119815353,"hash":"0x694f36503bcbb7726ac8043e4a2d48018c004e35d6ced6440d17e1a2facf915d","delta":{"type":"send","user":"0x0bb81e516c88881c54529e1790470cb5e9f8740d","destination":"0xafe62f929c84b4a7730ae98a3835a936fd86bde0","sourceDex":"spot","destinationDex":"spot","token":"USDC","amount":"1001.0","usdcValue":"1001.0","fee":"0.0","nativeTokenFee":"0.0","nonce":1782119805600,"feeToken":""}},{"time":1780738783092,"hash":"0x963a8dcdb1a580cb97b4043d16ff150201d900b34ca89f9d3a03392070a95ab6","delta":{"type":"send","user":"0x0bb81e516c88881c54529e1790470cb5e9f8740d","destination":"0xafe62f929c84b4a7730ae98a3835a936fd86bde0","sourceDex":"spot","destinationDex":"spot","token":"USDC","amount":"1000.0","usdcValue":"1000.0","fee":"0.0","nativeTokenFee":"0.0","nonce":1780738774624,"feeToken":""}},{"time":1780027954270,"hash":"0x819c3e32662b75978315043c799bc80203a20018012e94692564e985252f4f82","delta":{"type":"send","user":"0xafe62f929c84b4a7730ae98a3835a936fd86bde0","destination":"0x0bb81e516c88881c54529e1790470cb5e9f8740d","sourceDex":"spot","destinationDex":"spot","token":"USDC","amount":"3585.0","usdcValue":"3585.0","fee":"0.0","nativeTokenFee":"0.0","nonce":1780027884206,"feeToken":""}},{"time":1778922456433,"hash":"0xdcfdea7c835b9550de77043b848a4f02010a00621e5eb42280c695cf425f6f3b","delta":{"type":"send","user":"0xafe62f929c84b4a7730ae98a3835a936fd86bde0","destination":"0x0bb81e516c88881c54529e1790470cb5e9f8740d","sourceDex":"","destinationDex":"","token":"USDC","amount":"4149.02","usdcValue":"4149.02","fee":"0.0","nativeTokenFee":"0.0","nonce":1778922441425,"feeToken":""}},{"time":1777879631281,"hash":"0x485e7d9a1159b92b49d8043a9cd7af02020a007fac5cd7fdec2728ecd05d9315","delta":{"type":"send","user":"0x0bb81e516c88881c54529e1790470cb5e9f8740d","destination":"0x68350a86f41bb9ad2a60778c733b4a11001901bc","sourceDex":"","destinationDex":"","token":"USDC","amount":"3591.31","usdcValue":"3591.31","fee":"0.0","nativeTokenFee":"0.0","nonce":1777879532019,"feeToken":""}},{"time":1775472466459,"hash":"0xd9571c3199c7f979dad0043885963b02036d001734cb184b7d1fc78458cbd364","delta":{"type":"send","user":"0x0bb81e516c88881c54529e1790470cb5e9f8740d","destination":"0x68350a86f41bb9ad2a60778c733b4a11001901bc","sourceDex":"","destinationDex":"","token":"USDC","amount":"500.0","usdcValue":"500.0","fee":"0.0","nativeTokenFee":"0.0","nonce":1775472434758,"feeToken":""}},{"time":1773187144531,"hash":"0x05bd140788e9379e07360436d2f3760203c800ed23ec5670a985bf5a47ed1188","delta":{"type":"send","user":"0x0bb81e516c88881c54529e1790470cb5e9f8740d","destination":"0xafe62f929c84b4a7730ae98a3835a936fd86bde0","sourceDex":"","destinationDex":"","token":"USDC","amount":"501.0","usdcValue":"501.0","fee":"0.0","nativeTokenFee":"0.0","nonce":1773187116509,"feeToken":""}},{"time":1772284628174,"hash":"0x5048fea8bccb047651c204362b9afa020722008e57ce2348f411a9fb7bcede60","delta":{"type":"send","user":"0xafe62f929c84b4a7730ae98a3835a936fd86bde0","destination":"0x0bb81e516c88881c54529e1790470cb5e9f8740d","sourceDex":"","destinationDex":"","token":"USDC","amount":"1799.0","usdcValue":"1799.0","fee":"0.0","nativeTokenFee":"0.0","nonce":1772284605026,"feeToken":""}},{"time":1770298146103,"hash":"0x116cd038acd3a4a312e60434ba415702063a001e47d6c375b5357b8b6bd77e8d","delta":{"type":"send","user":"0x0bb81e516c88881c54529e1790470cb5e9f8740d","destination":"0x0bb81e516c88881c54529e1790470cb5e9f8740d","sourceDex":"spot","destinationDex":"","token":"USDC","amount":"1995.8","usdcValue":"1995.8","fee":"0.0","nativeTokenFee":"0.0","nonce":1770298141707,"feeToken":""}},{"time":1770298127313,"hash":"0xac6ee546cd9bac2dade80434ba40810202d4002c689ecaff503790998c9f8618","delta":{"type":"send","user":"0x0bb81e516c88881c54529e1790470cb5e9f8740d","destination":"0x1d14c6221aa536eb86360b611089d881cc5cd4b3","sourceDex":"spot","destinationDex":"spot","token":"USDC","amount":"4.2","usdcValue":"4.2","fee":"0.0","nativeTokenFee":"0.0","nonce":1770298073572,"feeToken":""}},{"time":1770298018983,"hash":"0x23cf3c04f3343b5025480434ba3b350203ba00ea8e375a22c797e757b238153a","delta":{"type":"send","user":"0x1d14c6221aa536eb86360b611089d881cc5cd4b3","destination":"0x0bb81e516c88881c54529e1790470cb5e9f8740d","sourceDex":"spot","destinationDex":"spot","token":"USDC","amount":"2000.0","usdcValue":"2000.0","fee":"0.0","nativeTokenFee":"0.0","nonce":1770298004707,"feeToken":""}},{"time":1766665359823,"hash":"0x9bd00386ea0e630d9d49043211d848020210006c850181df3f98aed9a9023cf8","delta":{"type":"send","user":"0x0bb81e516c88881c54529e1790470cb5e9f8740d","destination":"0x6c30f71877c53ab67f296b5fcd07924131c02d59","sourceDex":"","destinationDex":"","token":"USDC","amount":"3653.39","usdcValue":"3653.39","fee":"0.0","nativeTokenFee":"0.0","nonce":1766665339099,"feeToken":""}},{"time":1766642456431,"hash":"0x091c987f4f780a9362628a4e9714e2811adb929948e7670a0c15867443bf81dc","delta":{"type":"withdraw","usdc":"549.0","nonce":1766642215794000,"fee":"1.0"}},{"time":1765875134059,"hash":"0x07f00505b69322dc096904317cfc9302040a00eb519641aeabb8b0587596fcc6","delta":{"type":"send","user":"0x92eabda862d24d290b5ee28ecc8e29587907804a","destination":"0x0bb81e516c88881c54529e1790470cb5e9f8740d","sourceDex":"","destinationDex":"","token":"USDC","amount":"1000.0","usdcValue":"1000.0","fee":"0.0","nativeTokenFee":"0.0","nonce":1765875119199,"feeToken":""}},{"time":1764113682150,"hash":"0x1f97f0b790b846b1211104303100550201b2009d2bbb6583c3609c0a4fbc209b","delta":{"type":"send","user":"0x0bb81e516c88881c54529e1790470cb5e9f8740d","destination":"0x5c7c1cddf6463aeb5020b472b864c397e826069f","sourceDex":"","destinationDex":"","token":"USDC","amount":"250.0","usdcValue":"250.0","fee":"0.0","nativeTokenFee":"0.0","nonce":1764113673520,"feeToken":""}},{"time":1763221849989,"hash":"0x8ed320e86ca62bc4904c042f894c5202041800ce07a94a96329bcc3b2baa05af","delta":{"type":"send","user":"0x0bb81e516c88881c54529e1790470cb5e9f8740d","destination":"0x5c7c1cddf6463aeb5020b472b864c397e826069f","sourceDex":"","destinationDex":"","token":"USDC","amount":"275.0","usdcValue":"275.0","fee":"0.0","nativeTokenFee":"0.0","nonce":1763221839919,"feeToken":""}},{"time":1762126572469,"hash":"0x2475e0399b239e6025ef042eb90a68020252001f3626bd32c83e8b8c5a27784a","delta":{"type":"send","user":"0x5c7c1cddf6463aeb5020b472b864c397e826069f","destination":"0x0bb81e516c88881c54529e1790470cb5e9f8740d","sourceDex":"","destinationDex":"","token":"USDC","amount":"1500.0","usdcValue":"1500.0","fee":"0.0","nativeTokenFee":"0.0","nonce":1762126558489,"feeToken":""}},{"time":1761986460305,"hash":"0xab23a5499e340431ac9d042e9de9120201d9002f393723034eec509c5d37de1c","delta":{"type":"send","user":"0x0bb81e516c88881c54529e1790470cb5e9f8740d","destination":"0x5c7c1cddf6463aeb5020b472b864c397e826069f","sourceDex":"","destinationDex":"","token":"USDC","amount":"150.0","usdcValue":"150.0","fee":"0.0","nativeTokenFee":"0.0","nonce":1761986448227,"feeToken":""}},{"time":1761576901031,"hash":"0xc243c11775b8e6d3c3bd042e4ecd3e02043500fd10bc05a5660c6c6a34bcc0be","delta":{"type":"send","user":"0x0bb81e516c88881c54529e1790470cb5e9f8740d","destination":"0x8318a9aa3993365cd200f17eab2e71e56250e5be","sourceDex":"","destinationDex":"","token":"USDC","amount":"550.0","usdcValue":"550.0","fee":"0.0","nativeTokenFee":"0.0","nonce":1761576890695,"feeToken":""}},{"time":1760350241623,"hash":"0xb7ecf4f5ebd4032db966042d64225801e5000cdb86d721ff5bb5a048aad7dd18","delta":{"type":"internalTransfer","usdc":"2000.0","user":"0x5c7c1cddf6463aeb5020b472b864c397e826069f","destination":"0x0bb81e516c88881c54529e1790470cb5e9f8740d","fee":"1.0"}}]
+[0m
+Let me get more comprehensive data from the HyperLiquid API - trade history, positions, and user activity.
+[0m$ [0mcurl -s -X POST https://api.hyperliquid.xyz/info \
+  -H "Content-Type: application/json" \
+  -d '{"type":"userNonFundingLedgerUpdates","user":"0x0bb81e516c88881c54529e1790470cb5e9f8740d","limit":100}' 2>&1 | python3 -c "
+import json, sys
+data = json.load(sys.stdin)
+for item in data:
+    print(json.dumps(item, indent=2))
+" 2>&1 | head -500
+{
+  "time": 1786969663674,
+  "hash": "0xf7482b144077e515f8c104425d6d8502041e00f9db7b03e89b10d666ff7bbf00",
+  "delta": {
+    "type": "send",
+    "user": "0x0bb81e516c88881c54529e1790470cb5e9f8740d",
+    "destination": "0xafe62f929c84b4a7730ae98a3835a936fd86bde0",
+    "sourceDex": "spot",
+    "destinationDex": "spot",
+    "token": "USDC",
+    "amount": "1001.0",
+    "usdcValue": "1001.0",
+    "fee": "0.0",
+    "nativeTokenFee": "0.0",
+    "nonce": 1786969639178,
+    "feeToken": ""
+  }
+}
+{
+  "time": 1782119815353,
+  "hash": "0x694f36503bcbb7726ac8043e4a2d48018c004e35d6ced6440d17e1a2facf915d",
+  "delta": {
+    "type": "send",
+    "user": "0x0bb81e516c88881c54529e1790470cb5e9f8740d",
+    "destination": "0xafe62f929c84b4a7730ae98a3835a936fd86bde0",
+    "sourceDex": "spot",
+    "destinationDex": "spot",
+    "token": "USDC",
+    "amount": "1001.0",
+    "usdcValue": "1001.0",
+    "fee": "0.0",
+    "nativeTokenFee": "0.0",
+    "nonce": 1782119805600,
+    "feeToken": ""
+  }
+}
+{
+  "time": 1780738783092,
+  "hash": "0x963a8dcdb1a580cb97b4043d16ff150201d900b34ca89f9d3a03392070a95ab6",
+  "delta": {
+    "type": "send",
+    "user": "0x0bb81e516c88881c54529e1790470cb5e9f8740d",
+    "destination": "0xafe62f929c84b4a7730ae98a3835a936fd86bde0",
+    "sourceDex": "spot",
+    "destinationDex": "spot",
+    "token": "USDC",
+    "amount": "1000.0",
+    "usdcValue": "1000.0",
+    "fee": "0.0",
+    "nativeTokenFee": "0.0",
+    "nonce": 1780738774624,
+    "feeToken": ""
+  }
+}
+{
+  "time": 1780027954270,
+  "hash": "0x819c3e32662b75978315043c799bc80203a20018012e94692564e985252f4f82",
+  "delta": {
+    "type": "send",
+    "user": "0xafe62f929c84b4a7730ae98a3835a936fd86bde0",
+    "destination": "0x0bb81e516c88881c54529e1790470cb5e9f8740d",
+    "sourceDex": "spot",
+    "destinationDex": "spot",
+    "token": "USDC",
+    "amount": "3585.0",
+    "usdcValue": "3585.0",
+    "fee": "0.0",
+    "nativeTokenFee": "0.0",
+    "nonce": 1780027884206,
+    "feeToken": ""
+  }
+}
+{
+  "time": 1778922456433,
+  "hash": "0xdcfdea7c835b9550de77043b848a4f02010a00621e5eb42280c695cf425f6f3b",
+  "delta": {
+    "type": "send",
+    "user": "0xafe62f929c84b4a7730ae98a3835a936fd86bde0",
+    "destination": "0x0bb81e516c88881c54529e1790470cb5e9f8740d",
+    "sourceDex": "",
+    "destinationDex": "",
+    "token": "USDC",
+    "amount": "4149.02",
+    "usdcValue": "4149.02",
+    "fee": "0.0",
+    "nativeTokenFee": "0.0",
+    "nonce": 1778922441425,
+    "feeToken": ""
+  }
+}
+{
+  "time": 1777879631281,
+  "hash": "0x485e7d9a1159b92b49d8043a9cd7af02020a007fac5cd7fdec2728ecd05d9315",
+  "delta": {
+    "type": "send",
+    "user": "0x0bb81e516c88881c54529e1790470cb5e9f8740d",
+    "destination": "0x68350a86f41bb9ad2a60778c733b4a11001901bc",
+    "sourceDex": "",
+    "destinationDex": "",
+    "token": "USDC",
+    "amount": "3591.31",
+    "usdcValue": "3591.31",
+    "fee": "0.0",
+    "nativeTokenFee": "0.0",
+    "nonce": 1777879532019,
+    "feeToken": ""
+  }
+}
+{
+  "time": 1775472466459,
+  "hash": "0xd9571c3199c7f979dad0043885963b02036d001734cb184b7d1fc78458cbd364",
+  "delta": {
+    "type": "send",
+    "user": "0x0bb81e516c88881c54529e1790470cb5e9f8740d",
+    "destination": "0x68350a86f41bb9ad2a60778c733b4a11001901bc",
+    "sourceDex": "",
+    "destinationDex": "",
+    "token": "USDC",
+    "amount": "500.0",
+    "usdcValue": "500.0",
+    "fee": "0.0",
+    "nativeTokenFee": "0.0",
+    "nonce": 1775472434758,
+    "feeToken": ""
+  }
+}
+{
+  "time": 1773187144531,
+  "hash": "0x05bd140788e9379e07360436d2f3760203c800ed23ec5670a985bf5a47ed1188",
+  "delta": {
+    "type": "send",
+    "user": "0x0bb81e516c88881c54529e1790470cb5e9f8740d",
+    "destination": "0xafe62f929c84b4a7730ae98a3835a936fd86bde0",
+    "sourceDex": "",
+    "destinationDex": "",
+    "token": "USDC",
+    "amount": "501.0",
+    "usdcValue": "501.0",
+    "fee": "0.0",
+    "nativeTokenFee": "0.0",
+    "nonce": 1773187116509,
+    "feeToken": ""
+  }
+}
+{
+  "time": 1772284628174,
+  "hash": "0x5048fea8bccb047651c204362b9afa020722008e57ce2348f411a9fb7bcede60",
+  "delta": {
+    "type": "send",
+    "user": "0xafe62f929c84b4a7730ae98a3835a936fd86bde0",
+    "destination": "0x0bb81e516c88881c54529e1790470cb5e9f8740d",
+    "sourceDex": "",
+    "destinationDex": "",
+    "token": "USDC",
+    "amount": "1799.0",
+    "usdcValue": "1799.0",
+    "fee": "0.0",
+    "nativeTokenFee": "0.0",
+    "nonce": 1772284605026,
+    "feeToken": ""
+  }
+}
+{
+  "time": 1770298146103,
+  "hash": "0x116cd038acd3a4a312e60434ba415702063a001e47d6c375b5357b8b6bd77e8d",
+  "delta": {
+    "type": "send",
+    "user": "0x0bb81e516c88881c54529e1790470cb5e9f8740d",
+    "destination": "0x0bb81e516c88881c54529e1790470cb5e9f8740d",
+    "sourceDex": "spot",
+    "destinationDex": "",
+    "token": "USDC",
+    "amount": "1995.8",
+    "usdcValue": "1995.8",
+    "fee": "0.0",
+    "nativeTokenFee": "0.0",
+    "nonce": 1770298141707,
+    "feeToken": ""
+  }
+}
+{
+  "time": 1770298127313,
+  "hash": "0xac6ee546cd9bac2dade80434ba40810202d4002c689ecaff503790998c9f8618",
+  "delta": {
+    "type": "send",
+    "user": "0x0bb81e516c88881c54529e1790470cb5e9f8740d",
+    "destination": "0x1d14c6221aa536eb86360b611089d881cc5cd4b3",
+    "sourceDex": "spot",
+    "destinationDex": "spot",
+    "token": "USDC",
+    "amount": "4.2",
+    "usdcValue": "4.2",
+    "fee": "0.0",
+    "nativeTokenFee": "0.0",
+    "nonce": 1770298073572,
+    "feeToken": ""
+  }
+}
+{
+  "time": 1770298018983,
+  "hash": "0x23cf3c04f3343b5025480434ba3b350203ba00ea8e375a22c797e757b238153a",
+  "delta": {
+    "type": "send",
+    "user": "0x1d14c6221aa536eb86360b611089d881cc5cd4b3",
+    "destination": "0x0bb81e516c88881c54529e1790470cb5e9f8740d",
+    "sourceDex": "spot",
+    "destinationDex": "spot",
+    "token": "USDC",
+    "amount": "2000.0",
+    "usdcValue": "2000.0",
+    "fee": "0.0",
+    "nativeTokenFee": "0.0",
+    "nonce": 1770298004707,
+    "feeToken": ""
+  }
+}
+{
+  "time": 1766665359823,
+  "hash": "0x9bd00386ea0e630d9d49043211d848020210006c850181df3f98aed9a9023cf8",
+  "delta": {
+    "type": "send",
+    "user": "0x0bb81e516c88881c54529e1790470cb5e9f8740d",
+    "destination": "0x6c30f71877c53ab67f296b5fcd07924131c02d59",
+    "sourceDex": "",
+    "destinationDex": "",
+    "token": "USDC",
+    "amount": "3653.39",
+    "usdcValue": "3653.39",
+    "fee": "0.0",
+    "nativeTokenFee": "0.0",
+    "nonce": 1766665339099,
+    "feeToken": ""
+  }
+}
+{
+  "time": 1766642456431,
+  "hash": "0x091c987f4f780a9362628a4e9714e2811adb929948e7670a0c15867443bf81dc",
+  "delta": {
+    "type": "withdraw",
+    "usdc": "549.0",
+    "nonce": 1766642215794000,
+    "fee": "1.0"
+  }
+}
+{
+  "time": 1765875134059,
+  "hash": "0x07f00505b69322dc096904317cfc9302040a00eb519641aeabb8b0587596fcc6",
+  "delta": {
+    "type": "send",
+    "user": "0x92eabda862d24d290b5ee28ecc8e29587907804a",
+    "destination": "0x0bb81e516c88881c54529e1790470cb5e9f8740d",
+    "sourceDex": "",
+    "destinationDex": "",
+    "token": "USDC",
+    "amount": "1000.0",
+    "usdcValue": "1000.0",
+    "fee": "0.0",
+    "nativeTokenFee": "0.0",
+    "nonce": 1765875119199,
+    "feeToken": ""
+  }
+}
+{
+  "time": 1764113682150,
+  "hash": "0x1f97f0b790b846b1211104303100550201b2009d2bbb6583c3609c0a4fbc209b",
+  "delta": {
+    "type": "send",
+    "user": "0x0bb81e516c88881c54529e1790470cb5e9f8740d",
+    "destination": "0x5c7c1cddf6463aeb5020b472b864c397e826069f",
+    "sourceDex": "",
+    "destinationDex": "",
+    "token": "USDC",
+    "amount": "250.0",
+    "usdcValue": "250.0",
+    "fee": "0.0",
+    "nativeTokenFee": "0.0",
+    "nonce": 1764113673520,
+    "feeToken": ""
+  }
+}
+{
+  "time": 1763221849989,
+  "hash": "0x8ed320e86ca62bc4904c042f894c5202041800ce07a94a96329bcc3b2baa05af",
+  "delta": {
+    "type": "send",
+    "user": "0x0bb81e516c88881c54529e1790470cb5e9f8740d",
+    "destination": "0x5c7c1cddf6463aeb5020b472b864c397e826069f",
+    "sourceDex": "",
+    "destinationDex": "",
+    "token": "USDC",
+    "amount": "275.0",
+    "usdcValue": "275.0",
+    "fee": "0.0",
+    "nativeTokenFee": "0.0",
+    "nonce": 1763221839919,
+    "feeToken": ""
+  }
+}
+{
+  "time": 1762126572469,
+  "hash": "0x2475e0399b239e6025ef042eb90a68020252001f3626bd32c83e8b8c5a27784a",
+  "delta": {
+    "type": "send",
+    "user": "0x5c7c1cddf6463aeb5020b472b864c397e826069f",
+    "destination": "0x0bb81e516c88881c54529e1790470cb5e9f8740d",
+    "sourceDex": "",
+    "destinationDex": "",
+    "token": "USDC",
+    "amount": "1500.0",
+    "usdcValue": "1500.0",
+    "fee": "0.0",
+    "nativeTokenFee": "0.0",
+    "nonce": 1762126558489,
+    "feeToken": ""
+  }
+}
+{
+  "time": 1761986460305,
+  "hash": "0xab23a5499e340431ac9d042e9de9120201d9002f393723034eec509c5d37de1c",
+  "delta": {
+    "type": "send",
+    "user": "0x0bb81e516c88881c54529e1790470cb5e9f8740d",
+    "destination": "0x5c7c1cddf6463aeb5020b472b864c397e826069f",
+    "sourceDex": "",
+    "destinationDex": "",
+    "token": "USDC",
+    "amount": "150.0",
+    "usdcValue": "150.0",
+    "fee": "0.0",
+    "nativeTokenFee": "0.0",
+    "nonce": 1761986448227,
+    "feeToken": ""
+  }
+}
+{
+  "time": 1761576901031,
+  "hash": "0xc243c11775b8e6d3c3bd042e4ecd3e02043500fd10bc05a5660c6c6a34bcc0be",
+  "delta": {
+    "type": "send",
+    "user": "0x0bb81e516c88881c54529e1790470cb5e9f8740d",
+    "destination": "0x8318a9aa3993365cd200f17eab2e71e56250e5be",
+    "sourceDex": "",
+    "destinationDex": "",
+    "token": "USDC",
+    "amount": "550.0",
+    "usdcValue": "550.0",
+    "fee": "0.0",
+    "nativeTokenFee": "0.0",
+    "nonce": 1761576890695,
+    "feeToken": ""
+  }
+}
+{
+  "time": 1760350241623,
+  "hash": "0xb7ecf4f5ebd4032db966042d64225801e5000cdb86d721ff5bb5a048aad7dd18",
+  "delta": {
+    "type": "internalTransfer",
+    "usdc": "2000.0",
+    "user": "0x5c7c1cddf6463aeb5020b472b864c397e826069f",
+    "destination": "0x0bb81e516c88881c54529e1790470cb5e9f8740d",
+    "fee": "1.0"
+  }
+}
+[0m
+The ledger only shows USDC transfers. Let me query more API endpoints for positions, fills, and open orders.
+[0m$ [0mcurl -s -X POST https://api.hyperliquid.xyz/info \
+  -H "Content-Type: application/json" \
+  -d '{"type":"clearinghouseState","user":"0x0bb81e516c88881c54529e1790470cb5e9f8740d"}' 2>&1 | python3 -c "
+import json, sys
+data = json.load(sys.stdin)
+print(json.dumps(data, indent=2))
+" 2>&1
+{
+  "marginSummary": {
+    "accountValue": "4236.378939",
+    "totalNtlPos": "1272.6979",
+    "totalRawUsd": "2963.681039",
+    "totalMarginUsed": "127.26979"
+  },
+  "crossMarginSummary": {
+    "accountValue": "4236.378939",
+    "totalNtlPos": "1272.6979",
+    "totalRawUsd": "2963.681039",
+    "totalMarginUsed": "127.26979"
+  },
+  "crossMaintenanceMarginUsed": "63.634895",
+  "withdrawable": "56.914725",
+  "assetPositions": [
+    {
+      "type": "oneWay",
+      "position": {
+        "coin": "HYPE",
+        "szi": "13.9",
+        "leverage": {
+          "type": "cross",
+          "value": 10
+        },
+        "entryPx": "92.1758",
+        "positionValue": "1272.6979",
+        "unrealizedPnl": "-8.54628",
+        "returnOnEquity": "-0.0667029762",
+        "liquidationPx": null,
+        "marginUsed": "127.26979",
+        "maxLeverage": 10,
+        "cumFunding": {
+          "allTime": "0.388728",
+          "sinceOpen": "0.373735",
+          "sinceChange": "0.157949"
+        }
+      }
+    }
+  ],
+  "time": 1789906520694
+}
+[0m
+Good, there's active position data. Let me get the fill history and order history to understand the trading patterns.
+[0m$ [0mcurl -s -X POST https://api.hyperliquid.xyz/info \
+  -H "Content-Type: application/json" \
+  -d '{"type":"userFills","user":"0x0bb81e516c88881c54529e1790470cb5e9f8740d","limit":100}' 2>&1 | python3 -c "
+import json, sys
+data = json.load(sys.stdin)
+print(f'Total fills: {len(data)}')
+for item in data:
+    print(json.dumps(item, indent=2))
+" 2>&1
+...output truncated...
+
+Full output saved to: /home/paf/.local/share/kilo/tool-output/tool_0bebe1f1e001WjrIO2a58UQS8v
+
+{
+  "coin": "HYPE",
+  "px": "62.277",
+  "sz": "3.05",
+  "side": "A",
+  "time": 1779802655020,
+  "startPosition": "3.05",
+  "dir": "Close Long",
+  "closedPnl": "1.58295",
+  "hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+  "oid": 443045135817,
+  "crossed": false,
+  "fee": "0.027352",
+  "tid": 384629349644442,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "61.758",
+  "sz": "3.05",
+  "side": "B",
+  "time": 1779799689418,
+  "startPosition": "0.0",
+  "dir": "Open Long",
+  "closedPnl": "0.0",
+  "hash": "0xc34c97c192c82d6ec4c6043c4738670201a100a72dcb4c406715431451cc0759",
+  "oid": 443044159043,
+  "crossed": true,
+  "fee": "0.081372",
+  "tid": 1030140140754621,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "61.81",
+  "sz": "4.59",
+  "side": "A",
+  "time": 1779799673023,
+  "startPosition": "4.59",
+  "dir": "Close Long",
+  "closedPnl": "2.362473",
+  "hash": "0x988c2a3d89b199de9a05043c47377602025d002324b4b8b03c54d59048b573c9",
+  "oid": 443002566224,
+  "crossed": false,
+  "fee": "0.040853",
+  "tid": 652902366324459,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "60.89",
+  "sz": "1.53",
+  "side": "B",
+  "time": 1779797283859,
+  "startPosition": "3.06",
+  "dir": "Open Long",
+  "closedPnl": "0.0",
+  "hash": "0x09dd6f232dc880660b57043c46afb50209cb0008c8cb9f38ada61a75eccc5a50",
+  "oid": 442884546928,
+  "crossed": false,
+  "fee": "0.013415",
+  "tid": 1086146929851591,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "61.498",
+  "sz": "3.06",
+  "side": "B",
+  "time": 1779791281750,
+  "startPosition": "0.0",
+  "dir": "Open Long",
+  "closedPnl": "0.0",
+  "hash": "0x3f8ec2734a4a3fe14108043c455be50215e30058e54d5eb3e3576dc6094e19cb",
+  "oid": 442884495434,
+  "crossed": true,
+  "fee": "0.081295",
+  "tid": 1110896693305995,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "61.604",
+  "sz": "3.08",
+  "side": "A",
+  "time": 1779791262411,
+  "startPosition": "3.08",
+  "dir": "Close Long",
+  "closedPnl": "1.58004",
+  "hash": "0x50962557f45b1c7e520f043c455acc020569003d8f5e3b50f45ed0aab35ef668",
+  "oid": 442875833374,
+  "crossed": false,
+  "fee": "0.027322",
+  "tid": 743814680749572,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "61.091",
+  "sz": "3.08",
+  "side": "B",
+  "time": 1779790900434,
+  "startPosition": "0.0",
+  "dir": "Open Long",
+  "closedPnl": "0.0",
+  "hash": "0xf8721237bf706da4f9eb043c45465f0207cc001d5a738c779c3abd8a7e74478f",
+  "oid": 442874791667,
+  "crossed": true,
+  "fee": "0.081285",
+  "tid": 478583486439051,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "60.697",
+  "sz": "3.12",
+  "side": "A",
+  "time": 1779790871198,
+  "startPosition": "3.12",
+  "dir": "Close Long",
+  "closedPnl": "1.57872",
+  "hash": "0x4b943f8d39c9d7c64d0d043c4544b802023c0072d4ccf698ef5ceadff8cdb1b0",
+  "oid": 442865974390,
+  "crossed": false,
+  "fee": "0.027269",
+  "tid": 17512381718266,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "60.191",
+  "sz": "3.12",
+  "side": "B",
+  "time": 1779790440614,
+  "startPosition": "0.0",
+  "dir": "Open Long",
+  "closedPnl": "0.0",
+  "hash": "0xd53e6cae0e906fa3d6b8043c452c5a0202670093a9938e7579071800cd94498e",
+  "oid": 442865421811,
+  "crossed": true,
+  "fee": "0.081127",
+  "tid": 575555951459423,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "60.186",
+  "sz": "4.71",
+  "side": "A",
+  "time": 1779790413689,
+  "startPosition": "4.71",
+  "dir": "Close Long",
+  "closedPnl": "2.363007",
+  "hash": "0x6a61c462a876392a6bdb043c452ad001e700dc48437957fc0e2a6fb5677a1315",
+  "oid": 442830830699,
+  "crossed": false,
+  "fee": "0.04082",
+  "tid": 77007754882826,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "59.281",
+  "sz": "1.57",
+  "side": "B",
+  "time": 1779788085906,
+  "startPosition": "3.14",
+  "dir": "Open Long",
+  "closedPnl": "0.0",
+  "hash": "0xa1399f9613828358a2b3043c44a5ee0201aa007bae85a22a45024ae8d2865d43",
+  "oid": 442776223003,
+  "crossed": false,
+  "fee": "0.013402",
+  "tid": 1122428516081926,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "59.886",
+  "sz": "3.14",
+  "side": "B",
+  "time": 1779784640144,
+  "startPosition": "0.0",
+  "dir": "Open Long",
+  "closedPnl": "0.0",
+  "hash": "0xfcdc72e33fd534a5fe56043c43e28002015d00c8dad85378a0a51e35fed90e90",
+  "oid": 442776215116,
+  "crossed": true,
+  "fee": "0.081234",
+  "tid": 243992318785553,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "60.54",
+  "sz": "34.69",
+  "side": "A",
+  "time": 1779776717177,
+  "startPosition": "34.69",
+  "dir": "Close Long",
+  "closedPnl": "17.601706",
+  "hash": "0x1caa547e767c30cb1e24043c421feb0000e56c64117f4f9dc072ffd135700ab5",
+  "oid": 442493576356,
+  "crossed": false,
+  "fee": "0.302419",
+  "tid": 21266108863878,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "58.61",
+  "sz": "16.02",
+  "side": "B",
+  "time": 1779764737833,
+  "startPosition": "18.67",
+  "dir": "Open Long",
+  "closedPnl": "0.0",
+  "hash": "0xb86bfdc537707b07b9e5043c3f753b0000a715aad27399d95c34a917f67454f2",
+  "oid": 441346313843,
+  "crossed": false,
+  "fee": "0.135206",
+  "tid": 262428404848422,
+  "liquidation": {
+    "liquidatedUser": "0xcd9d3b2d9d36b19881bb436b717ca75e7c68f539",
+    "markPx": "58.642",
+    "method": "market"
+  },
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "59.89",
+  "sz": "8.54",
+  "side": "B",
+  "time": 1779756485353,
+  "startPosition": "10.13",
+  "dir": "Open Long",
+  "closedPnl": "0.0",
+  "hash": "0xaf04f98afeb9bf90b07e043c3d9fc4020427007099bcde6252cda4ddbdbd997b",
+  "oid": 441346279504,
+  "crossed": false,
+  "fee": "0.07365",
+  "tid": 244724115260897,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "61.16",
+  "sz": "2.4",
+  "side": "B",
+  "time": 1779741516707,
+  "startPosition": "7.73",
+  "dir": "Open Long",
+  "closedPnl": "0.0",
+  "hash": "0xc7b9cedaf7af3c4cc933043c3a4aed010100e6c092a25b1e6b827a2db6a31637",
+  "oid": 441346248948,
+  "crossed": false,
+  "fee": "0.021136",
+  "tid": 938980698927874,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "61.8",
+  "sz": "2.4",
+  "side": "B",
+  "time": 1779729026789,
+  "startPosition": "5.33",
+  "dir": "Open Long",
+  "closedPnl": "0.0",
+  "hash": "0x71e8458aa2c00bb77362043c37854802087c00703dc32a8915b0f0dd61c3e5a2",
+  "oid": 441346216437,
+  "crossed": false,
+  "fee": "0.021358",
+  "tid": 35845254821981,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "62.43",
+  "sz": "1.33",
+  "side": "B",
+  "time": 1779714030178,
+  "startPosition": "4.0",
+  "dir": "Open Long",
+  "closedPnl": "0.0",
+  "hash": "0x950d4c3d244608199687043c34311c0202300022bf4926eb38d5f78fe349e204",
+  "oid": 441346186075,
+  "crossed": false,
+  "fee": "0.011956",
+  "tid": 533477631504058,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "63.07",
+  "sz": "1.33",
+  "side": "B",
+  "time": 1779705130205,
+  "startPosition": "2.67",
+  "dir": "Open Long",
+  "closedPnl": "0.0",
+  "hash": "0x894c0ef9eab639038ac5043c32361e0203a500df85b957d52d14ba4ca9ba12ee",
+  "oid": 441346148006,
+  "crossed": false,
+  "fee": "0.012079",
+  "tid": 29761976847579,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "63.716",
+  "sz": "2.67",
+  "side": "B",
+  "time": 1779697654737,
+  "startPosition": "0.0",
+  "dir": "Open Long",
+  "closedPnl": "0.0",
+  "hash": "0x1fdf6c1281a018372159043c308c7602023400f81ca33709c3a8176540a3f221",
+  "oid": 441346074357,
+  "crossed": true,
+  "fee": "0.073492",
+  "tid": 1111755701943047,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "63.64",
+  "sz": "2.7",
+  "side": "A",
+  "time": 1779697615579,
+  "startPosition": "2.7",
+  "dir": "Close Long",
+  "closedPnl": "1.431",
+  "hash": "0x2ab50ecccfbd1b0b2c2e043c308a3a01e90026b26ab039ddce7dba1f8eb0f4f5",
+  "oid": 441312084403,
+  "crossed": false,
+  "fee": "0.024743",
+  "tid": 826498660780827,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "63.11",
+  "sz": "2.7",
+  "side": "B",
+  "time": 1779695467964,
+  "startPosition": "0.0",
+  "dir": "Open Long",
+  "closedPnl": "0.0",
+  "hash": "0x0e5ce05c6a18f2c40fd6043c300fd40201fd0042051c1196b2258baf291cccae",
+  "oid": 441311277666,
+  "crossed": true,
+  "fee": "0.073611",
+  "tid": 438547461413199,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "63.09",
+  "sz": "5.4",
+  "side": "A",
+  "time": 1779695446128,
+  "startPosition": "5.4",
+  "dir": "Close Long",
+  "closedPnl": "2.862",
+  "hash": "0xa99b97087b488fb5ab15043c300e940203c800ee164bae874d64425b3a4c69a0",
+  "oid": 441194284625,
+  "crossed": false,
+  "fee": "0.049058",
+  "tid": 839043525882050,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "61.78",
+  "sz": "1.35",
+  "side": "B",
+  "time": 1779687986327,
+  "startPosition": "4.05",
+  "dir": "Open Long",
+  "closedPnl": "0.0",
+  "hash": "0x7f4e10df5fc8958480c7043c2e66c601d60028c4facbb4562316bc321ecc6f6f",
+  "oid": 441165053280,
+  "crossed": false,
+  "fee": "0.01201",
+  "tid": 825223889681999,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "62.41",
+  "sz": "1.35",
+  "side": "B",
+  "time": 1779686760393,
+  "startPosition": "2.7",
+  "dir": "Open Long",
+  "closedPnl": "0.0",
+  "hash": "0x9611ead1b59e2cf3978b043c2e21130202fa00b750914bc539da9624749206de",
+  "oid": 441165042567,
+  "crossed": false,
+  "fee": "0.012132",
+  "tid": 1095174616412356,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "63.025",
+  "sz": "2.7",
+  "side": "B",
+  "time": 1779686141620,
+  "startPosition": "0.0",
+  "dir": "Open Long",
+  "closedPnl": "0.0",
+  "hash": "0x731367a2759d4a53748d043c2dfddb02011200881090692516dc12f53491243e",
+  "oid": 441165021592,
+  "crossed": true,
+  "fee": "0.073512",
+  "tid": 424219506361866,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "62.94",
+  "sz": "2.73",
+  "side": "A",
+  "time": 1779686090746,
+  "startPosition": "2.73",
+  "dir": "Close Long",
+  "closedPnl": "1.43871",
+  "hash": "0xc1c951138035bb08c343043c2dfaef01e80068f91b38d9da6591fc663f3994f3",
+  "oid": 441137635646,
+  "crossed": false,
+  "fee": "0.024742",
+  "tid": 765208650123995,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "62.413",
+  "sz": "2.73",
+  "side": "B",
+  "time": 1779684421297,
+  "startPosition": "0.0",
+  "dir": "Open Long",
+  "closedPnl": "0.0",
+  "hash": "0xfe74d60ff5727c47ffee043c2d9c0201bd00edf590759b1aa23d8162b4765632",
+  "oid": 441136586388,
+  "crossed": true,
+  "fee": "0.073607",
+  "tid": 879565780035608,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "62.49",
+  "sz": "10.21",
+  "side": "A",
+  "time": 1779684395022,
+  "startPosition": "10.21",
+  "dir": "Close Long",
+  "closedPnl": "5.357187",
+  "hash": "0x4c2be6e8ed27dd944da5043c2d9a7c02010e00ce882afc66eff4923bac2bb77e",
+  "oid": 440984009484,
+  "crossed": false,
+  "fee": "0.091875",
+  "tid": 656029400788452,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "60.74",
+  "sz": "2.42",
+  "side": "B",
+  "time": 1779674456931,
+  "startPosition": "7.79",
+  "dir": "Open Long",
+  "closedPnl": "0.0",
+  "hash": "0xf485ae8a465f0de7f5ff043c2b64b4010100c66fe1522cba984e59dd0552e7d2",
+  "oid": 440826519660,
+  "crossed": false,
+  "fee": "0.021166",
+  "tid": 765040697878799,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "61.37",
+  "sz": "2.42",
+  "side": "B",
+  "time": 1779674307376,
+  "startPosition": "5.37",
+  "dir": "Open Long",
+  "closedPnl": "0.0",
+  "hash": "0xa82b8f3a072c5ed4a9a5043c2b5c330202db001fa22f7da64bf43a8cc62038bf",
+  "oid": 440826506487,
+  "crossed": false,
+  "fee": "0.021386",
+  "tid": 468141149807229,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "62.0",
+  "sz": "1.34",
+  "side": "B",
+  "time": 1779668868963,
+  "startPosition": "4.03",
+  "dir": "Open Long",
+  "closedPnl": "0.0",
+  "hash": "0x7542cd320355dfe776bc043c2a264302024600179e58feb9190b7884c259b9d2",
+  "oid": 440826493132,
+  "crossed": false,
+  "fee": "0.011963",
+  "tid": 816833299659479,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "62.64",
+  "sz": "1.34",
+  "side": "B",
+  "time": 1779667358543,
+  "startPosition": "2.69",
+  "dir": "Open Long",
+  "closedPnl": "0.0",
+  "hash": "0x1ce1e8f2ac00c10d1e5b043c29d067020c5500d84703dfdfc0aa94456b049af7",
+  "oid": 440826471935,
+  "crossed": false,
+  "fee": "0.012087",
+  "tid": 865255072063840,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "63.25",
+  "sz": "2.69",
+  "side": "B",
+  "time": 1779665710795,
+  "startPosition": "0.0",
+  "dir": "Open Long",
+  "closedPnl": "0.0",
+  "hash": "0xdb1d0501377c6e86dc96043c29728b02017000e6d27f8d587ee5b053f6704871",
+  "oid": 440826442577,
+  "crossed": true,
+  "fee": "0.073501",
+  "tid": 47530397909815,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "63.68",
+  "sz": "2.69",
+  "side": "A",
+  "time": 1779665687823,
+  "startPosition": "2.69",
+  "dir": "Close Long",
+  "closedPnl": "1.42839",
+  "hash": "0x723c162d6198187c73b5043c29713902087c0012fc9b374e1604c180209bf267",
+  "oid": 440814538767,
+  "crossed": false,
+  "fee": "0.024667",
+  "tid": 1068344356727384,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "63.149",
+  "sz": "2.69",
+  "side": "B",
+  "time": 1779665026440,
+  "startPosition": "0.0",
+  "dir": "Open Long",
+  "closedPnl": "0.0",
+  "hash": "0x2865897ec96322b729df043c294bb302011f006464664189cc2e34d18866fca1",
+  "oid": 440814081758,
+  "crossed": true,
+  "fee": "0.073384",
+  "tid": 287438277442537,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "63.21",
+  "sz": "10.1",
+  "side": "A",
+  "time": 1779664996413,
+  "startPosition": "10.1",
+  "dir": "Close Long",
+  "closedPnl": "5.2823",
+  "hash": "0xf14d15b718e7029ef2c6043c2949f801be002d9cb3ea21719515c109d7eadc89",
+  "oid": 440718392994,
+  "crossed": false,
+  "fee": "0.091932",
+  "tid": 719893812739856,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "61.44",
+  "sz": "2.39",
+  "side": "B",
+  "time": 1779659929005,
+  "startPosition": "7.71",
+  "dir": "Open Long",
+  "closedPnl": "0.0",
+  "hash": "0x12c66f6ff67220e51440043c282ade010100875591753fb7b68f1ac2b575facf",
+  "oid": 440557851707,
+  "crossed": false,
+  "fee": "0.021145",
+  "tid": 994615351966245,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "62.08",
+  "sz": "2.39",
+  "side": "B",
+  "time": 1779656094338,
+  "startPosition": "5.32",
+  "dir": "Open Long",
+  "closedPnl": "0.0",
+  "hash": "0xc00a43ebf970a655c184043c27507f0201cc00d19473c52763d2ef3eb8748040",
+  "oid": 440557829194,
+  "crossed": false,
+  "fee": "0.021365",
+  "tid": 23098905280815,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "62.72",
+  "sz": "1.33",
+  "side": "B",
+  "time": 1779652997177,
+  "startPosition": "3.99",
+  "dir": "Open Long",
+  "closedPnl": "0.0",
+  "hash": "0xc765046e20264d1cc8de043c269fbc02017e0053bb296bee6b2dafc0df2a2707",
+  "oid": 440557787707,
+  "crossed": false,
+  "fee": "0.012012",
+  "tid": 771694812906744,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "63.36",
+  "sz": "1.33",
+  "side": "B",
+  "time": 1779652006496,
+  "startPosition": "2.66",
+  "dir": "Open Long",
+  "closedPnl": "0.0",
+  "hash": "0x311a7b94196a12613294043c26671402037a0079b46d3133d4e326e6d86dec4b",
+  "oid": 440557735884,
+  "crossed": false,
+  "fee": "0.012134",
+  "tid": 419858853844995,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "64.0",
+  "sz": "2.66",
+  "side": "B",
+  "time": 1779649414667,
+  "startPosition": "0.0",
+  "dir": "Open Long",
+  "closedPnl": "0.0",
+  "hash": "0xfdd1b4fa49b629b1ff4b043c25d3df019000ccdfe4b94884a19a604d08ba039c",
+  "oid": 440557700422,
+  "crossed": true,
+  "fee": "0.073543",
+  "tid": 316050870316483,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "64.43",
+  "sz": "2.66",
+  "side": "A",
+  "time": 1779649386204,
+  "startPosition": "2.66",
+  "dir": "Close Long",
+  "closedPnl": "1.4231",
+  "hash": "0x36e66a4cabceb57e3860043c25d23e02083e003246c1d450daaf159f6ac28f68",
+  "oid": 440555181933,
+  "crossed": false,
+  "fee": "0.024679",
+  "tid": 613922832580650,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "63.895",
+  "sz": "2.66",
+  "side": "B",
+  "time": 1779649224403,
+  "startPosition": "0.0",
+  "dir": "Open Long",
+  "closedPnl": "0.0",
+  "hash": "0xbbd70c3f008f1e14bd50043c25c8f702020d00249b823ce65f9fb791bf82f7ff",
+  "oid": 440554058325,
+  "crossed": true,
+  "fee": "0.073423",
+  "tid": 819604580280963,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "63.9",
+  "sz": "4.02",
+  "side": "A",
+  "time": 1779649193034,
+  "startPosition": "4.02",
+  "dir": "Close Long",
+  "closedPnl": "2.15472",
+  "hash": "0x009d7ca7c2ae64f60217043c25c73702013f008d5da183c8a46627fa81a23ee0",
+  "oid": 440468488428,
+  "crossed": false,
+  "fee": "0.03699",
+  "tid": 225083586434825,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "62.95",
+  "sz": "1.34",
+  "side": "B",
+  "time": 1779643303217,
+  "startPosition": "2.68",
+  "dir": "Open Long",
+  "closedPnl": "0.0",
+  "hash": "0x915fd4eb52ea67cc92d9043c24776e02039000d0eded869e3528803e11ee41b7",
+  "oid": 440355569715,
+  "crossed": false,
+  "fee": "0.012146",
+  "tid": 1017721422769097,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "63.571",
+  "sz": "2.68",
+  "side": "B",
+  "time": 1779636294755,
+  "startPosition": "0.0",
+  "dir": "Open Long",
+  "closedPnl": "0.0",
+  "hash": "0x5376f76341a42ec554f0043c22e8520201e80048dca74d97f73fa2b600a808af",
+  "oid": 440355512420,
+  "crossed": true,
+  "fee": "0.073599",
+  "tid": 490898761577424,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "63.51",
+  "sz": "7.71",
+  "side": "A",
+  "time": 1779636271540,
+  "startPosition": "7.71",
+  "dir": "Close Long",
+  "closedPnl": "4.043124",
+  "hash": "0xcc8abbdfdf86c73cce04043c22e6fa02022e00c57a89e60e705367329e8aa127",
+  "oid": 440281890180,
+  "crossed": false,
+  "fee": "0.070511",
+  "tid": 354472851048922,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "61.99",
+  "sz": "2.39",
+  "side": "B",
+  "time": 1779632232888,
+  "startPosition": "5.32",
+  "dir": "Open Long",
+  "closedPnl": "0.0",
+  "hash": "0x4035721f375dee9a41af043c220133020cd60004d2510d6ce3fe1d71f651c884",
+  "oid": 440198826156,
+  "crossed": false,
+  "fee": "0.021334",
+  "tid": 639206299113604,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "62.63",
+  "sz": "1.33",
+  "side": "B",
+  "time": 1779632119478,
+  "startPosition": "3.99",
+  "dir": "Open Long",
+  "closedPnl": "0.0",
+  "hash": "0x52a457d412179b65541e043c21face02041b00b9ad1aba37f66d0326d11b754f",
+  "oid": 440198816608,
+  "crossed": false,
+  "fee": "0.011994",
+  "tid": 417415133569404,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "63.27",
+  "sz": "1.33",
+  "side": "B",
+  "time": 1779630931933,
+  "startPosition": "2.66",
+  "dir": "Open Long",
+  "closedPnl": "0.0",
+  "hash": "0xc3aac300b6fd9157c524043c21b78202031500e651f0b02967736e5375f16b42",
+  "oid": 440198807170,
+  "crossed": false,
+  "fee": "0.012117",
+  "tid": 994237191735176,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "63.916",
+  "sz": "2.66",
+  "side": "B",
+  "time": 1779627033411,
+  "startPosition": "0.0",
+  "dir": "Open Long",
+  "closedPnl": "0.0",
+  "hash": "0x6e15e5d84de1a0ca6f8f043c20d9590201e900bde8e4bf9c11de912b0ce57ab5",
+  "oid": 440198795830,
+  "crossed": true,
+  "fee": "0.073447",
+  "tid": 42903424540528,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "63.88",
+  "sz": "5.33",
+  "side": "A",
+  "time": 1779627011945,
+  "startPosition": "5.33",
+  "dir": "Close Long",
+  "closedPnl": "2.857946",
+  "hash": "0x42ea0b887dbd30df4463043c20d81f019000236e18b04fb1e6b2b6db3cb10ac9",
+  "oid": 440088305706,
+  "crossed": false,
+  "fee": "0.049029",
+  "tid": 59827538152410,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "62.55",
+  "sz": "1.33",
+  "side": "B",
+  "time": 1779619301309,
+  "startPosition": "4.0",
+  "dir": "Open Long",
+  "closedPnl": "0.0",
+  "hash": "0x8cf3b85a7b3664598e6d043c1f211f02092800401639832b30bc63ad3a3a3e44",
+  "oid": 440031499042,
+  "crossed": false,
+  "fee": "0.011979",
+  "tid": 1005019076965470,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "63.19",
+  "sz": "1.33",
+  "side": "B",
+  "time": 1779617053152,
+  "startPosition": "2.67",
+  "dir": "Open Long",
+  "closedPnl": "0.0",
+  "hash": "0x029cf4016bad83740416043c1ea1e20201b800e706a0a246a6659f542aa15d5e",
+  "oid": 440031475257,
+  "crossed": false,
+  "fee": "0.012102",
+  "tid": 532989100509376,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "63.816",
+  "sz": "2.67",
+  "side": "B",
+  "time": 1779615672943,
+  "startPosition": "0.0",
+  "dir": "Open Long",
+  "closedPnl": "0.0",
+  "hash": "0x7b4f144a6a2bf0797cc8043c1e53230201db0030052f0f4b1f17bf9d292fca64",
+  "oid": 440031418833,
+  "crossed": true,
+  "fee": "0.073607",
+  "tid": 340115498766682,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "63.88",
+  "sz": "2.69",
+  "side": "A",
+  "time": 1779615656499,
+  "startPosition": "2.69",
+  "dir": "Close Long",
+  "closedPnl": "1.43108",
+  "hash": "0xb54828bc715cb947b6c1043c1e523100008340a20c5fd8195910d40f30509332",
+  "oid": 440001083675,
+  "crossed": false,
+  "fee": "0.024744",
+  "tid": 680335553506578,
+  "liquidation": {
+    "liquidatedUser": "0xe50681d35ba91c5b13412ad2ea5f34b94141b122",
+    "markPx": "63.867",
+    "method": "market"
+  },
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "63.348",
+  "sz": "2.69",
+  "side": "B",
+  "time": 1779613444621,
+  "startPosition": "0.0",
+  "dir": "Open Long",
+  "closedPnl": "0.0",
+  "hash": "0xc78abb6a5d534217c904043c1dd403020426004ff85660e96b5366bd1c571c02",
+  "oid": 440000458349,
+  "crossed": true,
+  "fee": "0.073615",
+  "tid": 372992589064561,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "63.2",
+  "sz": "2.71",
+  "side": "A",
+  "time": 1779613417354,
+  "startPosition": "2.71",
+  "dir": "Close Long",
+  "closedPnl": "1.43359",
+  "hash": "0x6b6b4e3735fb1f4a6ce5043c1dd27402024b001cd0fe3e1c0f33f989f4fef935",
+  "oid": 439978434683,
+  "crossed": false,
+  "fee": "0.024663",
+  "tid": 110237353822016,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "62.671",
+  "sz": "2.71",
+  "side": "B",
+  "time": 1779611718923,
+  "startPosition": "0.0",
+  "dir": "Open Long",
+  "closedPnl": "0.0",
+  "hash": "0xf251e95bc23ec5b9f3cb043c1d720d0201f200415d31e48c961a94ae81329fa4",
+  "oid": 439977545564,
+  "crossed": true,
+  "fee": "0.07337",
+  "tid": 825611611767418,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "62.56",
+  "sz": "2.74",
+  "side": "A",
+  "time": 1779611684013,
+  "startPosition": "2.74",
+  "dir": "Close Long",
+  "closedPnl": "1.42754",
+  "hash": "0x9898357576e8cfa29a11043c1d700f0202eb005b11ebee743c60e0c835eca98d",
+  "oid": 439961196607,
+  "crossed": false,
+  "fee": "0.024683",
+  "tid": 189385062213680,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "62.039",
+  "sz": "1.09",
+  "side": "B",
+  "time": 1779610470955,
+  "startPosition": "1.65",
+  "dir": "Open Long",
+  "closedPnl": "0.0",
+  "hash": "0x3dce54a3ee88e43e3f48043c1d2ae101db006c89898c0310e196fff6ad8cbe28",
+  "oid": 439960601675,
+  "crossed": true,
+  "fee": "0.029212",
+  "tid": 706097494890596,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "62.039",
+  "sz": "1.65",
+  "side": "B",
+  "time": 1779610470955,
+  "startPosition": "0.0",
+  "dir": "Open Long",
+  "closedPnl": "0.0",
+  "hash": "0x3dce54a3ee88e43e3f48043c1d2ae101db006c89898c0310e196fff6ad8cbe28",
+  "oid": 439960601675,
+  "crossed": true,
+  "fee": "0.044221",
+  "tid": 307022304532126,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "62.18",
+  "sz": "4.13",
+  "side": "A",
+  "time": 1779610426683,
+  "startPosition": "4.13",
+  "dir": "Close Long",
+  "closedPnl": "2.136036",
+  "hash": "0x76eac394323942057864043c1d2857000025db79cd3c60d71ab36ee6f13d1bf0",
+  "oid": 439918675641,
+  "crossed": false,
+  "fee": "0.036979",
+  "tid": 1100233952820681,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "61.26",
+  "sz": "1.38",
+  "side": "B",
+  "time": 1779607080836,
+  "startPosition": "2.75",
+  "dir": "Open Long",
+  "closedPnl": "0.0",
+  "hash": "0x77c8e98f90ea3b427942043c1c696d02023500752bed5a141b9194e24fee152d",
+  "oid": 439895091427,
+  "crossed": false,
+  "fee": "0.012173",
+  "tid": 950229897373124,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "61.865",
+  "sz": "2.75",
+  "side": "B",
+  "time": 1779605516070,
+  "startPosition": "0.0",
+  "dir": "Open Long",
+  "closedPnl": "0.0",
+  "hash": "0x2732527fe523460028ac043c1c10560201cc0065802664d2cafafdd2a4271fea",
+  "oid": 439895043143,
+  "crossed": true,
+  "fee": "0.073495",
+  "tid": 619104946360996,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "61.85",
+  "sz": "2.78",
+  "side": "A",
+  "time": 1779605476855,
+  "startPosition": "2.78",
+  "dir": "Close Long",
+  "closedPnl": "1.42058",
+  "hash": "0xb492689f17b955a5b60c043c1c0e0f0209800084b2bc7477585b13f1d6bd2f90",
+  "oid": 439881091260,
+  "crossed": false,
+  "fee": "0.024759",
+  "tid": 586018735431965,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "61.339",
+  "sz": "2.78",
+  "side": "B",
+  "time": 1779604579459,
+  "startPosition": "0.0",
+  "dir": "Open Long",
+  "closedPnl": "0.0",
+  "hash": "0xc737e849b7c2235dc8b1043c1bdac9020107002f52c5422f6b00939c76c5fd48",
+  "oid": 439880627204,
+  "crossed": true,
+  "fee": "0.073665",
+  "tid": 673408116158596,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "61.29",
+  "sz": "4.19",
+  "side": "A",
+  "time": 1779604539672,
+  "startPosition": "4.19",
+  "dir": "Close Long",
+  "closedPnl": "2.136481",
+  "hash": "0x05bc629e6901a8b40736043c1bd8980201f000840404c786a9850df12805829e",
+  "oid": 439869664238,
+  "crossed": false,
+  "fee": "0.036979",
+  "tid": 167563916844864,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "60.32",
+  "sz": "1.4",
+  "side": "B",
+  "time": 1779603755110,
+  "startPosition": "2.79",
+  "dir": "Open Long",
+  "closedPnl": "0.0",
+  "hash": "0x79482664356c73fc7ac1043c1bac3001ae003e49d06f92ce1d10d1b6f4604de7",
+  "oid": 439837458919,
+  "crossed": false,
+  "fee": "0.01216",
+  "tid": 862444257523861,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "61.011",
+  "sz": "2.29",
+  "side": "B",
+  "time": 1779601426475,
+  "startPosition": "0.5",
+  "dir": "Open Long",
+  "closedPnl": "0.0",
+  "hash": "0xca22971fdbde95d0cb9c043c1b279602012f000576d1b4a26deb42729ad26fbb",
+  "oid": 439837445147,
+  "crossed": true,
+  "fee": "0.060356",
+  "tid": 266291509501481,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "61.011",
+  "sz": "0.5",
+  "side": "B",
+  "time": 1779601426475,
+  "startPosition": "0.0",
+  "dir": "Open Long",
+  "closedPnl": "0.0",
+  "hash": "0xca22971fdbde95d0cb9c043c1b279602012f000576d1b4a26deb42729ad26fbb",
+  "oid": 439837445147,
+  "crossed": true,
+  "fee": "0.013178",
+  "tid": 866812826031759,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "60.96",
+  "sz": "8.06",
+  "side": "A",
+  "time": 1779601411419,
+  "startPosition": "8.06",
+  "dir": "Close Long",
+  "closedPnl": "4.084002",
+  "hash": "0x003a175560bcb42801b3043c1b26b8020183003afbbfd2faa402c2a81fb08e12",
+  "oid": 439691690675,
+  "crossed": false,
+  "fee": "0.070752",
+  "tid": 212359080222521,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "59.5",
+  "sz": "2.5",
+  "side": "B",
+  "time": 1779590283389,
+  "startPosition": "5.56",
+  "dir": "Open Long",
+  "closedPnl": "0.0",
+  "hash": "0x38f33511e89fe7043a6c043c18ac9d02027800f7839305d6dcbbe064a793c0ee",
+  "oid": 439636235409,
+  "crossed": false,
+  "fee": "0.021419",
+  "tid": 355969562339389,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "60.11",
+  "sz": "1.39",
+  "side": "B",
+  "time": 1779587636621,
+  "startPosition": "4.17",
+  "dir": "Open Long",
+  "closedPnl": "0.0",
+  "hash": "0xa8810790bbebd859a9fa043c181569020379007656eef72b4c49b2e37aefb244",
+  "oid": 439636223326,
+  "crossed": false,
+  "fee": "0.012031",
+  "tid": 813969992089432,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "60.72",
+  "sz": "1.39",
+  "side": "B",
+  "time": 1779586935086,
+  "startPosition": "2.78",
+  "dir": "Open Long",
+  "closedPnl": "0.0",
+  "hash": "0xd8dd96e82d35d4c1da57043c17ed2b010c00aecdc838f3937ca6423aec39aeac",
+  "oid": 439636204313,
+  "crossed": false,
+  "fee": "0.012153",
+  "tid": 822285355307046,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "61.349",
+  "sz": "2.78",
+  "side": "B",
+  "time": 1779586392445,
+  "startPosition": "0.0",
+  "dir": "Open Long",
+  "closedPnl": "0.0",
+  "hash": "0x24a21fa301d05d6f261b043c17ce0902011000889cd37c41c86acaf5c0d43759",
+  "oid": 439636187322,
+  "crossed": true,
+  "fee": "0.073677",
+  "tid": 842857401546250,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "61.31",
+  "sz": "2.8",
+  "side": "A",
+  "time": 1779586372404,
+  "startPosition": "2.8",
+  "dir": "Close Long",
+  "closedPnl": "1.428",
+  "hash": "0x8513d63c46b0d676868d043c17ccdf0203e00021e1b3f54828dc818f05b4b061",
+  "oid": 439621327884,
+  "crossed": false,
+  "fee": "0.02472",
+  "tid": 804950162063503,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "60.8",
+  "sz": "2.8",
+  "side": "B",
+  "time": 1779585341946,
+  "startPosition": "0.0",
+  "dir": "Open Long",
+  "closedPnl": "0.0",
+  "hash": "0x77730b94ea77130a78ec043c1792620204ad007a857a31dc1b3bb6e7a97aecf5",
+  "oid": 439620677383,
+  "crossed": true,
+  "fee": "0.073543",
+  "tid": 840128439479515,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "60.79",
+  "sz": "2.83",
+  "side": "A",
+  "time": 1779585309478,
+  "startPosition": "2.83",
+  "dir": "Close Long",
+  "closedPnl": "1.43481",
+  "hash": "0x9fedb3db1eb2e599a167043c17908902018e00c0b9b6046b43b65f2dddb6bf84",
+  "oid": 439612942589,
+  "crossed": false,
+  "fee": "0.024773",
+  "tid": 726490168393801,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "60.283",
+  "sz": "2.83",
+  "side": "B",
+  "time": 1779584737677,
+  "startPosition": "0.0",
+  "dir": "Open Long",
+  "closedPnl": "0.0",
+  "hash": "0x83869f77c9803b818500043c176fe102010b005d64835a53274f4aca8884156c",
+  "oid": 439612371103,
+  "crossed": true,
+  "fee": "0.073699",
+  "tid": 875981985522936,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "60.16",
+  "sz": "2.85",
+  "side": "A",
+  "time": 1779584706172,
+  "startPosition": "2.85",
+  "dir": "Close Long",
+  "closedPnl": "1.44096",
+  "hash": "0x1d28ba06b96b3d9c1ea2043c176e1002018e00ec546e5c6ec0f16559786f1786",
+  "oid": 439598768939,
+  "crossed": false,
+  "fee": "0.024689",
+  "tid": 1047575209500848,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "59.655",
+  "sz": "2.65",
+  "side": "B",
+  "time": 1779583711679,
+  "startPosition": "0.2",
+  "dir": "Open Long",
+  "closedPnl": "0.0",
+  "hash": "0x5d8bcf7e265c9a4d5f05043c17353a01e300e763c15fb91f01547ad0e5507438",
+  "oid": 439598044045,
+  "crossed": true,
+  "fee": "0.068293",
+  "tid": 710661538771652,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "59.647",
+  "sz": "0.2",
+  "side": "B",
+  "time": 1779583711679,
+  "startPosition": "0.0",
+  "dir": "Open Long",
+  "closedPnl": "0.0",
+  "hash": "0x5d8bcf7e265c9a4d5f05043c17353a01e300e763c15fb91f01547ad0e5507438",
+  "oid": 439598044045,
+  "crossed": true,
+  "fee": "0.005153",
+  "tid": 159494447910915,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "59.67",
+  "sz": "2.88",
+  "side": "A",
+  "time": 1779583677417,
+  "startPosition": "2.88",
+  "dir": "Close Long",
+  "closedPnl": "1.44576",
+  "hash": "0x9181283f411f57eb92fa043c1733480204a90024dc1276bd3549d392001331d6",
+  "oid": 439582501572,
+  "crossed": false,
+  "fee": "0.024746",
+  "tid": 137702753511315,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "59.168",
+  "sz": "2.88",
+  "side": "B",
+  "time": 1779582657447,
+  "startPosition": "0.0",
+  "dir": "Open Long",
+  "closedPnl": "0.0",
+  "hash": "0xac463ddc0154d080adbf043c16f95801fd0055c19c57ef52500ee92ec058aa6b",
+  "oid": 439581461451,
+  "crossed": true,
+  "fee": "0.073614",
+  "tid": 970674972205220,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "59.16",
+  "sz": "8.29",
+  "side": "A",
+  "time": 1779582640515,
+  "startPosition": "8.29",
+  "dir": "Close Long",
+  "closedPnl": "4.113498",
+  "hash": "0x1240802288f9cce913ba043c16f85d0201ae000823fcebbbb6092b7547fda6d3",
+  "oid": 439426748649,
+  "crossed": false,
+  "fee": "0.070622",
+  "tid": 546253127377088,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "57.75",
+  "sz": "2.57",
+  "side": "B",
+  "time": 1779572919466,
+  "startPosition": "5.72",
+  "dir": "Open Long",
+  "closedPnl": "0.0",
+  "hash": "0x5b2f38166b8f52795ca8043c14d11000006a4ffc0682714bfef7e3692a832c63",
+  "oid": 439321702036,
+  "crossed": false,
+  "fee": "0.021372",
+  "tid": 341796163926813,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "58.34",
+  "sz": "1.43",
+  "side": "B",
+  "time": 1779572473354,
+  "startPosition": "4.29",
+  "dir": "Open Long",
+  "closedPnl": "0.0",
+  "hash": "0xc9670aa20142661dcae0043c14b79c0000a222879c4584ef6d2fb5f4c0464008",
+  "oid": 439321599011,
+  "crossed": false,
+  "fee": "0.012013",
+  "tid": 954486296260947,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "58.94",
+  "sz": "1.43",
+  "side": "B",
+  "time": 1779570771351,
+  "startPosition": "2.86",
+  "dir": "Open Long",
+  "closedPnl": "0.0",
+  "hash": "0xd48a778f54119e89d604043c14577f0106008f74ef14bd5b785322e213157874",
+  "oid": 439321508736,
+  "crossed": false,
+  "fee": "0.012136",
+  "tid": 957204768367084,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "59.509",
+  "sz": "2.86",
+  "side": "B",
+  "time": 1779568686296,
+  "startPosition": "0.0",
+  "dir": "Open Long",
+  "closedPnl": "0.0",
+  "hash": "0x0262cd33e0d8ab1e03dc043c13e1ab0206d600197bdbc9f0a62b78869fdc8508",
+  "oid": 439321348511,
+  "crossed": true,
+  "fee": "0.073524",
+  "tid": 1043989504683361,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "59.5",
+  "sz": "2.89",
+  "side": "A",
+  "time": 1779568659849,
+  "startPosition": "2.89",
+  "dir": "Close Long",
+  "closedPnl": "1.44211",
+  "hash": "0x97778dc26d95980098f1043c13e02902088c00a80898b6d23b4039152c9971eb",
+  "oid": 439315360043,
+  "crossed": false,
+  "fee": "0.024761",
+  "tid": 415882847499041,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "59.001",
+  "sz": "2.89",
+  "side": "B",
+  "time": 1779568415900,
+  "startPosition": "0.0",
+  "dir": "Open Long",
+  "closedPnl": "0.0",
+  "hash": "0x05b1988b2b5567c8072b043c13d23c0201290070c658869aa97a43ddea5941b2",
+  "oid": 439314593089,
+  "crossed": true,
+  "fee": "0.073661",
+  "tid": 1083361080259397,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "59.14",
+  "sz": "2.9",
+  "side": "A",
+  "time": 1779568385933,
+  "startPosition": "2.9",
+  "dir": "Close Long",
+  "closedPnl": "1.4326",
+  "hash": "0xd15334bb44a43b4bd2cc043c13d08c0202f600a0dfa75a1d751be00e03a81536",
+  "oid": 439218728508,
+  "crossed": false,
+  "fee": "0.024696",
+  "tid": 325584260912701,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "58.646",
+  "sz": "2.9",
+  "side": "B",
+  "time": 1779561455060,
+  "startPosition": "0.0",
+  "dir": "Open Long",
+  "closedPnl": "0.0",
+  "hash": "0x856113acb282ddff86da043c12458a02020e00924d85fcd12929beff7186b7ea",
+  "oid": 439218151233,
+  "crossed": true,
+  "fee": "0.073471",
+  "tid": 542090875832171,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "58.68",
+  "sz": "2.93",
+  "side": "A",
+  "time": 1779561429517,
+  "startPosition": "2.93",
+  "dir": "Close Long",
+  "closedPnl": "1.421636",
+  "hash": "0x4190aa361ec6432e430a043c124413020105001bb9c96200e5595588ddca1d18",
+  "oid": 439189637301,
+  "crossed": false,
+  "fee": "0.024758",
+  "tid": 509590715711314,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "58.196",
+  "sz": "2.24",
+  "side": "B",
+  "time": 1779560016152,
+  "startPosition": "0.69",
+  "dir": "Open Long",
+  "closedPnl": "0.0",
+  "hash": "0x641a85f7eb471d856594043c11f4230204bd00dd864a3c5707e3314aaa4af770",
+  "oid": 439188829736,
+  "crossed": true,
+  "fee": "0.056315",
+  "tid": 13958389243216,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "58.191",
+  "sz": "0.69",
+  "side": "B",
+  "time": 1779560016152,
+  "startPosition": "0.0",
+  "dir": "Open Long",
+  "closedPnl": "0.0",
+  "hash": "0x641a85f7eb471d856594043c11f4230204bd00dd864a3c5707e3314aaa4af770",
+  "oid": 439188829736,
+  "crossed": true,
+  "fee": "0.017345",
+  "tid": 415566816737697,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "58.19",
+  "sz": "4.41",
+  "side": "A",
+  "time": 1779559977796,
+  "startPosition": "4.41",
+  "dir": "Close Long",
+  "closedPnl": "2.146347",
+  "hash": "0x33e6f105e22c96223560043c11f21202107000eb7d2fb4f4d7af9c58a120700c",
+  "oid": 439146673022,
+  "crossed": false,
+  "fee": "0.036952",
+  "tid": 466239594822558,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "57.32",
+  "sz": "1.47",
+  "side": "B",
+  "time": 1779557189773,
+  "startPosition": "2.94",
+  "dir": "Open Long",
+  "closedPnl": "0.0",
+  "hash": "0xf01c67b4302e6689f196043c1153880202820099cb21855c93e51306ef224074",
+  "oid": 439115925323,
+  "crossed": false,
+  "fee": "0.012133",
+  "tid": 43837426031840,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "57.895",
+  "sz": "2.94",
+  "side": "B",
+  "time": 1779555008199,
+  "startPosition": "0.0",
+  "dir": "Open Long",
+  "closedPnl": "0.0",
+  "hash": "0x79ef5534074f064c7b69043c10d70f01e1006d19a242251e1db80086c642e037",
+  "oid": 439115903119,
+  "crossed": true,
+  "fee": "0.073531",
+  "tid": 296216445667090,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "57.91",
+  "sz": "4.43",
+  "side": "A",
+  "time": 1779554980904,
+  "startPosition": "4.43",
+  "dir": "Close Long",
+  "closedPnl": "2.128615",
+  "hash": "0x792c26a434ca5b8e7aa5043c10d5810201bf0089cfcd7a601cf4d1f6f3ce3579",
+  "oid": 439046082966,
+  "crossed": false,
+  "fee": "0.036941",
+  "tid": 1021396179954031,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "57.04",
+  "sz": "1.48",
+  "side": "B",
+  "time": 1779550277815,
+  "startPosition": "2.95",
+  "dir": "Open Long",
+  "closedPnl": "0.0",
+  "hash": "0xb936f1fd9ec23282bab0043c0fca5400007209e339c551545cff9d505dc60c6d",
+  "oid": 439039251607,
+  "crossed": false,
+  "fee": "0.012156",
+  "tid": 116541687720608,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "57.625",
+  "sz": "2.95",
+  "side": "B",
+  "time": 1779549873835,
+  "startPosition": "0.0",
+  "dir": "Open Long",
+  "closedPnl": "0.0",
+  "hash": "0xfcc32bdb5c93bb30fe3c043c0fb34701e60043c0f796da03a08bd72e1b97951b",
+  "oid": 439039238201,
+  "crossed": true,
+  "fee": "0.073437",
+  "tid": 228563065526015,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "57.45",
+  "sz": "2.99",
+  "side": "A",
+  "time": 1779549853743,
+  "startPosition": "2.99",
+  "dir": "Close Long",
+  "closedPnl": "1.422343",
+  "hash": "0x2d55b5f3f887dcff2ecf043c0fb220000090cdd9938afbd1d11e6146b78bb6e9",
+  "oid": 439024211672,
+  "crossed": false,
+  "fee": "0.024735",
+  "tid": 989934260500279,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "56.977",
+  "sz": "0.99",
+  "side": "B",
+  "time": 1779548874407,
+  "startPosition": "2.0",
+  "dir": "Open Long",
+  "closedPnl": "0.0",
+  "hash": "0x2c0e77a321bf9b222d88043c0f7a420204e10088bcb2b9f4cfd722f5e0b3750c",
+  "oid": 439023340709,
+  "crossed": true,
+  "fee": "0.024367",
+  "tid": 583335343778650,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "56.973",
+  "sz": "2.0",
+  "side": "B",
+  "time": 1779548874407,
+  "startPosition": "0.0",
+  "dir": "Open Long",
+  "closedPnl": "0.0",
+  "hash": "0x2c0e77a321bf9b222d88043c0f7a420204e10088bcb2b9f4cfd722f5e0b3750c",
+  "oid": 439023340709,
+  "crossed": true,
+  "fee": "0.049224",
+  "tid": 1005554999401165,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "57.02",
+  "sz": "66.02",
+  "side": "A",
+  "time": 1779548856697,
+  "startPosition": "66.02",
+  "dir": "Close Long",
+  "closedPnl": "31.663192",
+  "hash": "0x8bd0b275d90ac1ee8d4a043c0f793d0204f7005b740de0c02f995dc8980e9bd9",
+  "oid": 438063235139,
+  "crossed": false,
+  "fee": "0.542082",
+  "tid": 1053017777126552,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "54.45",
+  "sz": "30.25",
+  "side": "B",
+  "time": 1779481152533,
+  "startPosition": "35.77",
+  "dir": "Open Long",
+  "closedPnl": "0.0",
+  "hash": "0x857c3dacc4e0192486f5043c00750302070700925fe337f62944e8ff83e3f30f",
+  "oid": 437523179185,
+  "crossed": false,
+  "fee": "0.237184",
+  "tid": 907235199283781,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "56.93",
+  "sz": "16.5",
+  "side": "B",
+  "time": 1779474995357,
+  "startPosition": "19.27",
+  "dir": "Open Long",
+  "closedPnl": "0.0",
+  "hash": "0xa889f7384d3b8757aa03043bff1a8802047b001de83ea6294c52a28b0c3f6142",
+  "oid": 437523111063,
+  "crossed": false,
+  "fee": "0.135265",
+  "tid": 842457974827767,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "58.16",
+  "sz": "8.8",
+  "side": "B",
+  "time": 1779464445990,
+  "startPosition": "10.47",
+  "dir": "Open Long",
+  "closedPnl": "0.0",
+  "hash": "0x816998ea1850a7d882e3043bfcc61102089000cfb353c6aa2532443cd75481c3",
+  "oid": 437523087822,
+  "crossed": false,
+  "fee": "0.0737",
+  "tid": 37009516153476,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "59.4",
+  "sz": "2.48",
+  "side": "B",
+  "time": 1779461172430,
+  "startPosition": "7.99",
+  "dir": "Open Long",
+  "closedPnl": "0.0",
+  "hash": "0x191a89d659f7e5801a94043bfc0d0f02024400bbf4fb0452bce3352918fbbf6a",
+  "oid": 437523059826,
+  "crossed": false,
+  "fee": "0.021212",
+  "tid": 202517994657415,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "60.02",
+  "sz": "2.48",
+  "side": "B",
+  "time": 1779459502999,
+  "startPosition": "5.51",
+  "dir": "Open Long",
+  "closedPnl": "0.0",
+  "hash": "0x569b0d69071b6bb85814043bfbaea9020564004ea21e8a8afa63b8bbc61f45a2",
+  "oid": 437523029468,
+  "crossed": false,
+  "fee": "0.021434",
+  "tid": 715790116302297,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "60.64",
+  "sz": "1.38",
+  "side": "B",
+  "time": 1779459479089,
+  "startPosition": "4.13",
+  "dir": "Open Long",
+  "closedPnl": "0.0",
+  "hash": "0x20fe7490fcdfc9612278043bfbad490000398c7697d2e833c4c71fe3bbd3a34b",
+  "oid": 437523001708,
+  "crossed": false,
+  "fee": "0.01205",
+  "tid": 977320576850248,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "61.26",
+  "sz": "1.38",
+  "side": "B",
+  "time": 1779457552310,
+  "startPosition": "2.75",
+  "dir": "Open Long",
+  "closedPnl": "0.0",
+  "hash": "0x79584888b0a3d45c7ad2043bfb41320201f8006e4ba6f32e1d20f3db6fa7ae47",
+  "oid": 437522903087,
+  "crossed": false,
+  "fee": "0.012173",
+  "tid": 309732558657841,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "61.874",
+  "sz": "2.75",
+  "side": "B",
+  "time": 1779457298664,
+  "startPosition": "0.0",
+  "dir": "Open Long",
+  "closedPnl": "0.0",
+  "hash": "0xfdd41e780f4bfb9cff4d043bfb32f20204b2005daa4f1a6fa19cc9cace4fd587",
+  "oid": 437522835530,
+  "crossed": true,
+  "fee": "0.073506",
+  "tid": 999339606343951,
+  "feeToken": "USDC",
+  "twapId": null
+}
+{
+  "coin": "HYPE",
+  "px": "61.74",
+  "sz": "4.16",
+  "side": "A",
+  "time": 1779457268354,
+  "startPosition": "4.16",
+  "dir": "Close Long",
+  "closedPnl": "2.121184",
+  "hash": "0x229de006de855a152417043bfb3136020b7200ec798878e7c6668b599d8933ff",
+  "oid": 437446799226,
+  "crossed": false,
+  "fee": "0.036984",
+  "tid": 995491770970037,
+  "feeToken": "USDC",
+  "twapId": null
+}
+[0m
+Let me read the full fill data and also get order history for a complete picture.
+[0m$ [0mcurl -s -X POST https://api.hyperliquid.xyz/info \
+  -H "Content-Type: application/json" \
+  -d '{"type":"userFills","user":"0x0bb81e516c88881c54529e1790470cb5e9f8740d","limit":100}' 2>&1 | python3 -c "
+import json, sys
+data = json.load(sys.stdin)
+print(f'Total fills: {len(data)}')
+print()
+
+# Analyze the fills
+buys = [f for f in data if f['side'] == 'B']
+sells = [f for f in data if f['side'] == 'A']
+print(f'Buy fills: {len(buys)}')
+print(f'Sell fills: {len(sells)}')
+print()
+
+# Group by direction
+opens = [f for f in data if f['dir'] == 'Open Long']
+closes = [f for f in data if f['dir'] == 'Close Long']
+print(f'Open Long: {len(opens)}')
+print(f'Close Long: {len(closes)}')
+print()
+
+# Calculate total PnL from closed positions
+total_pnl = sum(float(f['closedPnl']) for f in closes)
+total_fees = sum(float(f['fee']) for f in data)
+print(f'Total closed PnL: {total_pnl:.4f}')
+print(f'Total fees: {total_fees:.4f}')
+print(f'Net PnL (closed): {total_pnl - total_fees:.4f}')
+print()
+
+# Average trade sizes
+open_sizes = [float(f['sz']) for f in opens]
+close_sizes = [float(f['sz']) for f in closes]
+print(f'Avg open size: {sum(open_sizes)/len(open_sizes):.4f}')
+print(f'Avg close size: {sum(close_sizes)/len(close_sizes):.4f}')
+print()
+
+# Look at the pattern of sizes
+print('Open sizes:', [float(f['sz']) for f in opens[:20]])
+print('Close sizes:', [float(f['sz']) for f in closes[:20]])
+print()
+
+# Entry/exit price analysis
+open_prices = [float(f['px']) for f in opens]
+close_prices = [float(f['px']) for f in closes]
+print(f'Avg entry price: {sum(open_prices)/len(open_prices):.4f}')
+print(f'Avg exit price: {sum(close_prices)/len(close_prices):.4f}')
+print()
+
+# Time analysis
+times = [f['time'] for f in data]
+print(f'Time range: {min(times)} - {max(times)}')
+print(f'Time range (readable): {min(times)/1000} - {max(times)/1000}')
+"
+Total fills: 2000
+
+Buy fills: 1405
+Sell fills: 595
+
+Open Long: 1405
+Close Long: 595
+
+Total closed PnL: 3428.4862
+Total fees: 168.4534
+Net PnL (closed): 3260.0328
+
+Avg open size: 4.3537
+Avg close size: 10.2643
+
+Open sizes: [3.29, 3.29, 1.83, 1.83, 3.66, 1.83, 3.67, 1.13, 2.57, 1.86, 3.73, 1.87, 3.74, 3.77, 1.9, 3.79, 3.82, 2.6, 1.26, 3.89]
+Close sizes: [5.5, 3.7, 5.59, 5.61, 3.77, 5.69, 3.82, 3.86, 3.89, 3.93, 3.96, 4.0, 4.03, 4.07, 4.1, 6.18, 6.19, 6.21, 6.27, 4.22]
+
+Avg entry price: 68.5530
+Avg exit price: 69.0811
+
+Time range: 1779457268354 - 1789872845564
+Time range (readable): 1779457268.354 - 1789872845.564
+[0m
+Let me dig deeper into the trading patterns - looking at the sequence of trades and the strategy more carefully.
+[0m$ [0mcurl -s -X POST https://api.hyperliquid.xyz/info \
+  -H "Content-Type: application/json" \
+  -d '{"type":"userFills","user":"0x0bb81e516c88881c54529e1790470cb5e9f8740d","limit":1000}' 2>&1 | python3 -c "
+import json, sys
+data = json.load(sys.stdin)
+
+# Sort by time
+data.sort(key=lambda x: x['time'])
+
+# Analyze the sequence - look at position building pattern
+print('=== TRADE SEQUENCE ANALYSIS ===')
+print()
+
+# Track position through trades
+pos = 0.0
+entry_cost = 0.0
+trade_num = 0
+for f in data:
+    sz = float(f['sz'])
+    px = float(f['px'])
+    side = f['side']
+    dir_ = f['dir']
+    
+    if dir_ == 'Open Long':
+        pos += sz
+        entry_cost += sz * px
+        trade_num += 1
+        if trade_num <= 5 or trade_num % 50 == 0:
+            print(f'T{trade_num}: OPEN +{sz:.2f} @ {px:.3f} | pos={pos:.2f} | avg_entry={entry_cost/pos:.3f}')
+    elif dir_ == 'Close Long':
+        pos -= sz
+        entry_cost -= sz * px  # This is wrong but let's just track
+        if pos < 0:
+            pos = 0
+        trade_num += 1
+        if trade_num <= 5 or trade_num % 50 == 0:
+            print(f'T{trade_num}: CLOSE -{sz:.2f} @ {px:.3f} | pos={pos:.2f}')
+
+print()
+print(f'Final position: {pos:.2f}')
+print(f'Total trades: {trade_num}')
+"
+=== TRADE SEQUENCE ANALYSIS ===
+
+T1: CLOSE -4.16 @ 61.740 | pos=0.00
+T2: OPEN +2.75 @ 61.874 | pos=2.75 | avg_entry=-31.522
+T3: OPEN +1.38 @ 61.260 | pos=4.13 | avg_entry=-0.520
+T4: OPEN +1.38 @ 60.640 | pos=5.51 | avg_entry=14.798
+T5: OPEN +2.48 @ 60.020 | pos=7.99 | avg_entry=28.834
+T50: OPEN +2.78 @ 61.339 | pos=2.78 | avg_entry=-51.816
+T100: OPEN +1.33 @ 62.430 | pos=5.33 | avg_entry=-2.563
+T150: OPEN +2.70 @ 60.710 | pos=11.40 | avg_entry=26.377
+T200: OPEN +5.42 @ 63.578 | pos=5.42 | avg_entry=-23.705
+T250: CLOSE -7.55 @ 69.471 | pos=0.00
+T300: OPEN +2.37 @ 73.202 | pos=7.10 | avg_entry=-11.621
+T350: OPEN +1.07 @ 70.841 | pos=6.01 | avg_entry=-44.425
+T400: CLOSE -4.81 @ 74.722 | pos=0.00
+T450: OPEN +5.70 @ 63.737 | pos=5.70 | avg_entry=-100.234
+T500: OPEN +6.17 @ 59.554 | pos=6.17 | avg_entry=-109.823
+T550: OPEN +5.49 @ 58.311 | pos=23.18 | avg_entry=11.425
+T600: CLOSE -8.24 @ 59.964 | pos=0.00
+T650: OPEN +4.48 @ 63.784 | pos=14.44 | avg_entry=-23.618
+T700: OPEN +2.91 @ 57.527 | pos=11.64 | avg_entry=-66.937
+T750: OPEN +2.90 @ 58.959 | pos=8.70 | avg_entry=-118.770
+T800: OPEN +1.60 @ 66.200 | pos=5.26 | avg_entry=-241.088
+T850: OPEN +4.66 @ 75.135 | pos=4.66 | avg_entry=-284.837
+T900: OPEN +4.70 @ 75.204 | pos=4.70 | avg_entry=-300.677
+T950: OPEN +5.07 @ 70.723 | pos=5.07 | avg_entry=-301.030
+T1000: OPEN +4.48 @ 62.565 | pos=14.44 | avg_entry=-75.800
+T1050: OPEN +5.04 @ 64.335 | pos=5.04 | avg_entry=-351.562
+T1100: OPEN +4.42 @ 64.741 | pos=4.42 | avg_entry=-429.103
+T1150: CLOSE -7.80 @ 63.931 | pos=0.00
+T1200: CLOSE -17.69 @ 70.719 | pos=0.00
+T1250: CLOSE -7.68 @ 66.326 | pos=0.00
+T1300: OPEN +2.68 @ 57.683 | pos=21.66 | avg_entry=-59.474
+T1350: OPEN +3.02 @ 56.917 | pos=9.07 | avg_entry=-240.627
+T1400: CLOSE -22.96 @ 57.295 | pos=0.00
+T1450: OPEN +2.48 @ 61.928 | pos=7.44 | avg_entry=-317.097
+T1500: CLOSE -4.34 @ 72.829 | pos=0.00
+T1550: OPEN +0.50 @ 77.037 | pos=0.67 | avg_entry=-4353.346
+T1600: OPEN +3.49 @ 78.599 | pos=14.74 | avg_entry=-124.634
+T1650: CLOSE -6.06 @ 80.063 | pos=0.00
+T1700: CLOSE -4.09 @ 80.057 | pos=0.00
+T1750: OPEN +3.93 @ 83.410 | pos=3.93 | avg_entry=-745.509
+T1800: CLOSE -5.87 @ 85.180 | pos=0.00
+T1850: CLOSE -2.78 @ 86.392 | pos=0.00
+T1900: OPEN +0.82 @ 81.590 | pos=4.93 | avg_entry=-635.493
+T1950: OPEN +0.56 @ 82.185 | pos=4.14 | avg_entry=-792.412
+T2000: OPEN +3.29 @ 90.336 | pos=13.90 | avg_entry=-172.788
+
+Final position: 13.90
+Total trades: 2000
+[0m
+Let me analyze the complete trading pattern more thoroughly - position building, closing behavior, and PnL per cycle.
+[0m$ [0mcurl -s -X POST https://api.hyperliquid.xyz/info \
+  -H "Content-Type: application/json" \
+  -d '{"type":"userFills","user":"0x0bb81e516c88881c54529e1790470cb5e9f8740d","limit":1000}' 2>&1 | python3 -c "
+import json, sys
+data = json.load(sys.stdin)
+data.sort(key=lambda x: x['time'])
+
+# Analyze complete trade cycles (open -> close)
+cycles = []
+current_pos = 0.0
+current_cost = 0.0
+cycle_opens = []
+
+for f in data:
+    sz = float(f['sz'])
+    px = float(f['px'])
+    dir_ = f['dir']
+    pnl = float(f.get('closedPnl', 0))
+    
+    if dir_ == 'Open Long':
+        current_pos += sz
+        current_cost += sz * px
+        cycle_opens.append((sz, px))
+    elif dir_ == 'Close Long':
+        # This closes part or all of the position
+        if current_pos > 0:
+            avg_entry = current_cost / current_pos
+            realized_pnl = sz * (px - avg_entry)
+            cycles.append({
+                'entry_sz': current_pos,
+                'entry_px': avg_entry,
+                'exit_sz': sz,
+                'exit_px': px,
+                'realized_pnl': realized_pnl,
+                'fee': float(f['fee']),
+                'pnl_reported': pnl
+            })
+            current_pos = 0
+            current_cost = 0
+            cycle_opens = []
+
+print(f'Total complete cycles: {len(cycles)}')
+print()
+
+# Analyze cycles
+total_pnl = sum(c['realized_pnl'] for c in cycles)
+total_fees = sum(c['fee'] for c in cycles)
+print(f'Total realized PnL: {total_pnl:.2f}')
+print(f'Total fees: {total_fees:.2f}')
+print(f'Net PnL: {total_pnl - total_fees:.2f}')
+print()
+
+# Win rate
+winners = [c for c in cycles if c['realized_pnl'] > 0]
+losers = [c for c in cycles if c['realized_pnl'] <= 0]
+print(f'Win rate: {len(winners)}/{len(cycles)} = {len(winners)/len(cycles)*100:.1f}%')
+print()
+
+# Average PnL per cycle
+avg_pnl = total_pnl / len(cycles) if cycles else 0
+print(f'Avg PnL per cycle: {avg_pnl:.2f}')
+print()
+
+# Show first 20 cycles
+print('=== FIRST 20 CYCLES ===')
+for i, c in enumerate(cycles[:20]):
+    print(f'Cycle {i+1}: Entry {c[\"entry_sz\"]:.2f} @ {c[\"entry_px\"]:.3f} -> Exit {c[\"exit_sz\"]:.2f} @ {c[\"exit_px\"]:.3f} | PnL: {c[\"realized_pnl\"]:.2f}')
+
+print()
+print('=== LAST 20 CYCLES ===')
+for i, c in enumerate(cycles[-20:]):
+    idx = len(cycles) - 20 + i
+    print(f'Cycle {idx+1}: Entry {c[\"entry_sz\"]:.2f} @ {c[\"entry_px\"]:.3f} -> Exit {c[\"exit_sz\"]:.2f} @ {c[\"exit_px\"]:.3f} | PnL: {c[\"realized_pnl\"]:.2f}')
+"
+Total complete cycles: 542
+
+Total realized PnL: 3125.54
+Total fees: 54.24
+Net PnL: 3071.30
+
+Win rate: 542/542 = 100.0%
+
+Avg PnL per cycle: 5.77
+
+=== FIRST 20 CYCLES ===
+Cycle 1: Entry 66.02 @ 56.540 -> Exit 66.02 @ 57.020 | PnL: 31.66
+Cycle 2: Entry 2.99 @ 56.974 -> Exit 2.99 @ 57.450 | PnL: 1.42
+Cycle 3: Entry 4.43 @ 57.430 -> Exit 4.43 @ 57.910 | PnL: 2.13
+Cycle 4: Entry 4.41 @ 57.703 -> Exit 4.41 @ 58.190 | PnL: 2.15
+Cycle 5: Entry 2.93 @ 58.195 -> Exit 2.93 @ 58.680 | PnL: 1.42
+Cycle 6: Entry 2.90 @ 58.646 -> Exit 2.90 @ 59.140 | PnL: 1.43
+Cycle 7: Entry 2.89 @ 59.001 -> Exit 2.89 @ 59.500 | PnL: 1.44
+Cycle 8: Entry 8.29 @ 58.664 -> Exit 8.29 @ 59.160 | PnL: 4.11
+Cycle 9: Entry 2.88 @ 59.168 -> Exit 2.88 @ 59.670 | PnL: 1.45
+Cycle 10: Entry 2.85 @ 59.654 -> Exit 2.85 @ 60.160 | PnL: 1.44
+Cycle 11: Entry 2.83 @ 60.283 -> Exit 2.83 @ 60.790 | PnL: 1.43
+Cycle 12: Entry 2.80 @ 60.800 -> Exit 2.80 @ 61.310 | PnL: 1.43
+Cycle 13: Entry 8.06 @ 60.453 -> Exit 8.06 @ 60.960 | PnL: 4.08
+Cycle 14: Entry 4.19 @ 60.780 -> Exit 4.19 @ 61.290 | PnL: 2.14
+Cycle 15: Entry 2.78 @ 61.339 -> Exit 2.78 @ 61.850 | PnL: 1.42
+Cycle 16: Entry 4.13 @ 61.663 -> Exit 4.13 @ 62.180 | PnL: 2.14
+Cycle 17: Entry 2.74 @ 62.039 -> Exit 2.74 @ 62.560 | PnL: 1.43
+Cycle 18: Entry 2.71 @ 62.671 -> Exit 2.71 @ 63.200 | PnL: 1.43
+Cycle 19: Entry 2.69 @ 63.348 -> Exit 2.69 @ 63.880 | PnL: 1.43
+Cycle 20: Entry 5.33 @ 63.344 -> Exit 5.33 @ 63.880 | PnL: 2.86
+
+=== LAST 20 CYCLES ===
+Cycle 523: Entry 4.22 @ 80.978 -> Exit 4.22 @ 81.658 | PnL: 2.87
+Cycle 524: Entry 6.27 @ 81.637 -> Exit 6.27 @ 82.323 | PnL: 4.30
+Cycle 525: Entry 6.21 @ 82.110 -> Exit 6.21 @ 82.800 | PnL: 4.28
+Cycle 526: Entry 6.19 @ 82.546 -> Exit 6.19 @ 83.239 | PnL: 4.29
+Cycle 527: Entry 6.18 @ 82.836 -> Exit 6.18 @ 83.532 | PnL: 4.30
+Cycle 528: Entry 4.10 @ 83.562 -> Exit 4.10 @ 84.264 | PnL: 2.88
+Cycle 529: Entry 4.07 @ 84.303 -> Exit 4.07 @ 85.011 | PnL: 2.88
+Cycle 530: Entry 4.03 @ 85.018 -> Exit 4.03 @ 85.732 | PnL: 2.88
+Cycle 531: Entry 4.00 @ 85.750 -> Exit 4.00 @ 86.470 | PnL: 2.88
+Cycle 532: Entry 3.96 @ 86.669 -> Exit 3.96 @ 87.397 | PnL: 2.88
+Cycle 533: Entry 3.93 @ 87.410 -> Exit 3.93 @ 88.144 | PnL: 2.88
+Cycle 534: Entry 3.89 @ 88.309 -> Exit 3.89 @ 89.051 | PnL: 2.89
+Cycle 535: Entry 3.86 @ 89.017 -> Exit 3.86 @ 89.765 | PnL: 2.89
+Cycle 536: Entry 3.82 @ 89.872 -> Exit 3.82 @ 90.627 | PnL: 2.88
+Cycle 537: Entry 5.69 @ 90.306 -> Exit 5.69 @ 91.064 | PnL: 4.31
+Cycle 538: Entry 3.77 @ 91.121 -> Exit 3.77 @ 91.886 | PnL: 2.88
+Cycle 539: Entry 5.61 @ 91.585 -> Exit 5.61 @ 92.354 | PnL: 4.31
+Cycle 540: Entry 5.59 @ 92.059 -> Exit 5.59 @ 92.832 | PnL: 4.32
+Cycle 541: Entry 3.70 @ 92.928 -> Exit 3.70 @ 93.709 | PnL: 2.89
+Cycle 542: Entry 5.50 @ 93.367 -> Exit 5.50 @ 94.151 | PnL: 4.31
+[0m
+The data reveals a very consistent pattern. Let me analyze the DCA building pattern and profit targets more precisely.
+[0m$ [0mcurl -s -X POST https://api.hyperliquid.xyz/info \
+  -H "Content-Type: application/json" \
+  -d '{"type":"userFills","user":"0x0bb81e516c88881c54529e1790470cb5e9f8740d","limit":1000}' 2>&1 | python3 -c "
+import json, sys
+data = json.load(sys.stdin)
+data.sort(key=lambda x: x['time'])
+
+# Analyze DCA building pattern - how position is built before close
+# Look at the fills in order and track position building
+print('=== DCA BUILDING PATTERN ===')
+print()
+
+pos = 0.0
+cost = 0.0
+cycle_id = 0
+opens_in_cycle = []
+
+for f in data:
+    sz = float(f['sz'])
+    px = float(f['px'])
+    dir_ = f['dir']
+    
+    if dir_ == 'Open Long':
+        pos += sz
+        cost += sz * px
+        opens_in_cycle.append((sz, px))
+    elif dir_ == 'Close Long':
+        if pos > 0:
+            cycle_id += 1
+            avg_entry = cost / pos
+            exit_px = px
+            profit_pct = (exit_px - avg_entry) / avg_entry * 100
+            profit_usd = pos * (exit_px - avg_entry)
+            
+            # Analyze the DCA pattern
+            num_dca = len(opens_in_cycle)
+            sizes = [o[0] for o in opens_in_cycle]
+            prices = [o[1] for o in opens_in_cycle]
+            
+            # Check if sizes are consistent (dca pattern)
+            size_pattern = 'uniform' if len(set([round(s, 2) for s in sizes])) <= 2 else 'varying'
+            
+            if cycle_id <= 10 or cycle_id % 100 == 0:
+                print(f'Cycle {cycle_id}: {num_dca} opens, total {pos:.2f} @ avg {avg_entry:.3f} -> close {pos:.2f} @ {exit_px:.3f}')
+                print(f'  Profit: {profit_usd:.2f} ({profit_pct:.2f}%)')
+                print(f'  Sizes: {sizes}')
+                print(f'  Prices: {prices}')
+                print(f'  Size pattern: {size_pattern}')
+                print()
+            
+            pos = 0
+            cost = 0
+            opens_in_cycle = []
+
+print(f'Total cycles: {cycle_id}')
+"
+=== DCA BUILDING PATTERN ===
+
+Cycle 1: 8 opens, total 66.02 @ avg 56.540 -> close 66.02 @ 57.020
+  Profit: 31.66 (0.85%)
+  Sizes: [2.75, 1.38, 1.38, 2.48, 2.48, 8.8, 16.5, 30.25]
+  Prices: [61.874, 61.26, 60.64, 60.02, 59.4, 58.16, 56.93, 54.45]
+  Size pattern: varying
+
+Cycle 2: 2 opens, total 2.99 @ avg 56.974 -> close 2.99 @ 57.450
+  Profit: 1.42 (0.83%)
+  Sizes: [0.99, 2.0]
+  Prices: [56.977, 56.973]
+  Size pattern: uniform
+
+Cycle 3: 2 opens, total 4.43 @ avg 57.430 -> close 4.43 @ 57.910
+  Profit: 2.13 (0.84%)
+  Sizes: [2.95, 1.48]
+  Prices: [57.625, 57.04]
+  Size pattern: uniform
+
+Cycle 4: 2 opens, total 4.41 @ avg 57.703 -> close 4.41 @ 58.190
+  Profit: 2.15 (0.84%)
+  Sizes: [2.94, 1.47]
+  Prices: [57.895, 57.32]
+  Size pattern: uniform
+
+Cycle 5: 2 opens, total 2.93 @ avg 58.195 -> close 2.93 @ 58.680
+  Profit: 1.42 (0.83%)
+  Sizes: [2.24, 0.69]
+  Prices: [58.196, 58.191]
+  Size pattern: uniform
+
+Cycle 6: 1 opens, total 2.90 @ avg 58.646 -> close 2.90 @ 59.140
+  Profit: 1.43 (0.84%)
+  Sizes: [2.9]
+  Prices: [58.646]
+  Size pattern: uniform
+
+Cycle 7: 1 opens, total 2.89 @ avg 59.001 -> close 2.89 @ 59.500
+  Profit: 1.44 (0.85%)
+  Sizes: [2.89]
+  Prices: [59.001]
+  Size pattern: uniform
+
+Cycle 8: 4 opens, total 8.29 @ avg 58.664 -> close 8.29 @ 59.160
+  Profit: 4.11 (0.85%)
+  Sizes: [2.86, 1.43, 1.43, 2.57]
+  Prices: [59.509, 58.94, 58.34, 57.75]
+  Size pattern: varying
+
+Cycle 9: 1 opens, total 2.88 @ avg 59.168 -> close 2.88 @ 59.670
+  Profit: 1.45 (0.85%)
+  Sizes: [2.88]
+  Prices: [59.168]
+  Size pattern: uniform
+
+Cycle 10: 2 opens, total 2.85 @ avg 59.654 -> close 2.85 @ 60.160
+  Profit: 1.44 (0.85%)
+  Sizes: [2.65, 0.2]
+  Prices: [59.655, 59.647]
+  Size pattern: uniform
+
+Cycle 100: 3 opens, total 7.20 @ avg 73.152 -> close 7.20 @ 73.767
+  Profit: 4.43 (0.84%)
+  Sizes: [1.4, 3.4, 2.4]
+  Prices: [73.4, 73.396, 72.662]
+  Size pattern: varying
+
+Cycle 200: 1 opens, total 5.62 @ avg 61.090 -> close 5.62 @ 61.603
+  Profit: 2.88 (0.84%)
+  Sizes: [5.62]
+  Prices: [61.09]
+  Size pattern: uniform
+
+Cycle 300: 1 opens, total 5.21 @ avg 62.899 -> close 5.21 @ 63.427
+  Profit: 2.75 (0.84%)
+  Sizes: [5.21]
+  Prices: [62.899]
+  Size pattern: uniform
+
+Cycle 400: 5 opens, total 16.50 @ avg 70.353 -> close 16.50 @ 70.944
+  Profit: 9.75 (0.84%)
+  Sizes: [4.34, 2.17, 2.17, 3.91, 3.91]
+  Prices: [71.902, 71.083, 70.365, 69.647, 68.929]
+  Size pattern: varying
+
+Cycle 500: 1 opens, total 3.90 @ avg 85.672 -> close 3.90 @ 86.392
+  Profit: 2.81 (0.84%)
+  Sizes: [3.9]
+  Prices: [85.672]
+  Size pattern: uniform
+
+Total cycles: 542
+[0m
+Let me also check the order history and get more details on the DCA size patterns.
+[0m$ [0mcurl -s -X POST https://api.hyperliquid.xyz/info \
+  -H "Content-Type: application/json" \
+  -d '{"type":"userOpenOrders","user":"0x0bb81e516c88881c54529e1790470cb5e9f8740d"}' 2>&1 | python3 -c "
+import json, sys
+data = json.load(sys.stdin)
+print(json.dumps(data, indent=2))
+"
+Traceback (most recent call last):
+  File "<string>", line 3, in <module>
+  File "/usr/lib/python3.12/json/__init__.py", line 293, in load
+    return loads(fp.read(),
+           ^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/json/__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/json/decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/json/decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+[0m
+Let me try the order history endpoint and also get more detailed analysis of the DCA patterns.
+[0m$ [0mcurl -s -X POST https://api.hyperliquid.xyz/info \
+  -H "Content-Type: application/json" \
+  -d '{"type":"userOrderHistory","user":"0x0bb81e516c88881c54529e1790470cb5e9f8740d","limit":50}' 2>&1 | python3 -c "
+import json, sys
+data = json.load(sys.stdin)
+print(f'Total orders: {len(data)}')
+for item in data[:10]:
+    print(json.dumps(item, indent=2))
+"
+Traceback (most recent call last):
+  File "<string>", line 3, in <module>
+  File "/usr/lib/python3.12/json/__init__.py", line 293, in load
+    return loads(fp.read(),
+           ^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/json/__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/json/decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/json/decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+[0m
+Let me do a comprehensive analysis of the DCA patterns and profit targets from the fill data.
+[0m$ [0mcurl -s -X POST https://api.hyperliquid.xyz/info \
+  -H "Content-Type: application/json" \
+  -d '{"type":"userFills","user":"0x0bb81e516c88881c54529e1790470cb5e9f8740d","limit":1000}' 2>&1 | python3 -c "
+import json, sys
+data = json.load(sys.stdin)
+data.sort(key=lambda x: x['time'])
+
+# Detailed DCA analysis
+print('=== DETAILED DCA STRATEGY ANALYSIS ===')
+print()
+
+# Track position building
+pos = 0.0
+cost = 0.0
+opens_in_cycle = []
+cycle_num = 0
+all_cycles = []
+
+for f in data:
+    sz = float(f['sz'])
+    px = float(f['px'])
+    dir_ = f['dir']
+    
+    if dir_ == 'Open Long':
+        pos += sz
+        cost += sz * px
+        opens_in_cycle.append((sz, px))
+    elif dir_ == 'Close Long':
+        if pos > 0:
+            cycle_num += 1
+            avg_entry = cost / pos
+            exit_px = px
+            profit_pct = (exit_px - avg_entry) / avg_entry * 100
+            profit_usd = pos * (exit_px - avg_entry)
+            
+            all_cycles.append({
+                'cycle': cycle_num,
+                'num_opens': len(opens_in_cycle),
+                'total_size': pos,
+                'avg_entry': avg_entry,
+                'exit_px': exit_px,
+                'profit_pct': profit_pct,
+                'profit_usd': profit_usd,
+                'sizes': [s for s, p in opens_in_cycle],
+                'prices': [p for s, p in opens_in_cycle]
+            })
+            
+            pos = 0
+            cost = 0
+            opens_in_cycle = []
+
+print(f'Total cycles: {cycle_num}')
+print()
+
+# Profit target distribution
+profit_pcts = [c['profit_pct'] for c in all_cycles]
+print(f'Profit target - Min: {min(profit_pcts):.4f}%, Max: {max(profit_pcts):.4f}%, Avg: {sum(profit_pcts)/len(profit_pcts):.4f}%')
+print()
+
+# Number of DCA steps distribution
+dca_steps = [c['num_opens'] for c in all_cycles]
+from collections import Counter
+step_dist = Counter(dca_steps)
+print('DCA steps distribution:')
+for steps, count in sorted(step_dist.items()):
+    print(f'  {steps} opens: {count} cycles ({count/cycle_num*100:.1f}%)')
+print()
+
+# Position size distribution
+sizes = [c['total_size'] for c in all_cycles]
+print(f'Position size - Min: {min(sizes):.2f}, Max: {max(sizes):.2f}, Avg: {sum(sizes)/len(sizes):.2f}')
+print()
+
+# Profit per cycle distribution
+profits = [c['profit_usd'] for c in all_cycles]
+print(f'Profit per cycle - Min: {min(profits):.2f}, Max: {max(profits):.2f}, Avg: {sum(profits)/len(profits):.2f}')
+print()
+
+# Analyze DCA size ratios
+print('=== DCA SIZE RATIOS ===')
+for c in all_cycles[:30]:
+    if c['num_opens'] > 1:
+        sizes = c['sizes']
+        ratios = [sizes[i+1]/sizes[i] if sizes[i] > 0 else 0 for i in range(len(sizes)-1)]
+        print(f'Cycle {c[\"cycle\"]}: sizes={sizes}, ratios={[round(r,2) for r in ratios]}')
+"
+=== DETAILED DCA STRATEGY ANALYSIS ===
+
+Total cycles: 542
+
+Profit target - Min: 0.8324%, Max: 4.0707%, Avg: 0.8520%
+
+DCA steps distribution:
+  1 opens: 220 cycles (40.6%)
+  2 opens: 123 cycles (22.7%)
+  3 opens: 64 cycles (11.8%)
+  4 opens: 42 cycles (7.7%)
+  5 opens: 42 cycles (7.7%)
+  6 opens: 18 cycles (3.3%)
+  7 opens: 19 cycles (3.5%)
+  8 opens: 9 cycles (1.7%)
+  9 opens: 2 cycles (0.4%)
+  10 opens: 1 cycles (0.2%)
+  11 opens: 1 cycles (0.2%)
+  12 opens: 1 cycles (0.2%)
+
+Position size - Min: 2.66, Max: 221.61, Avg: 11.26
+
+Profit per cycle - Min: 1.42, Max: 107.58, Avg: 6.32
+
+=== DCA SIZE RATIOS ===
+Cycle 1: sizes=[2.75, 1.38, 1.38, 2.48, 2.48, 8.8, 16.5, 30.25], ratios=[0.5, 1.0, 1.8, 1.0, 3.55, 1.87, 1.83]
+Cycle 2: sizes=[0.99, 2.0], ratios=[2.02]
+Cycle 3: sizes=[2.95, 1.48], ratios=[0.5]
+Cycle 4: sizes=[2.94, 1.47], ratios=[0.5]
+Cycle 5: sizes=[2.24, 0.69], ratios=[0.31]
+Cycle 8: sizes=[2.86, 1.43, 1.43, 2.57], ratios=[0.5, 1.0, 1.8]
+Cycle 10: sizes=[2.65, 0.2], ratios=[0.08]
+Cycle 13: sizes=[2.78, 1.39, 1.39, 2.5], ratios=[0.5, 1.0, 1.8]
+Cycle 14: sizes=[2.29, 0.5, 1.4], ratios=[0.22, 2.8]
+Cycle 16: sizes=[2.75, 1.38], ratios=[0.5]
+Cycle 17: sizes=[1.09, 1.65], ratios=[1.51]
+Cycle 20: sizes=[2.67, 1.33, 1.33], ratios=[0.5, 1.0]
+Cycle 21: sizes=[2.66, 1.33, 1.33, 2.39], ratios=[0.5, 1.0, 1.8]
+Cycle 22: sizes=[2.68, 1.34], ratios=[0.5]
+Cycle 24: sizes=[2.66, 1.33, 1.33, 2.39, 2.39], ratios=[0.5, 1.0, 1.8, 1.0]
+Cycle 26: sizes=[2.69, 1.34, 1.34, 2.42, 2.42], ratios=[0.5, 1.0, 1.81, 1.0]
+Cycle 28: sizes=[2.7, 1.35, 1.35], ratios=[0.5, 1.0]
+Cycle 30: sizes=[2.67, 1.33, 1.33, 2.4, 2.4, 8.54, 16.02], ratios=[0.5, 1.0, 1.8, 1.0, 3.56, 1.88]
+[0m

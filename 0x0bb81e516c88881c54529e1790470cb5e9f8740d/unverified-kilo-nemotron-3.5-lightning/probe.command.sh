@@ -1,0 +1,1 @@
+kilo run -m kilo/nvidia/nemotron-3.5-lightning:free --auto --dir /home/paf/Documents/code/misc/hyperliquid-strategy-sweeps/unverified-kilo-nemotron-3.5-lightning/work --variant thinking --agent plan Reply\ with\ exactly:\ OK

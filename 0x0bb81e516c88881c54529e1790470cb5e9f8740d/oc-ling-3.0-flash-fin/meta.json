@@ -1,0 +1,14 @@
+{
+ "label": "oc-ling-3.0-flash-fin",
+ "tool": "opencode",
+ "model": "opencode/ling-3.0-flash-fin-free",
+ "variant": "high",
+ "free_gate": "ok",
+ "probe": "OK",
+ "status": "DONE",
+ "exit": 0,
+ "duration_s": 55.0,
+ "bytes": 59515,
+ "extra": "",
+ "prompt_file": "prompt.txt"
+}

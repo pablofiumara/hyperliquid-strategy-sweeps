@@ -1,0 +1,14 @@
+{
+ "label": "cline-deepseek-v4.1-flash",
+ "tool": "cline",
+ "model": "cline-free/deepseek-v4.1-flash",
+ "variant": "xhigh",
+ "free_gate": "ok",
+ "probe": "OK",
+ "status": "FAILED",
+ "exit": 1,
+ "duration_s": 489.0,
+ "bytes": 946777,
+ "extra": "",
+ "prompt_file": "prompt.txt"
+}

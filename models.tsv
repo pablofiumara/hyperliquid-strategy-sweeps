@@ -1,0 +1,33 @@
+# tool | model | label | variant | extra-args
+# variant = max reasoning effort. cline -> --thinking <v>, kilo/opencode -> --variant <v> (blank = omit)
+# labels prefixed "unverified-" were never run on this account, so free-ness is unproven.
+cline|cline-free/deepseek-v4.1-flash|cline-deepseek-v4.1-flash|xhigh|
+cline|cline-free/muse-spark-1.3-contributor|cline-muse-spark-1.3-contributor|xhigh|
+cline|z-ai/glm-5.3-flash|cline-glm-5.3-flash|xhigh|
+cline|cline-free/solar-pro4|cline-solar-pro4|xhigh|
+cline|poolside/laguna-s-2.1:free|cline-laguna-s-2.1|xhigh|
+kilo|kilo/cohere/north-mini-code:free|kilo-north-mini-code|thinking|
+kilo|kilo/deepseek/deepseek-v4-flash-0731:free|kilo-deepseek-v4-flash-0731|max|
+kilo|kilo/dots-studio/dots-3-note-preview:free|kilo-dots-3-note-preview|thinking|
+kilo|kilo/inclusionai/ling-3.0-flash-vl:free|kilo-ling-3.0-flash-vl|thinking|
+kilo|kilo/inclusionai/ling-3.0-flash-fin:free|unverified-kilo-ling-3.0-flash-fin|thinking|
+kilo|kilo/inclusionai/ling-3.0-flash-sante:free|unverified-kilo-ling-3.0-flash-sante|thinking|
+kilo|kilo/liquid/lfm-2.5-2.6b:free|kilo-lfm-2.5-2.6b|thinking|
+kilo|kilo/nex-agi/nex-n2.5-mini:free|unverified-kilo-nex-n2.5-mini|high|
+kilo|kilo/nex-agi/nex-n2.5-pro:free|unverified-kilo-nex-n2.5-pro|high|
+kilo|kilo/nvidia/nemotron-3-super-120b-a12b:free|kilo-nemotron-3-super|medium|
+kilo|kilo/nvidia/nemotron-3-ultra-550b-a55b:free|kilo-nemotron-3-ultra|high|
+kilo|kilo/nvidia/nemotron-3.5-lightning:free|unverified-kilo-nemotron-3.5-lightning|thinking|
+kilo|kilo/poolside/laguna-s-2.1:free|kilo-laguna-s-2.1|thinking|
+kilo|kilo/poolside/laguna-xs-2.1:free|kilo-laguna-xs-2.1|thinking|
+kilo|kilo/qwen/qwen3.8-27b:free|unverified-kilo-qwen3.8-27b|xhigh|
+kilo|kilo/stepfun/step-3.7-flash:free|kilo-step-3.7-flash|high|
+kilo|kilo/thinkingmachines/inkling-small:free|unverified-kilo-inkling-small|max|
+opencode|opencode/big-pickle|oc-big-pickle||
+opencode|opencode/jev-1.13-free|oc-jev-1.13||
+opencode|opencode/ling-3.0-flash-fin-free|oc-ling-3.0-flash-fin|high|
+opencode|opencode/mimo-v2.5-free|oc-mimo-v2.5||
+opencode|opencode/muse-spark-1.2-contributor-free|oc-muse-spark-1.2|xhigh|
+opencode|opencode/muse-spark-1.3-contributor-free|oc-muse-spark-1.3|xhigh|
+opencode|opencode/nemotron-3-ultra-free|oc-nemotron-3-ultra||
+opencode|opencode/nemotron-3.5-lightning-free|oc-nemotron-3.5-lightning||

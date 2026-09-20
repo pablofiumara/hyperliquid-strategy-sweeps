@@ -1,0 +1,14 @@
+{
+ "label": "oc-muse-spark-1.2",
+ "tool": "opencode",
+ "model": "opencode/muse-spark-1.2-contributor-free",
+ "variant": "xhigh",
+ "free_gate": "ok",
+ "probe": "OK",
+ "status": "DONE",
+ "exit": 0,
+ "duration_s": 228.0,
+ "bytes": 183771,
+ "extra": "",
+ "prompt_file": "prompt.txt"
+}

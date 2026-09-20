@@ -1,0 +1,1 @@
+kilo run -m kilo/thinkingmachines/inkling-small:free --auto --dir /home/paf/Documents/code/misc/hyperliquid-strategy-sweeps/unverified-kilo-inkling-small/work --variant max --agent plan Reply\ with\ exactly:\ OK

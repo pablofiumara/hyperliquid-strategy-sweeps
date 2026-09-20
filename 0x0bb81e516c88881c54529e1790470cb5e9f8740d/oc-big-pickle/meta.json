@@ -1,0 +1,14 @@
+{
+ "label": "oc-big-pickle",
+ "tool": "opencode",
+ "model": "opencode/big-pickle",
+ "variant": "",
+ "free_gate": "ok",
+ "probe": "OK",
+ "status": "DONE",
+ "exit": 0,
+ "duration_s": 160.0,
+ "bytes": 88652,
+ "extra": "",
+ "prompt_file": "prompt.txt"
+}

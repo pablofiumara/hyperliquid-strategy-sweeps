@@ -1,0 +1,6 @@
+[0m
+> code · nvidia/nemotron-3.5-lightning:free
+[0m
+[0m• [0mExplore hyperliquid codebase[90m Explore Agent[0m
+[0m✓ [0mExplore hyperliquid codebase[90m Explore Agent[0m
+[91m[1mError: [0mUpstream idle timeout exceeded

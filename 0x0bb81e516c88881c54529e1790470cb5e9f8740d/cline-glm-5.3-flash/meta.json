@@ -1,0 +1,14 @@
+{
+ "label": "cline-glm-5.3-flash",
+ "tool": "cline",
+ "model": "z-ai/glm-5.3-flash",
+ "variant": "xhigh",
+ "free_gate": "ok",
+ "probe": "OK",
+ "status": "TIMEOUT",
+ "exit": 124,
+ "duration_s": 1500.0,
+ "bytes": 101733,
+ "extra": "",
+ "prompt_file": "prompt.txt"
+}

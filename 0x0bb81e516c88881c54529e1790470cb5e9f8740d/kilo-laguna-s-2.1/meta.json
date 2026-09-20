@@ -1,0 +1,14 @@
+{
+ "label": "kilo-laguna-s-2.1",
+ "tool": "kilo",
+ "model": "kilo/poolside/laguna-s-2.1:free",
+ "variant": "thinking",
+ "free_gate": "ok",
+ "probe": "OK",
+ "status": "DONE",
+ "exit": 0,
+ "duration_s": 1350.0,
+ "bytes": 189994,
+ "extra": "",
+ "prompt_file": "prompt.txt"
+}

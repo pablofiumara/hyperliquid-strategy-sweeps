@@ -1,0 +1,1 @@
+kilo run -m kilo/liquid/lfm-2.5-2.6b:free --auto --dir /home/paf/Documents/code/misc/hyperliquid-strategy-sweeps/kilo-lfm-2.5-2.6b/work --variant thinking --agent plan Reply\ with\ exactly:\ OK

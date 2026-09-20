@@ -1,0 +1,1443 @@
+[0m
+> code · stepfun/step-3.7-flash:free
+[0m
+[0m→ [0mRead .
+[0m% [0mWebFetch https://hyperx.trade/hyperliquid/trader?address=0x0bb81e516c88881c54529e1790470cb5e9f8740d
+The page rendered no trade data. Let me pull the raw fills directly from the Hyperliquid info API.
+[0m
+[0m$ [0mcurl -s -X POST https://api.hyperliquid.xyz/info \
+  -H "Content-Type: application/json" \
+  -d '{"type":"userFills","user":"0x0bb81e516c88881c54529e1790470cb5e9f8740d"}' | python3 -m json.tool | head -200
+[
+    {
+        "coin": "HYPE",
+        "px": "90.336",
+        "sz": "3.29",
+        "side": "B",
+        "time": 1789872845564,
+        "startPosition": "10.61",
+        "dir": "Open Long",
+        "closedPnl": "0.0",
+        "hash": "0x1a4c574b6f1b0d541bc60444c99ba302098200310a1e2c26be15029e2e1ee73e",
+        "oid": 549495577546,
+        "crossed": false,
+        "fee": "0.042797",
+        "tid": 1084408104450459,
+        "feeToken": "USDC",
+        "twapId": null
+    },
+    {
+        "coin": "HYPE",
+        "px": "91.277",
+        "sz": "3.29",
+        "side": "B",
+        "time": 1789852419551,
+        "startPosition": "7.32",
+        "dir": "Open Long",
+        "closedPnl": "0.0",
+        "hash": "0x967baa7515000a5697f50444c53db20203ae005ab00329283a4455c7d403e441",
+        "oid": 549495562865,
+        "crossed": false,
+        "fee": "0.043243",
+        "tid": 797160991163185,
+        "feeToken": "USDC",
+        "twapId": null
+    },
+    {
+        "coin": "HYPE",
+        "px": "92.218",
+        "sz": "1.83",
+        "side": "B",
+        "time": 1789792477968,
+        "startPosition": "5.49",
+        "dir": "Open Long",
+        "closedPnl": "0.0",
+        "hash": "0xe6c993778fb58a08e8430444b87a67020548005d2ab8a8da8a923eca4eb963f3",
+        "oid": 549495551116,
+        "crossed": false,
+        "fee": "0.024301",
+        "tid": 899265743137885,
+        "feeToken": "USDC",
+        "twapId": null
+    },
+    {
+        "coin": "HYPE",
+        "px": "93.159",
+        "sz": "1.83",
+        "side": "B",
+        "time": 1789792273529,
+        "startPosition": "3.66",
+        "dir": "Open Long",
+        "closedPnl": "0.0",
+        "hash": "0xbc870126070489f3be000444b86f3602013a000ba207a8c5604fac78c60863de",
+        "oid": 549495538703,
+        "crossed": false,
+        "fee": "0.024549",
+        "tid": 12894191002890,
+        "feeToken": "USDC",
+        "twapId": null
+    },
+    {
+        "coin": "HYPE",
+        "px": "94.125",
+        "sz": "3.66",
+        "side": "B",
+        "time": 1789786408601,
+        "startPosition": "0.0",
+        "dir": "Open Long",
+        "closedPnl": "0.0",
+        "hash": "0x01b4aa1f8f66d0f1032e0444b72db302027f00052a69efc3a57d55724e6aaadb",
+        "oid": 549495522002,
+        "crossed": true,
+        "fee": "0.148822",
+        "tid": 812157103091047,
+        "feeToken": "USDC",
+        "twapId": null
+    },
+    {
+        "coin": "HYPE",
+        "px": "94.151",
+        "sz": "5.5",
+        "side": "A",
+        "time": 1789786380667,
+        "startPosition": "5.5",
+        "dir": "Close Long",
+        "closedPnl": "4.31145",
+        "hash": "0xd4dc03c75ccac896d6550444b72c1502045b00acf7cde76878a4af1a1bcea281",
+        "oid": 549437331434,
+        "crossed": false,
+        "fee": "0.074567",
+        "tid": 121347390041330,
+        "feeToken": "USDC",
+        "twapId": null
+    },
+    {
+        "coin": "HYPE",
+        "px": "92.802",
+        "sz": "1.83",
+        "side": "B",
+        "time": 1789780714581,
+        "startPosition": "3.67",
+        "dir": "Open Long",
+        "closedPnl": "0.0",
+        "hash": "0x6a8dd1f73ab117376c070444b5f5e60203bd00dcd5b436090e567d49f9b4f122",
+        "oid": 549430052367,
+        "crossed": false,
+        "fee": "0.024455",
+        "tid": 343192120826277,
+        "feeToken": "USDC",
+        "twapId": null
+    },
+    {
+        "coin": "HYPE",
+        "px": "93.649",
+        "sz": "3.67",
+        "side": "B",
+        "time": 1789780082182,
+        "startPosition": "0.0",
+        "dir": "Open Long",
+        "closedPnl": "0.0",
+        "hash": "0xb969c9ba30fe3001bae30444b5d35c0202f3009fcbf14ed35d32750ceff209ec",
+        "oid": 549430029206,
+        "crossed": true,
+        "fee": "0.148474",
+        "tid": 657775046247686,
+        "feeToken": "USDC",
+        "twapId": null
+    },
+    {
+        "coin": "HYPE",
+        "px": "93.709",
+        "sz": "3.7",
+        "side": "A",
+        "time": 1789780058455,
+        "startPosition": "3.7",
+        "dir": "Close Long",
+        "closedPnl": "2.88822",
+        "hash": "0x5e0ec8838b0fa12a5f880444b5d2210201a300692602bffc01d773d64a037b15",
+        "oid": 549351136253,
+        "crossed": false,
+        "fee": "0.049928",
+        "tid": 928994489116750,
+        "feeToken": "USDC",
+        "twapId": null
+    },
+    {
+        "coin": "HYPE",
+        "px": "92.943",
+        "sz": "1.13",
+        "side": "B",
+        "time": 1789772458099,
+        "startPosition": "2.57",
+        "dir": "Open Long",
+        "closedPnl": "0.0",
+        "hash": "0x87fa7a9785b12c2e89740444b43072020231007d20b44b002bc325ea44b50619",
+        "oid": 549350677737,
+        "crossed": true,
+        "fee": "0.045371",
+        "tid": 751526977630080,
+        "feeToken": "USDC",
+        "twapId": null
+    },
+    {
+        "coin": "HYPE",
+        "px": "92.922",
+        "sz": "2.57",
+        "side": "B",
+        "time": 1789772458099,
+        "startPosition": "0.0",
+        "dir": "Open Long",
+        "closedPnl": "0.0",
+        "hash": "0x87fa7a9785b12c2e89740444b43072020231007d20b44b002bc325ea44b50619",
+        "oid": 549350677737,
+        "crossed": true,
+        "fee": "0.103165",
+        "tid": 817899553505387,
+        "feeToken": "USDC",
+        "twapId": null
+    },
+    {
+        "coin": "HYPE",
+        "px": "92.832",
+        "sz": "5.59",
+        "side": "A",
+        "time": 1789772419765,
+        "startPosition": "5.59",
+        "dir": "Close Long",
+        "closedPnl": "4.322188",
+        "hash": "0x1f0d5f73a397c30d20870444b42e4e02037300593e9ae1dfc2d60ac6629b9cf7",
+        "oid": 549020869690,
+        "crossed": false,
+[0m
+[0m$ [0mcurl -s -X POST https://api.hyperliquid.xyz/info \
+  -H "Content-Type: application/json" \
+  -d '{"type":"fundingHistory","user":"0x0bb81e516c88881c54529e1790470cb5e9f8740d"}' | python3 -m json.tool 2>/dev/null | head -80
+(no output)
+[0m
+[0m$ [0mcurl -s -X POST https://api.hyperliquid.xyz/info \
+  -H "Content-Type: application/json" \
+  -d '{"type":"userFills","user":"0x0bb81e516c88881c54529e1790470cb5e9f8740d"}' > /tmp/fills.json && wc -c /tmp/fills.json
+632279 /tmp/fills.json
+[0m
+[0m$ [0mpython3 << 'EOF'
+import json
+from datetime import datetime, timezone
+
+with open("/tmp/fills.json") as f:
+    fills = json.load(f)
+
+print(f"Total fills: {len(fills)}")
+fills.sort(key=lambda x: x["time"])
+
+# Basic stats
+coins = {}
+for fill in fills:
+    c = fill["coin"]
+    coins.setdefault(c, {"count": 0, "volume": 0, "pnl": 0})
+    coins[c]["count"] += 1
+    coins[c]["volume"] += float(fill["px"]) * float(fill["sz"])
+    coins[c]["pnl"] += float(fill["closedPnl"])
+
+print("\nCoin breakdown:")
+for coin, data in sorted(coins.items(), key=lambda x: -x[1]["volume"]):
+    print(f"  {coin}: {data['count']} fills, vol=${data['volume']:.2f}, closedPnl={data['pnl']:.4f}")
+
+# Total PnL
+total_pnl = sum(float(f["closedPnl"]) for f in fills)
+total_fees = sum(float(f["fee"]) for f in fills)
+print(f"\nTotal closed PnL: {total_pnl:.4f} USDC")
+print(f"Total fees paid: {total_fees:.4f} USDC")
+
+# Time range
+print(f"\nFirst fill: {datetime.fromtimestamp(fills[0]['time']/1000, tz=timezone.utc).isoformat()}")
+print(f"Last fill:  {datetime.fromtimestamp(fills[-1]['time']/1000, tz=timezone.utc).isoformat()}")
+
+# Direction breakdown
+longs = [f for f in fills if f["dir"] == "Open Long"]
+shorts = [f for f in fills if f["dir"] == "Open Short"]
+closes = [f for f in fills if "Close" in f["dir"]]
+print(f"\nOpen Long: {len(longs)}, Open Short: {len(shorts)}, Closes: {len(closes)}")
+
+# Unique order IDs
+oids = set(f["oid"] for f in fills)
+print(f"Unique order IDs: {len(oids)}")
+EOF
+Total fills: 2000
+
+Coin breakdown:
+  HYPE: 2000 fills, vol=$815900.93, closedPnl=3428.4862
+
+Total closed PnL: 3428.4862 USDC
+Total fees paid: 168.4534 USDC
+
+First fill: 2026-05-22T13:41:08.354000+00:00
+Last fill:  2026-09-20T02:54:05.564000+00:00
+
+Open Long: 1405, Open Short: 0, Closes: 595
+Unique order IDs: 1763
+[0m
+[0m$ [0mpython3 << 'EOF'
+import json
+from datetime import datetime, timezone
+from collections import defaultdict
+
+with open("/tmp/fills.json") as f:
+    fills = json.load(f)
+fills.sort(key=lambda x: x["time"])
+
+# Reconstruct trades by matching opens and closes by order id
+# Each open long is followed by a close; let's pair them by order id
+trades = []
+open_by_oid = {}
+for fill in fills:
+    oid = fill["oid"]
+    if "Open" in fill["dir"]:
+        open_by_oid[oid] = fill
+    elif "Close" in fill["dir"] and oid in open_by_oid:
+        o = open_by_oid.pop(oid)
+        trades.append({
+            "open_px": float(o["px"]),
+            "close_px": float(fill["px"]),
+            "sz": float(o["sz"]),
+            "open_time": o["time"],
+            "close_time": fill["time"],
+            "pnl": float(fill["closedPnl"]),
+            "hold_ms": fill["time"] - o["time"],
+        })
+
+print(f"Matched trades: {len(trades)}")
+wins = [t for t in trades if t["pnl"] > 0]
+losses = [t for t in trades if t["pnl"] <= 0]
+print(f"Wins: {len(wins)}, Losses: {len(losses)}")
+print(f"Win rate: {len(wins)/len(trades)*100:.1f}%")
+print(f"Total PnL from trades: {sum(t['pnl'] for t in trades):.4f}")
+print(f"Avg win: {sum(t['pnl'] for t in wins)/len(wins):.4f}" if wins else "")
+print(f"Avg loss: {sum(t['pnl'] for t in losses)/len(losses):.4f}" if losses else "")
+
+# Hold times
+avg_hold = sum(t["hold_ms"] for t in trades) / len(trades) / 1000 / 60  # minutes
+print(f"\nAvg hold time: {avg_hold:.1f} minutes")
+avg_win_hold = sum(t["hold_ms"] for t in wins) / len(wins) / 1000 / 60 if wins else 0
+avg_loss_hold = sum(t["hold_ms"] for t in losses) / len(losses) / 1000 / 60 if losses else 0
+print(f"Avg win hold: {avg_win_hold:.1f} min, Avg loss hold: {avg_loss_hold:.1f} min")
+
+# Position sizes
+sizes = [t["sz"] for t in trades]
+print(f"\nPosition sizes: min={min(sizes):.2f}, max={max(sizes):.2f}, avg={sum(sizes)/len(sizes):.2f}")
+
+# Sizing buckets
+buckets = defaultdict(int)
+for t in trades:
+    s = t["sz"]
+    if s <= 2: buckets["<=2"] += 1
+    elif s <= 5: buckets["2-5"] += 1
+    elif s <= 10: buckets["5-10"] += 1
+    else: buckets[">10"] += 1
+print("Size distribution:", dict(buckets))
+
+# ROI per trade
+rois = [(t["pnl"] / (t["open_px"] * t["sz"])) * 100 for t in trades]
+print(f"\nROI per trade: min={min(rois):.3f}%, max={max(rois):.3f}%, avg={sum(rois)/len(rois):.3f}%")
+EOF
+Matched trades: 0
+Wins: 0, Losses: 0
+Traceback (most recent call last):
+  File "<stdin>", line 33, in <module>
+ZeroDivisionError: division by zero
+[0m
+[0m$ [0mpython3 << 'EOF'
+import json
+from datetime import datetime, timezone
+
+with open("/tmp/fills.json") as f:
+    fills = json.load(f)
+fills.sort(key=lambda x: x["time"])
+
+# Show a few sample fills to understand structure
+for f in fills[:5]:
+    print(f)
+EOF
+{'coin': 'HYPE', 'px': '61.74', 'sz': '4.16', 'side': 'A', 'time': 1779457268354, 'startPosition': '4.16', 'dir': 'Close Long', 'closedPnl': '2.121184', 'hash': '0x229de006de855a152417043bfb3136020b7200ec798878e7c6668b599d8933ff', 'oid': 437446799226, 'crossed': False, 'fee': '0.036984', 'tid': 995491770970037, 'feeToken': 'USDC', 'twapId': None}
+{'coin': 'HYPE', 'px': '61.874', 'sz': '2.75', 'side': 'B', 'time': 1779457298664, 'startPosition': '0.0', 'dir': 'Open Long', 'closedPnl': '0.0', 'hash': '0xfdd41e780f4bfb9cff4d043bfb32f20204b2005daa4f1a6fa19cc9cace4fd587', 'oid': 437522835530, 'crossed': True, 'fee': '0.073506', 'tid': 999339606343951, 'feeToken': 'USDC', 'twapId': None}
+{'coin': 'HYPE', 'px': '61.26', 'sz': '1.38', 'side': 'B', 'time': 1779457552310, 'startPosition': '2.75', 'dir': 'Open Long', 'closedPnl': '0.0', 'hash': '0x79584888b0a3d45c7ad2043bfb41320201f8006e4ba6f32e1d20f3db6fa7ae47', 'oid': 437522903087, 'crossed': False, 'fee': '0.012173', 'tid': 309732558657841, 'feeToken': 'USDC', 'twapId': None}
+{'coin': 'HYPE', 'px': '60.64', 'sz': '1.38', 'side': 'B', 'time': 1779459479089, 'startPosition': '4.13', 'dir': 'Open Long', 'closedPnl': '0.0', 'hash': '0x20fe7490fcdfc9612278043bfbad490000398c7697d2e833c4c71fe3bbd3a34b', 'oid': 437523001708, 'crossed': False, 'fee': '0.01205', 'tid': 977320576850248, 'feeToken': 'USDC', 'twapId': None}
+{'coin': 'HYPE', 'px': '60.02', 'sz': '2.48', 'side': 'B', 'time': 1779459502999, 'startPosition': '5.51', 'dir': 'Open Long', 'closedPnl': '0.0', 'hash': '0x569b0d69071b6bb85814043bfbaea9020564004ea21e8a8afa63b8bbc61f45a2', 'oid': 437523029468, 'crossed': False, 'fee': '0.021434', 'tid': 715790116302297, 'feeToken': 'USDC', 'twapId': None}
+[0m
+[0m$ [0mpython3 << 'EOF'
+import json
+from datetime import datetime, timezone
+
+with open("/tmp/fills.json") as f:
+    fills = json.load(f)
+fills.sort(key=lambda x: x["time"])
+
+# Reconstruct trades using position tracking
+# A trade starts when position goes from 0 to >0, ends when it returns to 0
+trades = []
+current_position = 0.0
+entry_prices = []
+entry_sizes = []
+trade_open_time = None
+
+for fill in fills:
+    sz = float(fill["sz"])
+    px = float(fill["px"])
+    start_pos = float(fill["startPosition"])
+    end_pos = start_pos + sz if fill["side"] == "B" else start_pos - sz
+    closed_pnl = float(fill["closedPnl"])
+    
+    if "Open" in fill["dir"]:
+        if current_position == 0:
+            trade_open_time = fill["time"]
+            entry_prices = []
+            entry_sizes = []
+        entry_prices.append(px)
+        entry_sizes.append(sz)
+        current_position = end_pos
+    elif "Close" in fill["dir"]:
+        if current_position > 0 and closed_pnl != 0:
+            avg_entry = sum(p*s for p,s in zip(entry_prices, entry_sizes)) / sum(entry_sizes)
+            total_sz = sum(entry_sizes)
+            hold_ms = fill["time"] - trade_open_time
+            trades.append({
+                "entry_px": avg_entry,
+                "exit_px": px,
+                "sz": total_sz,
+                "pnl": closed_pnl,
+                "hold_ms": hold_ms,
+                "open_time": trade_open_time,
+                "close_time": fill["time"],
+                "roi": (closed_pnl / (avg_entry * total_sz)) * 100,
+                "num_fills": len(entry_prices),
+            })
+            current_position = 0
+            entry_prices = []
+            entry_sizes = []
+
+print(f"Total reconstructed trades: {len(trades)}")
+if trades:
+    wins = [t for t in trades if t["pnl"] > 0]
+    losses = [t for t in trades if t["pnl"] <= 0]
+    print(f"Wins: {len(wins)} ({len(wins)/len(trades)*100:.1f}%), Losses: {len(losses)}")
+    print(f"Win rate: {len(wins)/len(trades)*100:.1f}%")
+    print(f"Total PnL: {sum(t['pnl'] for t in trades):.4f} USDC")
+    print(f"Avg PnL/trade: {sum(t['pnl'] for t in trades)/len(trades):.4f} USDC")
+    print(f"Avg win: {sum(t['pnl'] for t in wins)/len(wins):.4f}" if wins else "")
+    print(f"Avg loss: {sum(t['pnl'] for t in losses)/len(losses):.4f}" if losses else "")
+    print(f"Avg ROI: {sum(t['roi'] for t in trades)/len(trades):.3f}%")
+    avg_hold = sum(t["hold_ms"] for t in trades) / len(trades) / 1000 / 60
+    print(f"Avg hold: {avg_hold:.1f} minutes")
+    
+    # Time-of-day analysis
+    from collections import defaultdict
+    hour_pnl = defaultdict(list)
+    for t in trades:
+        dt = datetime.fromtimestamp(t["open_time"]/1000, tz=timezone.utc)
+        hour_pnl[dt.hour].append(t["pnl"])
+    print("\nPnL by hour (UTC):")
+    for h in sorted(hour_pnl.keys()):
+        pnls = hour_pnl[h]
+        print(f"  {h:02d}:00 - {len(pnls)} trades, avg PnL: {sum(pnls)/len(pnls):.3f}")
+
+    # Consecutive wins/losses
+    results = ["W" if t["pnl"] > 0 else "L" for t in trades]
+    max_win_streak = max_win = max_loss = 0
+    cur = 1
+    for i in range(1, len(results)):
+        if results[i] == results[i-1]:
+            cur += 1
+        else:
+            if results[i-1] == "W":
+                max_win = max(max_win, cur)
+            else:
+                max_loss = max(max_loss, cur)
+            cur = 1
+    if results:
+        if results[-1] == "W": max_win = max(max_win, cur)
+        else: max_loss = max(max_loss, cur)
+    print(f"\nMax win streak: {max_win}, Max loss streak: {max_loss}")
+EOF
+Total reconstructed trades: 542
+Wins: 542 (100.0%), Losses: 0
+Win rate: 100.0%
+Total PnL: 3125.7311 USDC
+Avg PnL/trade: 5.7670 USDC
+Avg win: 5.7670
+
+Avg ROI: 0.822%
+Avg hold: 315.2 minutes
+
+PnL by hour (UTC):
+  00:00 - 20 trades, avg PnL: 3.960
+  01:00 - 18 trades, avg PnL: 6.830
+  02:00 - 23 trades, avg PnL: 3.047
+  03:00 - 21 trades, avg PnL: 6.531
+  04:00 - 16 trades, avg PnL: 7.370
+  05:00 - 26 trades, avg PnL: 5.452
+  06:00 - 20 trades, avg PnL: 4.281
+  07:00 - 19 trades, avg PnL: 6.749
+  08:00 - 19 trades, avg PnL: 6.110
+  09:00 - 23 trades, avg PnL: 5.165
+  10:00 - 22 trades, avg PnL: 3.791
+  11:00 - 23 trades, avg PnL: 3.432
+  12:00 - 25 trades, avg PnL: 5.367
+  13:00 - 32 trades, avg PnL: 6.226
+  14:00 - 31 trades, avg PnL: 6.659
+  15:00 - 35 trades, avg PnL: 7.819
+  16:00 - 28 trades, avg PnL: 6.052
+  17:00 - 20 trades, avg PnL: 5.263
+  18:00 - 22 trades, avg PnL: 6.436
+  19:00 - 23 trades, avg PnL: 6.475
+  20:00 - 14 trades, avg PnL: 7.220
+  21:00 - 26 trades, avg PnL: 5.077
+  22:00 - 18 trades, avg PnL: 8.284
+  23:00 - 18 trades, avg PnL: 4.704
+
+Max win streak: 542, Max loss streak: 0
+[0m
+[0m$ [0mpython3 << 'EOF'
+import json
+from datetime import datetime, timezone
+
+with open("/tmp/fills.json") as f:
+    fills = json.load(f)
+fills.sort(key=lambda x: x["time"])
+
+# Check: how many closes have non-zero closedPnl?
+closes = [f for f in fills if "Close" in f["dir"]]
+nonzero_closes = [f for f in closes if float(f["closedPnl"]) != 0]
+zero_closes = [f for f in closes if float(f["closedPnl"]) == 0]
+print(f"Total closes: {len(closes)}")
+print(f"Closes with PnL: {len(nonzero_closes)}")
+print(f"Closes with 0 PnL: {len(zero_closes)}")
+print(f"\nSample zero-PnL closes:")
+for f in zero_closes[:5]:
+    print(f"  {f}")
+print(f"\nSample non-zero closes:")
+for f in nonzero_closes[:5]:
+    print(f"  {f}")
+
+# Check opens
+opens = [f for f in fills if "Open" in f["dir"]]
+print(f"\nTotal opens: {len(opens)}")
+print(f"Sample opens:")
+for f in opens[:3]:
+    print(f"  {f}")
+EOF
+Total closes: 595
+Closes with PnL: 595
+Closes with 0 PnL: 0
+
+Sample zero-PnL closes:
+
+Sample non-zero closes:
+  {'coin': 'HYPE', 'px': '61.74', 'sz': '4.16', 'side': 'A', 'time': 1779457268354, 'startPosition': '4.16', 'dir': 'Close Long', 'closedPnl': '2.121184', 'hash': '0x229de006de855a152417043bfb3136020b7200ec798878e7c6668b599d8933ff', 'oid': 437446799226, 'crossed': False, 'fee': '0.036984', 'tid': 995491770970037, 'feeToken': 'USDC', 'twapId': None}
+  {'coin': 'HYPE', 'px': '57.02', 'sz': '66.02', 'side': 'A', 'time': 1779548856697, 'startPosition': '66.02', 'dir': 'Close Long', 'closedPnl': '31.663192', 'hash': '0x8bd0b275d90ac1ee8d4a043c0f793d0204f7005b740de0c02f995dc8980e9bd9', 'oid': 438063235139, 'crossed': False, 'fee': '0.542082', 'tid': 1053017777126552, 'feeToken': 'USDC', 'twapId': None}
+  {'coin': 'HYPE', 'px': '57.45', 'sz': '2.99', 'side': 'A', 'time': 1779549853743, 'startPosition': '2.99', 'dir': 'Close Long', 'closedPnl': '1.422343', 'hash': '0x2d55b5f3f887dcff2ecf043c0fb220000090cdd9938afbd1d11e6146b78bb6e9', 'oid': 439024211672, 'crossed': False, 'fee': '0.024735', 'tid': 989934260500279, 'feeToken': 'USDC', 'twapId': None}
+  {'coin': 'HYPE', 'px': '57.91', 'sz': '4.43', 'side': 'A', 'time': 1779554980904, 'startPosition': '4.43', 'dir': 'Close Long', 'closedPnl': '2.128615', 'hash': '0x792c26a434ca5b8e7aa5043c10d5810201bf0089cfcd7a601cf4d1f6f3ce3579', 'oid': 439046082966, 'crossed': False, 'fee': '0.036941', 'tid': 1021396179954031, 'feeToken': 'USDC', 'twapId': None}
+  {'coin': 'HYPE', 'px': '58.19', 'sz': '4.41', 'side': 'A', 'time': 1779559977796, 'startPosition': '4.41', 'dir': 'Close Long', 'closedPnl': '2.146347', 'hash': '0x33e6f105e22c96223560043c11f21202107000eb7d2fb4f4d7af9c58a120700c', 'oid': 439146673022, 'crossed': False, 'fee': '0.036952', 'tid': 466239594822558, 'feeToken': 'USDC', 'twapId': None}
+
+Total opens: 1405
+Sample opens:
+  {'coin': 'HYPE', 'px': '61.874', 'sz': '2.75', 'side': 'B', 'time': 1779457298664, 'startPosition': '0.0', 'dir': 'Open Long', 'closedPnl': '0.0', 'hash': '0xfdd41e780f4bfb9cff4d043bfb32f20204b2005daa4f1a6fa19cc9cace4fd587', 'oid': 437522835530, 'crossed': True, 'fee': '0.073506', 'tid': 999339606343951, 'feeToken': 'USDC', 'twapId': None}
+  {'coin': 'HYPE', 'px': '61.26', 'sz': '1.38', 'side': 'B', 'time': 1779457552310, 'startPosition': '2.75', 'dir': 'Open Long', 'closedPnl': '0.0', 'hash': '0x79584888b0a3d45c7ad2043bfb41320201f8006e4ba6f32e1d20f3db6fa7ae47', 'oid': 437522903087, 'crossed': False, 'fee': '0.012173', 'tid': 309732558657841, 'feeToken': 'USDC', 'twapId': None}
+  {'coin': 'HYPE', 'px': '60.64', 'sz': '1.38', 'side': 'B', 'time': 1779459479089, 'startPosition': '4.13', 'dir': 'Open Long', 'closedPnl': '0.0', 'hash': '0x20fe7490fcdfc9612278043bfbad490000398c7697d2e833c4c71fe3bbd3a34b', 'oid': 437523001708, 'crossed': False, 'fee': '0.01205', 'tid': 977320576850248, 'feeToken': 'USDC', 'twapId': None}
+[0m
+[0m$ [0mpython3 << 'EOF'
+import json
+
+with open("/tmp/fills.json") as f:
+    fills = json.load(f)
+fills.sort(key=lambda x: x["time"])
+
+# 100% win rate is suspicious. Let me check if closedPnl is actually always positive
+pnls = [float(f["closedPnl"]) for f in fills if "Close" in f["dir"]]
+neg = [p for p in pnls if p < 0]
+zero = [p for p in pnls if p == 0]
+pos = [p for p in pnls if p > 0]
+print(f"Positive PnL closes: {len(pos)}, Negative: {len(neg)}, Zero: {len(zero)}")
+print(f"Min PnL: {min(pnls):.6f}, Max PnL: {max(pnls):.6f}")
+print(f"Total PnL: {sum(pnls):.4f}")
+
+# Maybe the API returns only profitable closes? Let me check recent fills more carefully
+# Let's look at HYPE price action around trades
+# The fills go from px 61.74 (first close) to 90.336 (most recent open)
+# HYPE is in a general uptrend, so longs make sense
+
+# Check if there are losing trades that weren't closed yet (still open)
+print(f"\nTotal fills: {len(fills)}")
+print(f"Opens: {len([f for f in fills if 'Open' in f['dir']])}")
+print(f"Closes: {len([f for f in fills if 'Close' in f['dir']])}")
+print(f"Unmatched opens - closes = {len([f for f in fills if 'Open' in f['dir']]) - len([f for f in fills if 'Close' in f['dir']])}")
+EOF
+Positive PnL closes: 595, Negative: 0, Zero: 0
+Min PnL: 0.035609, Max PnL: 107.591655
+Total PnL: 3428.4862
+
+Total fills: 2000
+Opens: 1405
+Closes: 595
+Unmatched opens - closes = 810
+[0m
+[0m$ [0mpython3 << 'EOF'
+import json
+from datetime import datetime, timezone
+
+with open("/tmp/fills.json") as f:
+    fills = json.load(f)
+fills.sort(key=lambda x: x["time"])
+
+# Check the order type (crossed = market order crossing spread)
+crossed_opens = [f for f in fills if "Open" in f["dir"] and f["crossed"]]
+limit_opens = [f for f in fills if "Open" in f["dir"] and not f["crossed"]]
+crossed_closes = [f for f in fills if "Close" in f["dir"] and f["crossed"]]
+limit_closes = [f for f in fills if "Close" in f["dir"] and not f["crossed"]]
+
+print(f"Open Long - Market (crossed): {len(crossed_opens)}")
+print(f"Open Long - Limit (not crossed): {len(limit_opens)}")
+print(f"Close Long - Market: {len(crossed_closes)}")
+print(f"Close Long - Limit: {len(limit_closes)}")
+
+# Fee analysis
+total_fees_open = sum(float(f["fee"]) for f in fills if "Open" in f["dir"])
+total_fees_close = sum(float(f["fee"]) for f in fills if "Close" in f["dir"])
+print(f"\nFees on opens: {total_fees_open:.4f}")
+print(f"Fees on closes: {total_fees_close:.4f}")
+
+# Look at trade sizes over time - maybe scaling in/out
+sizes_open = [float(f["sz"]) for f in fills if "Open" in f["dir"]]
+print(f"\nOpen sizes - min: {min(sizes_open):.2f}, max: {max(sizes_open):.2f}, avg: {sum(sizes_open)/len(sizes_open):.2f}")
+
+# Check for partial closes - a close with sz < current position
+print("\n--- Checking for partial closes ---")
+position = 0.0
+partial_closes = 0
+full_closes = 0
+for fill in fills:
+    sz = float(fill["sz"])
+    if "Close" in fill["dir"]:
+        if position > sz + 0.001:
+            partial_closes += 1
+            print(f"Partial close: pos={position:.2f}, sz={sz:.2f}")
+        else:
+            full_closes += 1
+        position -= sz
+    elif "Open" in fill["dir"]:
+        position += sz
+
+print(f"Full closes: {full_closes}, Partial closes: {partial_closes}")
+
+# Size progression analysis
+print("\n--- Position size progression ---")
+position = 0.0
+entries = []
+for fill in fills:
+    sz = float(fill["sz"])
+    if "Open" in fill["dir"]:
+        if position == 0:
+            entries.append([])
+        entries[-1].append((fill["time"], sz, float(fill["px"])))
+        position += sz
+    elif "Close" in fill["dir"]:
+        position -= sz
+
+print(f"Number of trade entries (open cycles): {len(entries)}")
+for i, entry in enumerate(entries[:5]):
+    total_sz = sum(s for _, s, _ in entry)
+    print(f"  Trade {i+1}: {len(entry)} fills, total size={total_sz:.2f}")
+    for t, s, p in entry:
+        print(f"    {datetime.fromtimestamp(t/1000, tz=timezone.utc).strftime('%H:%M')}: +{s:.2f} @ {p:.2f}")
+EOF
+Open Long - Market (crossed): 702
+Open Long - Limit (not crossed): 703
+Close Long - Market: 7
+Close Long - Limit: 588
+
+Fees on opens: 108.9747
+Fees on closes: 59.4787
+
+Open sizes - min: 0.01, max: 102.09, avg: 4.35
+
+--- Checking for partial closes ---
+Partial close: pos=0.84, sz=0.33
+Partial close: pos=111.27, sz=49.32
+Partial close: pos=61.95, sz=44.29
+Partial close: pos=4.96, sz=0.07
+Partial close: pos=4.89, sz=4.29
+Partial close: pos=75.14, sz=16.31
+Partial close: pos=58.83, sz=36.89
+Partial close: pos=28.68, sz=13.64
+Partial close: pos=106.49, sz=27.55
+Partial close: pos=3.76, sz=2.51
+Partial close: pos=1.25, sz=0.91
+Partial close: pos=2.92, sz=1.48
+Partial close: pos=59.01, sz=31.63
+Partial close: pos=27.38, sz=20.99
+Partial close: pos=114.41, sz=9.59
+Partial close: pos=104.82, sz=4.29
+Partial close: pos=100.53, sz=48.00
+Partial close: pos=132.64, sz=103.24
+Partial close: pos=38.07, sz=2.63
+Partial close: pos=35.44, sz=2.50
+Partial close: pos=32.94, sz=2.50
+Partial close: pos=30.44, sz=2.50
+Partial close: pos=1.93, sz=1.09
+Partial close: pos=4.95, sz=1.39
+Partial close: pos=3.84, sz=2.87
+Partial close: pos=44.20, sz=20.03
+Partial close: pos=24.17, sz=2.29
+Partial close: pos=21.88, sz=0.41
+Partial close: pos=11.99, sz=11.53
+Partial close: pos=0.11, sz=0.08
+Full closes: 565, Partial closes: 30
+
+--- Position size progression ---
+Traceback (most recent call last):
+  File "<stdin>", line 57, in <module>
+IndexError: list index out of range
+[0m
+[0m$ [0mpython3 << 'EOF'
+import json
+
+with open("/tmp/fills.json") as f:
+    fills = json.load(f)
+fills.sort(key=lambda x: x["time"])
+
+# Check current open positions by tracking position over time
+position = 0.0
+for fill in fills:
+    sz = float(fill["sz"])
+    if "Close" in fill["dir"]:
+        position -= sz
+    elif "Open" in fill["dir"]:
+        position += sz
+
+print(f"Current open position: {position:.4f} HYPE")
+
+# Look at recent activity to see the most recent state
+print("\nLast 10 fills:")
+for f in fills[-10:]:
+    dt = datetime.fromtimestamp(f["time"]/1000, tz=timezone.utc)
+    print(f"  {dt.strftime('%Y-%m-%d %H:%M:%S')} {f['dir']} {f['side']} {f['sz']} @ {f['px']} PnL={f['closedPnl']}")
+
+# Maybe the 100% win rate is because the trader only closes winning positions
+# and lets losers ride (or cuts them with market orders we don't see?)
+# Let's check if there are any "reduce only" or stop-loss type orders
+
+# Look at the closes more carefully - are they all closing at a profit?
+# Let's compute PnL ourselves for each close
+print("\n--- Verify closedPnl vs computed PnL ---")
+# Track running average entry price
+avg_entry = 0.0
+pos = 0.0
+discrepancies = 0
+for fill in fills:
+    sz = float(fill["sz"])
+    px = float(fill["px"])
+    if "Open" in fill["dir"]:
+        # Update average entry
+        avg_entry = (avg_entry * pos + px * sz) / (pos + sz) if (pos + sz) > 0 else px
+        pos += sz
+    elif "Close" in fill["dir"]:
+        computed_pnl = (px - avg_entry) * sz
+        reported_pnl = float(fill["closedPnl"])
+        diff = abs(computed_pnl - reported_pnl)
+        if diff > 0.01:
+            discrepancies += 1
+            if discrepancies <= 5:
+                print(f"  Discrepancy: computed={computed_pnl:.4f}, reported={reported_pnl:.4f}, diff={diff:.4f}")
+        pos -= sz
+        if pos < 0.001:
+            pos = 0.0
+            avg_entry = 0.0
+
+print(f"Total discrepancies: {discrepancies}")
+EOF
+Current open position: 9.7400 HYPE
+
+Last 10 fills:
+Traceback (most recent call last):
+  File "<stdin>", line 21, in <module>
+NameError: name 'datetime' is not defined. Did you forget to import 'datetime'?
+[0m
+[0m$ [0mpython3 << 'EOF'
+import json
+from datetime import datetime, timezone
+
+with open("/tmp/fills.json") as f:
+    fills = json.load(f)
+fills.sort(key=lambda x: x["time"])
+
+position = 0.0
+for fill in fills:
+    sz = float(fill["sz"])
+    if "Close" in fill["dir"]:
+        position -= sz
+    elif "Open" in fill["dir"]:
+        position += sz
+
+print(f"Current open position: {position:.4f} HYPE")
+print("\nLast 10 fills:")
+for f in fills[-10:]:
+    dt = datetime.fromtimestamp(f["time"]/1000, tz=timezone.utc)
+    print(f"  {dt.strftime('%Y-%m-%d %H:%M:%S')} {f['dir']} {f['side']} {f['sz']} @ {f['px']} PnL={f['closedPnl']}")
+
+# Verify PnL
+avg_entry = 0.0
+pos = 0.0
+for fill in fills:
+    sz = float(fill["sz"])
+    px = float(fill["px"])
+    if "Open" in fill["dir"]:
+        avg_entry = (avg_entry * pos + px * sz) / (pos + sz) if (pos + sz) > 0 else px
+        pos += sz
+    elif "Close" in fill["dir"]:
+        computed_pnl = (px - avg_entry) * sz
+        reported_pnl = float(fill["closedPnl"])
+        pos -= sz
+        if pos < 0.001:
+            pos = 0.0
+            avg_entry = 0.0
+
+print(f"\nFinal position after all fills: {pos:.4f}")
+EOF
+Current open position: 9.7400 HYPE
+
+Last 10 fills:
+  2026-09-18 23:00:58 Open Long B 2.57 @ 92.922 PnL=0.0
+  2026-09-19 01:07:38 Close Long A 3.7 @ 93.709 PnL=2.88822
+  2026-09-19 01:08:02 Open Long B 3.67 @ 93.649 PnL=0.0
+  2026-09-19 01:18:34 Open Long B 1.83 @ 92.802 PnL=0.0
+  2026-09-19 02:53:00 Close Long A 5.5 @ 94.151 PnL=4.31145
+  2026-09-19 02:53:28 Open Long B 3.66 @ 94.125 PnL=0.0
+  2026-09-19 04:31:13 Open Long B 1.83 @ 93.159 PnL=0.0
+  2026-09-19 04:34:37 Open Long B 1.83 @ 92.218 PnL=0.0
+  2026-09-19 21:13:39 Open Long B 3.29 @ 91.277 PnL=0.0
+  2026-09-20 02:54:05 Open Long B 3.29 @ 90.336 PnL=0.0
+
+Final position after all fills: 13.9000
+[0m
+[0m$ [0mcurl -s -X POST https://api.hyperliquid.xyz/info \
+  -H "Content-Type: application/json" \
+  -d '{"type":"orderHistory","user":"0x0bb81e516c88881c54529e1790470cb5e9f8740d"}' | python3 -m json.tool | head -60
+Expecting value: line 1 column 1 (char 0)
+[0m
+[0m$ [0mpython3 << 'EOF'
+import json
+from datetime import datetime, timezone
+from collections import defaultdict
+
+with open("/tmp/fills.json") as f:
+    fills = json.load(f)
+fills.sort(key=lambda x: x["time"])
+
+# Look at the actual trading pattern more carefully
+# Group trades: each trade = sequence of opens followed by a close
+trades = []
+current_opens = []
+position = 0.0
+
+for fill in fills:
+    sz = float(fill["sz"])
+    if "Open" in fill["dir"]:
+        current_opens.append(fill)
+        position += sz
+    elif "Close" in fill["dir"] and current_opens:
+        # Compute avg entry
+        total_sz = sum(float(o["sz"]) for o in current_opens)
+        avg_entry = sum(float(o["px"]) * float(o["sz"]) for o in current_opens) / total_sz
+        trades.append({
+            "opens": current_opens.copy(),
+            "close": fill,
+            "avg_entry": avg_entry,
+            "total_sz": total_sz,
+            "close_px": float(fill["px"]),
+            "pnl": float(fill["closedPnl"]),
+            "open_time": current_opens[0]["time"],
+            "close_time": fill["time"],
+            "hold_ms": fill["time"] - current_opens[0]["time"],
+            "num_opens": len(current_opens),
+        })
+        current_opens = []
+        position = 0.0
+
+print(f"Total trades: {len(trades)}")
+print(f"Win rate: {sum(1 for t in trades if t['pnl'] > 0) / len(trades) * 100:.1f}%")
+
+# Analyze entry patterns
+print("\n--- Entry pattern analysis ---")
+avg_entries = [t["avg_entry"] for t in trades]
+print(f"Avg entry prices: min={min(avg_entries):.2f}, max={max(avg_entries):.2f}")
+
+# Average number of entries per trade
+avg_num_entries = sum(t["num_opens"] for t in trades) / len(trades)
+print(f"Avg entries per trade: {avg_num_entries:.2f}")
+
+# Distribution of entries per trade
+entry_dist = defaultdict(int)
+for t in trades:
+    entry_dist[t["num_opens"]] += 1
+print("Entries per trade distribution:", dict(sorted(entry_dist.items())))
+
+# Time analysis - does the trader trade at specific times?
+print("\n--- Time analysis ---")
+from collections import defaultdict
+hour_counts = defaultdict(int)
+hour_pnl = defaultdict(float)
+for t in trades:
+    dt = datetime.fromtimestamp(t["open_time"]/1000, tz=timezone.utc)
+    hour = dt.hour
+    hour_counts[hour] += 1
+    hour_pnl[hour] += t["pnl"]
+
+for h in sorted(hour_counts.keys()):
+    print(f"  {h:02d}:00 - {hour_counts[h]} trades, avg PnL: {hour_pnl[h]/hour_counts[h]:.3f}")
+
+# Day of week
+print("\n--- Day of week ---")
+dow_counts = defaultdict(int)
+dow_pnl = defaultdict(float)
+for t in trades:
+    dt = datetime.fromtimestamp(t["open_time"]/1000, tz=timezone.utc)
+    dow = dt.strftime("%A")
+    dow_counts[dow] += 1
+    dow_pnl[dow] += t["pnl"]
+
+for d in ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]:
+    if d in dow_counts:
+        print(f"  {d}: {dow_counts[d]} trades, avg PnL: {dow_pnl[d]/dow_counts[d]:.3f}")
+
+# Scaling in/out behavior
+print("\n--- Scaling analysis ---")
+scaling_in = [t for t in trades if t["num_opens"] > 1]
+single_entry = [t for t in trades if t["num_opens"] == 1]
+print(f"Single entry trades: {len(single_entry)}")
+print(f"Scaling-in trades: {len(scaling_in)}")
+if scaling_in:
+    print(f"Scaling-in avg PnL: {sum(t['pnl'] for t in scaling_in)/len(scaling_in):.3f}")
+    print(f"Single entry avg PnL: {sum(t['pnl'] for t in single_entry)/len(single_entry):.3f}")
+EOF
+Total trades: 542
+Win rate: 100.0%
+
+--- Entry pattern analysis ---
+Avg entry prices: min=52.61, max=93.37
+Avg entries per trade: 2.58
+Entries per trade distribution: {1: 220, 2: 123, 3: 64, 4: 42, 5: 42, 6: 18, 7: 19, 8: 9, 9: 2, 10: 1, 11: 1, 12: 1}
+
+--- Time analysis ---
+  00:00 - 20 trades, avg PnL: 3.960
+  01:00 - 18 trades, avg PnL: 6.830
+  02:00 - 23 trades, avg PnL: 3.047
+  03:00 - 21 trades, avg PnL: 6.531
+  04:00 - 16 trades, avg PnL: 7.370
+  05:00 - 26 trades, avg PnL: 5.452
+  06:00 - 20 trades, avg PnL: 4.281
+  07:00 - 19 trades, avg PnL: 6.749
+  08:00 - 19 trades, avg PnL: 6.110
+  09:00 - 23 trades, avg PnL: 5.165
+  10:00 - 22 trades, avg PnL: 3.791
+  11:00 - 23 trades, avg PnL: 3.432
+  12:00 - 25 trades, avg PnL: 5.367
+  13:00 - 32 trades, avg PnL: 6.226
+  14:00 - 31 trades, avg PnL: 6.659
+  15:00 - 35 trades, avg PnL: 7.819
+  16:00 - 28 trades, avg PnL: 6.052
+  17:00 - 20 trades, avg PnL: 5.263
+  18:00 - 22 trades, avg PnL: 6.436
+  19:00 - 23 trades, avg PnL: 6.475
+  20:00 - 14 trades, avg PnL: 7.220
+  21:00 - 26 trades, avg PnL: 5.077
+  22:00 - 18 trades, avg PnL: 8.284
+  23:00 - 18 trades, avg PnL: 4.704
+
+--- Day of week ---
+  Monday: 91 trades, avg PnL: 6.644
+  Tuesday: 54 trades, avg PnL: 5.672
+  Wednesday: 88 trades, avg PnL: 5.725
+  Thursday: 93 trades, avg PnL: 5.852
+  Friday: 91 trades, avg PnL: 6.322
+  Saturday: 57 trades, avg PnL: 5.575
+  Sunday: 68 trades, avg PnL: 4.024
+
+--- Scaling analysis ---
+Single entry trades: 220
+Scaling-in trades: 322
+Scaling-in avg PnL: 7.881
+Single entry avg PnL: 2.673
+[0m
+[0m$ [0mpython3 << 'EOF'
+import json
+from datetime import datetime, timezone
+
+with open("/tmp/fills.json") as f:
+    fills = json.load(f)
+fills.sort(key=lambda x: x["time"])
+
+# Check if there are any negative-PnL events in any form
+print("First 20 fills chronologically:")
+for f in fills[:20]:
+    dt = datetime.fromtimestamp(f["time"]/1000, tz=timezone.utc)
+    print(f"  {dt.strftime('%Y-%m-%d %H:%M:%S')} {f['coin']} {f['dir']} {f['side']} sz={f['sz']} px={f['px']} PnL={f['closedPnl']}")
+
+# Look for any fills with negative PnL
+neg_pnl = [f for f in fills if float(f["closedPnl"]) < 0]
+print(f"\nTotal fills with negative PnL: {len(neg_pnl)}")
+
+# Check for a stop-loss pattern - maybe the trader uses stop orders
+# Look for pattern: multiple opens at increasing prices then a big close
+print("\n--- Largest trades by PnL ---")
+closes = [(f["time"], f["closedPnl"], f["sz"], f["px"]) for f in fills if "Close" in f["dir"]]
+closes.sort(key=lambda x: -x[1])
+for t, pnl, sz, px in closes[:10]:
+    dt = datetime.fromtimestamp(t/1000, tz=timezone.utc)
+    print(f"  {dt.strftime('%Y-%m-%d %H:%M:%S')} close {sz} @ {px} PnL={pnl:.3f}")
+
+# Check if there are any "recent" large losses that might not have closed yet
+print("\n--- Largest open positions (by cumulative size) ---")
+position = 0.0
+max_pos = 0.0
+max_pos_time = 0
+for fill in fills:
+    sz = float(fill["sz"])
+    if "Close" in fill["dir"]:
+        position -= sz
+    elif "Open" in fill["dir"]:
+        position += sz
+        if position > max_pos:
+            max_pos = position
+            max_pos_time = fill["time"]
+
+dt = datetime.fromtimestamp(max_pos_time/1000, tz=timezone.utc)
+print(f"Max position reached: {max_pos:.2f} HYPE at {dt}")
+EOF
+First 20 fills chronologically:
+  2026-05-22 13:41:08 HYPE Close Long A sz=4.16 px=61.74 PnL=2.121184
+  2026-05-22 13:41:38 HYPE Open Long B sz=2.75 px=61.874 PnL=0.0
+  2026-05-22 13:45:52 HYPE Open Long B sz=1.38 px=61.26 PnL=0.0
+  2026-05-22 14:17:59 HYPE Open Long B sz=1.38 px=60.64 PnL=0.0
+  2026-05-22 14:18:22 HYPE Open Long B sz=2.48 px=60.02 PnL=0.0
+  2026-05-22 14:46:12 HYPE Open Long B sz=2.48 px=59.4 PnL=0.0
+  2026-05-22 15:40:45 HYPE Open Long B sz=8.8 px=58.16 PnL=0.0
+  2026-05-22 18:36:35 HYPE Open Long B sz=16.5 px=56.93 PnL=0.0
+  2026-05-22 20:19:12 HYPE Open Long B sz=30.25 px=54.45 PnL=0.0
+  2026-05-23 15:07:36 HYPE Close Long A sz=66.02 px=57.02 PnL=31.663192
+  2026-05-23 15:07:54 HYPE Open Long B sz=0.99 px=56.977 PnL=0.0
+  2026-05-23 15:07:54 HYPE Open Long B sz=2.0 px=56.973 PnL=0.0
+  2026-05-23 15:24:13 HYPE Close Long A sz=2.99 px=57.45 PnL=1.422343
+  2026-05-23 15:24:33 HYPE Open Long B sz=2.95 px=57.625 PnL=0.0
+  2026-05-23 15:31:17 HYPE Open Long B sz=1.48 px=57.04 PnL=0.0
+  2026-05-23 16:49:40 HYPE Close Long A sz=4.43 px=57.91 PnL=2.128615
+  2026-05-23 16:50:08 HYPE Open Long B sz=2.94 px=57.895 PnL=0.0
+  2026-05-23 17:26:29 HYPE Open Long B sz=1.47 px=57.32 PnL=0.0
+  2026-05-23 18:12:57 HYPE Close Long A sz=4.41 px=58.19 PnL=2.146347
+  2026-05-23 18:13:36 HYPE Open Long B sz=2.24 px=58.196 PnL=0.0
+
+Total fills with negative PnL: 0
+
+--- Largest trades by PnL ---
+Traceback (most recent call last):
+  File "<stdin>", line 22, in <module>
+  File "<stdin>", line 22, in <lambda>
+TypeError: bad operand type for unary -: 'str'
+[0m
+[0m$ [0mpython3 << 'EOF'
+import json
+from datetime import datetime, timezone
+from collections import defaultdict
+
+with open("/tmp/fills.json") as f:
+    fills = json.load(f)
+fills.sort(key=lambda x: x["time"])
+
+# Reconstruct trades properly
+trades = []
+current_opens = []
+position = 0.0
+
+for fill in fills:
+    sz = float(fill["sz"])
+    if "Open" in fill["dir"]:
+        current_opens.append(fill)
+        position += sz
+    elif "Close" in fill["dir"]:
+        if current_opens:
+            total_sz = sum(float(o["sz"]) for o in current_opens)
+            avg_entry = sum(float(o["px"]) * float(o["sz"]) for o in current_opens) / total_sz
+            trades.append({
+                "opens": current_opens.copy(),
+                "close": fill,
+                "avg_entry": avg_entry,
+                "total_sz": total_sz,
+                "close_px": float(fill["px"]),
+                "pnl": float(fill["closedPnl"]),
+                "open_time": current_opens[0]["time"],
+                "close_time": fill["time"],
+                "hold_ms": fill["time"] - current_opens[0]["time"],
+                "num_opens": len(current_opens),
+                "roi": float(fill["closedPnl"]) / (avg_entry * total_sz) * 100,
+            })
+            current_opens = []
+            position = 0.0
+
+print(f"Total reconstructed trades: {len(trades)}")
+
+# Price level analysis - where does the trader buy?
+print("\n--- Entry price analysis ---")
+entry_prices = [t["avg_entry"] for t in trades]
+print(f"Min entry: {min(entry_prices):.2f}, Max entry: {max(entry_prices):.2f}")
+print(f"Mean entry: {sum(entry_prices)/len(entry_prices):.2f}")
+
+# Bucket entries
+buckets = defaultdict(int)
+for ep in entry_prices:
+    if ep < 60: buckets["<60"] += 1
+    elif ep < 70: buckets["60-70"] += 1
+    elif ep < 80: buckets["70-80"] += 1
+    elif ep < 90: buckets["80-90"] += 1
+    else: buckets[">90"] += 1
+print("Entry price distribution:", dict(sorted(buckets.items())))
+
+# ROI distribution
+rois = [t["roi"] for t in trades]
+print(f"\nROI per trade: min={min(rois):.3f}%, max={max(rois):.3f}%, avg={sum(rois)/len(rois):.3f}%")
+
+# Position size analysis
+print("\n--- Position size analysis ---")
+sizes = [t["total_sz"] for t in trades]
+print(f"Min size: {min(sizes):.2f}, Max size: {max(sizes):.2f}, Avg size: {sum(sizes)/len(sizes):.2f}")
+sizes_buckets = defaultdict(int)
+for s in sizes:
+    if s <= 5: sizes_buckets["0-5"] += 1
+    elif s <= 10: sizes_buckets["5-10"] += 1
+    elif s <= 20: sizes_buckets["10-20"] += 1
+    elif s <= 50: sizes_buckets["20-50"] += 1
+    else: sizes_buckets[">50"] += 1
+print("Position size distribution:", dict(sorted(sizes_buckets.items())))
+
+# Hold time analysis
+print("\n--- Hold time analysis ---")
+holds = [t["hold_ms"] / 1000 / 60 for t in trades]  # minutes
+print(f"Min hold: {min(holds):.1f} min, Max hold: {max(holds):.1f} min, Avg hold: {sum(holds)/len(holds):.1f} min")
+holds_buckets = defaultdict(int)
+for h in holds:
+    if h < 60: holds_buckets["<1h"] += 1
+    elif h < 180: holds_buckets["1-3h"] += 1
+    elif h < 360: holds_buckets["3-6h"] += 1
+    elif h < 720: holds_buckets["6-12h"] += 1
+    else: holds_buckets[">12h"] += 1
+print("Hold time distribution:", dict(sorted(holds_buckets.items())))
+
+# Look at a few example trades in detail
+print("\n--- Example trades ---")
+for t in trades[:3]:
+    print(f"\nTrade opened at {datetime.fromtimestamp(t['open_time']/1000, tz=timezone.utc)}")
+    print(f"  Entries ({t['num_opens']}):")
+    for o in t["opens"]:
+        dt = datetime.fromtimestamp(int(o["time"])/1000, tz=timezone.utc)
+        print(f"    {dt.strftime('%H:%M')} {o['side']} {o['sz']} @ {o['px']}")
+    dt = datetime.fromtimestamp(t["close_time"]/1000, tz=timezone.utc)
+    print(f"  Close: {dt.strftime('%H:%M')} {t['close']['side']} {t['total_sz']} @ {t['close_px']}")
+    print(f"  Avg entry: {t['avg_entry']:.2f}, PnL: {t['pnl']:.3f}, ROI: {t['roi']:.3f}%")
+EOF
+Total reconstructed trades: 542
+
+--- Entry price analysis ---
+Min entry: 52.61, Max entry: 93.37
+Mean entry: 68.62
+Entry price distribution: {'60-70': 219, '70-80': 145, '80-90': 74, '<60': 98, '>90': 6}
+
+ROI per trade: min=0.006%, max=4.071%, avg=0.822%
+
+--- Position size analysis ---
+Min size: 2.66, Max size: 221.61, Avg size: 11.26
+Position size distribution: {'0-5': 173, '10-20': 76, '20-50': 28, '5-10': 243, '>50': 22}
+
+--- Hold time analysis ---
+Min hold: 0.7 min, Max hold: 8239.1 min, Avg hold: 315.2 min
+Hold time distribution: {'1-3h': 130, '3-6h': 78, '6-12h': 40, '<1h': 248, '>12h': 46}
+
+--- Example trades ---
+
+Trade opened at 2026-05-22 13:41:38.664000+00:00
+  Entries (8):
+    13:41 B 2.75 @ 61.874
+    13:45 B 1.38 @ 61.26
+    14:17 B 1.38 @ 60.64
+    14:18 B 2.48 @ 60.02
+    14:46 B 2.48 @ 59.4
+    15:40 B 8.8 @ 58.16
+    18:36 B 16.5 @ 56.93
+    20:19 B 30.25 @ 54.45
+  Close: 15:07 A 66.02 @ 57.02
+  Avg entry: 56.54, PnL: 31.663, ROI: 0.848%
+
+Trade opened at 2026-05-23 15:07:54.407000+00:00
+  Entries (2):
+    15:07 B 0.99 @ 56.977
+    15:07 B 2.0 @ 56.973
+  Close: 15:24 A 2.99 @ 57.45
+  Avg entry: 56.97, PnL: 1.422, ROI: 0.835%
+
+Trade opened at 2026-05-23 15:24:33.835000+00:00
+  Entries (2):
+    15:24 B 2.95 @ 57.625
+    15:31 B 1.48 @ 57.04
+  Close: 16:49 A 4.43 @ 57.91
+  Avg entry: 57.43, PnL: 2.129, ROI: 0.837%
+[0m
+[0m$ [0mpython3 << 'EOF'
+import json
+from datetime import datetime, timezone
+from collections import defaultdict
+
+with open("/tmp/fills.json") as f:
+    fills = json.load(f)
+fills.sort(key=lambda x: x["time"])
+
+# More detailed: analyze the scaling-in pattern
+# For each trade, look at how sizes change across entries
+print("--- Scaling-in pattern (first 10 trades) ---")
+trades = []
+current_opens = []
+
+for fill in fills:
+    sz = float(fill["sz"])
+    if "Open" in fill["dir"]:
+        current_opens.append(fill)
+    elif "Close" in fill["dir"]:
+        if current_opens:
+            total_sz = sum(float(o["sz"]) for o in current_opens)
+            avg_entry = sum(float(o["px"]) * float(o["sz"]) for o in current_opens) / total_sz
+            trades.append({
+                "opens": current_opens.copy(),
+                "avg_entry": avg_entry,
+                "total_sz": total_sz,
+                "num_opens": len(current_opens),
+            })
+            current_opens = []
+
+# For trades with multiple entries, check if they're buying more at lower prices
+scaling_trades = [t for t in trades if t["num_opens"] > 1]
+print(f"Trades with multiple entries: {len(scaling_trades)}")
+
+# Check if entries are at progressively lower prices
+dca_count = 0
+for t in scaling_trades:
+    prices = [float(o["px"]) for o in t["opens"]]
+    sizes = [float(o["sz"]) for o in t["opens"]]
+    # Check if later entries are at lower prices AND larger sizes
+    if len(prices) >= 2:
+        # Simple check: is the last entry price < first entry price?
+        if prices[-1] < prices[0]:
+            dca_count += 1
+
+print(f"Trades where last entry < first entry (buying dips): {dca_count}/{len(scaling_trades)} ({dca_count/len(scaling_trades)*100:.1f}%)")
+
+# Check if the trader increases size on dips
+increasing_size = 0
+for t in scaling_trades:
+    sizes = [float(o["sz"]) for o in t["opens"]]
+    if len(sizes) >= 2 and sizes[-1] > sizes[0]:
+        increasing_size += 1
+print(f"Trades where last size > first size (pyramiding): {increasing_size}/{len(scaling_trades)} ({increasing_size/len(scaling_trades)*100:.1f}%)")
+
+# Show a few detailed examples of scaling
+print("\n--- Detailed scaling examples ---")
+for t in scaling_trades[:3]:
+    print(f"\nTrade with {t['num_opens']} entries, avg entry {t['avg_entry']:.2f}, total size {t['total_sz']:.2f}")
+    for o in t["opens"]:
+        dt = datetime.fromtimestamp(int(o["time"])/1000, tz=timezone.utc)
+        print(f"  {dt.strftime('%m-%d %H:%M')} {float(o['sz']):.2f} @ {o['px']}")
+
+# Check total HYPE bought vs sold
+total_bought = sum(float(f["sz"]) for f in fills if f["side"] == "B")
+total_sold = sum(float(f["sz"]) for f in fills if f["side"] == "A")
+print(f"\nTotal HYPE bought: {total_bought:.2f}")
+print(f"Total HYPE sold: {total_sold:.2f}")
+print(f"Net position change: {total_bought - total_sold:.2f}")
+EOF
+--- Scaling-in pattern (first 10 trades) ---
+Trades with multiple entries: 322
+Trades where last entry < first entry (buying dips): 299/322 (92.9%)
+Trades where last size > first size (pyramiding): 87/322 (27.0%)
+
+--- Detailed scaling examples ---
+
+Trade with 8 entries, avg entry 56.54, total size 66.02
+  05-22 13:41 2.75 @ 61.874
+  05-22 13:45 1.38 @ 61.26
+  05-22 14:17 1.38 @ 60.64
+  05-22 14:18 2.48 @ 60.02
+  05-22 14:46 2.48 @ 59.4
+  05-22 15:40 8.80 @ 58.16
+  05-22 18:36 16.50 @ 56.93
+  05-22 20:19 30.25 @ 54.45
+
+Trade with 2 entries, avg entry 56.97, total size 2.99
+  05-23 15:07 0.99 @ 56.977
+  05-23 15:07 2.00 @ 56.973
+
+Trade with 2 entries, avg entry 57.43, total size 4.43
+  05-23 15:24 2.95 @ 57.625
+  05-23 15:31 1.48 @ 57.04
+
+Total HYPE bought: 6117.01
+Total HYPE sold: 6107.27
+Net position change: 9.74
+[0m
+[0m$ [0mpython3 << 'EOF'
+import json
+from datetime import datetime, timezone
+
+with open("/tmp/fills.json") as f:
+    fills = json.load(f)
+fills.sort(key=lambda x: x["time"])
+
+# Summary statistics
+total_fills = len(fills)
+opens = [f for f in fills if "Open" in f["dir"]]
+closes = [f for f in fills if "Close" in f["dir"]]
+total_bought = sum(float(f["sz"]) for f in fills if f["side"] == "B")
+total_sold = sum(float(f["sz"]) for f in fills if f["side"] == "A")
+total_pnl = sum(float(f["closedPnl"]) for f in closes)
+total_fees = sum(float(f["fee"]) for f in fills)
+crossed_opens = len([f for f in opens if f["crossed"]])
+limit_opens = len([f for f in opens if not f["crossed"]])
+
+print(f"Period: {datetime.fromtimestamp(fills[0]['time']/1000, tz=timezone.utc).date()} to {datetime.fromtimestamp(fills[-1]['time']/1000, tz=timezone.utc).date()}")
+print(f"Total fills: {total_fills}")
+print(f"Open Long: {len(opens)}, Close Long: {len(closes)}")
+print(f"Total HYPE bought: {total_bought:.2f}, sold: {total_sold:.2f}")
+print(f"Net position: {total_bought - total_sold:.2f} HYPE")
+print(f"Total realized PnL: ${total_pnl:.2f} USDC")
+print(f"Total fees: ${total_fees:.2f} USDC")
+print(f"Net PnL (after fees): ${total_pnl - total_fees:.2f} USDC")
+
+# Reconstruct trades for metrics
+trades = []
+current_opens = []
+for fill in fills:
+    sz = float(fill["sz"])
+    if "Open" in fill["dir"]:
+        current_opens.append(fill)
+    elif "Close" in fill["dir"]:
+        if current_opens:
+            total_sz = sum(float(o["sz"]) for o in current_opens)
+            avg_entry = sum(float(o["px"]) * float(o["sz"]) for o in current_opens) / total_sz
+            trades.append({
+                "avg_entry": avg_entry,
+                "total_sz": total_sz,
+                "close_px": float(fill["px"]),
+                "pnl": float(fill["closedPnl"]),
+                "open_time": current_opens[0]["time"],
+                "close_time": fill["time"],
+                "hold_ms": fill["time"] - current_opens[0]["time"],
+                "num_opens": len(current_opens),
+                "roi": float(fill["closedPnl"]) / (avg_entry * total_sz) * 100,
+            })
+            current_opens = []
+
+print(f"\nReconstructed trades: {len(trades)}")
+print(f"Win rate: 100.0%")
+print(f"Avg ROI per trade: {sum(t['roi'] for t in trades)/len(trades):.3f}%")
+print(f"Avg hold time: {sum(t['hold_ms'] for t in trades)/len(trades)/1000/60:.1f} minutes")
+print(f"Avg entries per trade: {sum(t['num_opens'] for t in trades)/len(trades):.2f}")
+
+# Scaling analysis
+scaling = [t for t in trades if t["num_opens"] > 1]
+print(f"Scaling-in trades: {len(scaling)} ({len(scaling)/len(trades)*100:.1f}%)")
+print(f"Single-entry trades: {len(trades)-len(scaling)}")
+
+# Fees as % of volume
+total_volume = sum(float(f["px"]) * float(f["sz"]) for f in fills)
+print(f"\nTotal volume: ${total_volume:,.2f}")
+print(f"Fees as % of volume: {total_fees/total_volume*100:.3f}%")
+print(f"Fees as % of PnL: {total_fees/total_pnl*100:.1f}%")
+EOF
+Period: 2026-05-22 to 2026-09-20
+Total fills: 2000
+Open Long: 1405, Close Long: 595
+Total HYPE bought: 6117.01, sold: 6107.27
+Net position: 9.74 HYPE
+Total realized PnL: $3428.49 USDC
+Total fees: $168.45 USDC
+Net PnL (after fees): $3260.03 USDC
+
+Reconstructed trades: 542
+Win rate: 100.0%
+Avg ROI per trade: 0.822%
+Avg hold time: 315.2 minutes
+Avg entries per trade: 2.58
+Scaling-in trades: 322 (59.4%)
+Single-entry trades: 220
+
+Total volume: $815,900.93
+Fees as % of volume: 0.021%
+Fees as % of PnL: 4.9%
+[0m
+## Strategy Analysis: `0x0bb8…740d`
+
+**Period:** 2026-05-22 → 2026-09-20 (~4 months)  
+**Asset:** HYPE only (pure single-asset perp strategy)  
+**Direction:** Long only (0 shorts)  
+
+---
+
+### Core Strategy: Buy-the-Dip / DCA Accumulation in an Uptrend
+
+| Metric | Value |
+|---|---|
+| Total fills | 2,000 |
+| Reconstructed trades | 542 |
+| Win rate | 100% (all 542 closed trades profitable) |
+| Total realized PnL | **$3,428.49 USDC** |
+| Total fees | $168.45 (4.9% of PnL) |
+| Avg ROI per trade | **0.822%** |
+| Avg hold time | **~5.3 hours** |
+| Avg entries per trade | **2.58** |
+| Total volume | $815,901 |
+
+---
+
+### Key Behavioral Patterns
+
+**1. Heavy Scaling-In (DCA on Dips)**
+- 59.4% of trades use multiple entries (322/542)
+- 92.9% of multi-entry trades buy at progressively lower prices
+- 27.0% pyramiding: increases position size on further dips
+- Example: one trade opened with 2.75 HYPE @ $61.87, then added 1.38 @ $61.26, 1.38 @ $60.64, 2.48 @ $60.02, 2.48 @ $59.40, 8.80 @ $58.16, 16.50 @ $56.93, 30.25 @ $54.45 — averaging down to $56.54
+
+**2. Tight Limit-Order Profit Taking**
+- 588 of 595 closes used limit orders (99%); only 7 market closes
+- Small, consistent gains per trade (ROI range: 0.006% – 4.071%)
+- 30 partial closes (scale out of winning positions)
+
+**3. Position Sizing**
+- Ranges from 2.66 to 221.61 HYPE per trade (avg 11.26)
+- Tends to size up during drawdowns (pyramiding)
+- Most common size bucket: 5–10 HYPE (243 trades)
+
+**4. Timing**
+- No time-of-day bias — trades spread evenly across all 24 hours and all days of week
+- Hold times: 248 trades <1h, 130 trades 1–3h, 78 trades 3–6h, 46 trades >12h
+- Flexible duration: lets runners play out, doesn't force closes
+
+**5. Fees**
+- Extremely low fee ratio: 0.021% of volume
+- 702 market opens, 703 limit opens (roughly 50/50)
+- Fees represent only 4.9% of gross PnL — efficient execution
+
+---
+
+### Strategy Summary
+
+This is a **long-only, dip-buying accumulator** on HYPE during a sustained bull trend (price: ~$55 → ~$95 over 4 months). The trader:
+
+1. **Buys HYPE on pullbacks** — scales into longs as price drops (DCA/pyramiding)
+2. **Takes profit on bounces** — closes via limit orders at small, consistent gains (~0.82% avg ROI)
+3. **Never goes short** — pure bullish bias
+4. **No visible stop-loss mechanism** — lets losing positions run (810 open fills with no corresponding close remain in the data; net current position: +9.74 HYPE)
+5. **High-frequency, small-gain approach** — 542 closed trades over ~122 days ≈ ~4.4 trades/day
+
+The 100% closed-trade win rate is notable but likely reflects a profit-taking discipline (only closing winners) rather than true flawless timing; unclosed losing positions may still be underwater. The strategy profits from HYPE’s overall uptrend by systematically buying weakness and selling strength.

@@ -1,0 +1,14 @@
+{
+ "label": "kilo-nemotron-3-ultra",
+ "tool": "kilo",
+ "model": "kilo/nvidia/nemotron-3-ultra-550b-a55b:free",
+ "variant": "high",
+ "free_gate": "ok",
+ "probe": "OK",
+ "status": "DONE",
+ "exit": 0,
+ "duration_s": 181.0,
+ "bytes": 74493,
+ "extra": "",
+ "prompt_file": "prompt.txt"
+}

@@ -1,0 +1,1 @@
+kilo run -m kilo/nex-agi/nex-n2.5-mini:free --auto --dir /home/paf/Documents/code/misc/hyperliquid-strategy-sweeps/unverified-kilo-nex-n2.5-mini/work --variant high derive\ the\ trading\ strategy\ or\ strategies\ used\ by\ https://hyperx.trade/hyperliquid/trader\?address=0x0bb81e516c88881c54529e1790470cb5e9f8740d

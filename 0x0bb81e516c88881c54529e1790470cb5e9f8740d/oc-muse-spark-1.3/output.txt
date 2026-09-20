@@ -1,0 +1,1626 @@
+[0m
+> build · muse-spark-1.3-contributor-free
+[0m
+[0m→ [0mRead .
+[0m% [0mWebFetch https://hyperx.trade/hyperliquid/trader?address=0x0bb81e516c88881c54529e1790470cb5e9f8740d
+[0m◈ [0mParallel Web Search "hyperx.trade trader 0x0bb81e516c88881c54529e1790470cb5e9f8740d"
+a[0m
+[0m$ [0mpython3 -c "
+import json, urllib.request;
+addr='0x0bb81e516c88881c54529e1790470cb5e9f8740d';
+def post(payload):
+    req=urllib.request.Request('https://api.hyperliquid.xyz/info', data=json.dumps(payload).encode(), headers={'Content-Type':'application/json'});
+    with urllib.request.urlopen(req, timeout=30) as r:
+        return json.loads(r.read().decode());
+# 1. clearinghouse state (perps positions + margin)
+try:
+    cs=post({'type':'clearinghouseState','user':addr});
+    print('=== CLEARINGHOUSE STATE KEYS:', list(cs.keys()) if isinstance(cs,dict) else type(cs));
+    print(json.dumps(cs, indent=2)[:8000]);
+except Exception as e:
+    print('clearinghouseState ERROR:', e);
+"
+
+=== CLEARINGHOUSE STATE KEYS: ['marginSummary', 'crossMarginSummary', 'crossMaintenanceMarginUsed', 'withdrawable', 'assetPositions', 'time']
+{
+  "marginSummary": {
+    "accountValue": "4229.310789",
+    "totalNtlPos": "1265.62975",
+    "totalRawUsd": "2963.681039",
+    "totalMarginUsed": "126.562975"
+  },
+  "crossMarginSummary": {
+    "accountValue": "4229.310789",
+    "totalNtlPos": "1265.62975",
+    "totalRawUsd": "2963.681039",
+    "totalMarginUsed": "126.562975"
+  },
+  "crossMaintenanceMarginUsed": "63.281487",
+  "withdrawable": "50.55339",
+  "assetPositions": [
+    {
+      "type": "oneWay",
+      "position": {
+        "coin": "HYPE",
+        "szi": "13.9",
+        "leverage": {
+          "type": "cross",
+          "value": 10
+        },
+        "entryPx": "92.1758",
+        "positionValue": "1265.62975",
+        "unrealizedPnl": "-15.61443",
+        "returnOnEquity": "-0.1218692755",
+        "liquidationPx": null,
+        "marginUsed": "126.562975",
+        "maxLeverage": 10,
+        "cumFunding": {
+          "allTime": "0.388728",
+          "sinceOpen": "0.373735",
+          "sinceChange": "0.157949"
+        }
+      }
+    }
+  ],
+  "time": 1789907612414
+}
+[0m
+a[0m$ [0mpython3 -c "
+import json, urllib.request, datetime
+addr='0x0bb81e516c88881c54529e1790470cb5e9f8740d'
+def post(payload):
+    req=urllib.request.Request('https://api.hyperliquid.xyz/info', data=json.dumps(payload).encode(), headers={'Content-Type':'application/json'})
+    with urllib.request.urlopen(req, timeout=30) as r:
+        return json.loads(r.read().decode())
+# spot state
+try:
+    s=post({'type':'spotClearinghouseState','user':addr})
+    print('=== SPOT ===')
+    print(json.dumps(s, indent=2)[:6000])
+except Exception as e:
+    print('spot ERROR:', e)
+# open orders
+try:
+    o=post({'type':'openOrders','user':addr})
+    print('=== OPEN ORDERS ===')
+    print(json.dumps(o, indent=2)[:6000])
+except Exception as e:
+    print('openOrders ERROR:', e)
+# frontend orders? user fills
+try:
+    f=post({'type':'userFills','user':addr})
+    print('=== USER FILLS count:', len(f) if isinstance(f,list) else type(f))
+    print(json.dumps(f[-10:] if isinstance(f,list) else f, indent=2)[:8000])
+except Exception as e:
+    print('userFills ERROR:', e)
+"
+
+=== SPOT ===
+{
+  "balances": [
+    {
+      "coin": "USDC",
+      "token": 0,
+      "total": "8082.246327",
+      "hold": "4219.32424",
+      "entryNtl": "0.0"
+    },
+    {
+      "coin": "USDE",
+      "token": 235,
+      "total": "0.0",
+      "hold": "0.0",
+      "entryNtl": "0.0"
+    },
+    {
+      "coin": "USDT0",
+      "token": 268,
+      "total": "0.0",
+      "hold": "0.0",
+      "entryNtl": "0.0"
+    },
+    {
+      "coin": "USDH",
+      "token": 360,
+      "total": "0.0",
+      "hold": "0.0",
+      "entryNtl": "0.0"
+    }
+  ],
+  "tokenToAvailableAfterMaintenance": [
+    [
+      0,
+      "8018.942391"
+    ]
+  ]
+}
+=== OPEN ORDERS ===
+[
+  {
+    "coin": "HYPE",
+    "side": "A",
+    "limitPx": "92.95",
+    "sz": "13.9",
+    "oid": 550321849509,
+    "timestamp": 1789872861374,
+    "origSz": "13.9",
+    "reduceOnly": true
+  },
+  {
+    "coin": "HYPE",
+    "side": "B",
+    "limitPx": "67.752",
+    "sz": "265.35",
+    "oid": 549495642439,
+    "timestamp": 1789786420726,
+    "origSz": "265.35"
+  },
+  {
+    "coin": "HYPE",
+    "side": "B",
+    "limitPx": "73.398",
+    "sz": "140.91",
+    "oid": 549495631809,
+    "timestamp": 1789786419634,
+    "origSz": "140.91"
+  },
+  {
+    "coin": "HYPE",
+    "side": "B",
+    "limitPx": "79.044",
+    "sz": "75.03",
+    "oid": 549495620037,
+    "timestamp": 1789786418464,
+    "origSz": "75.03"
+  },
+  {
+    "coin": "HYPE",
+    "side": "B",
+    "limitPx": "82.808",
+    "sz": "40.26",
+    "oid": 549495610534,
+    "timestamp": 1789786417313,
+    "origSz": "40.26"
+  },
+  {
+    "coin": "HYPE",
+    "side": "B",
+    "limitPx": "86.572",
+    "sz": "21.96",
+    "oid": 549495599990,
+    "timestamp": 1789786416090,
+    "origSz": "21.96"
+  },
+  {
+    "coin": "HYPE",
+    "side": "B",
+    "limitPx": "88.454",
+    "sz": "11.71",
+    "oid": 549495588741,
+    "timestamp": 1789786414946,
+    "origSz": "11.71"
+  }
+]
+=== USER FILLS count: 2000
+[
+  {
+    "coin": "HYPE",
+    "px": "57.02",
+    "sz": "66.02",
+    "side": "A",
+    "time": 1779548856697,
+    "startPosition": "66.02",
+    "dir": "Close Long",
+    "closedPnl": "31.663192",
+    "hash": "0x8bd0b275d90ac1ee8d4a043c0f793d0204f7005b740de0c02f995dc8980e9bd9",
+    "oid": 438063235139,
+    "crossed": false,
+    "fee": "0.542082",
+    "tid": 1053017777126552,
+    "feeToken": "USDC",
+    "twapId": null
+  },
+  {
+    "coin": "HYPE",
+    "px": "54.45",
+    "sz": "30.25",
+    "side": "B",
+    "time": 1779481152533,
+    "startPosition": "35.77",
+    "dir": "Open Long",
+    "closedPnl": "0.0",
+    "hash": "0x857c3dacc4e0192486f5043c00750302070700925fe337f62944e8ff83e3f30f",
+    "oid": 437523179185,
+    "crossed": false,
+    "fee": "0.237184",
+    "tid": 907235199283781,
+    "feeToken": "USDC",
+    "twapId": null
+  },
+  {
+    "coin": "HYPE",
+    "px": "56.93",
+    "sz": "16.5",
+    "side": "B",
+    "time": 1779474995357,
+    "startPosition": "19.27",
+    "dir": "Open Long",
+    "closedPnl": "0.0",
+    "hash": "0xa889f7384d3b8757aa03043bff1a8802047b001de83ea6294c52a28b0c3f6142",
+    "oid": 437523111063,
+    "crossed": false,
+    "fee": "0.135265",
+    "tid": 842457974827767,
+    "feeToken": "USDC",
+    "twapId": null
+  },
+  {
+    "coin": "HYPE",
+    "px": "58.16",
+    "sz": "8.8",
+    "side": "B",
+    "time": 1779464445990,
+    "startPosition": "10.47",
+    "dir": "Open Long",
+    "closedPnl": "0.0",
+    "hash": "0x816998ea1850a7d882e3043bfcc61102089000cfb353c6aa2532443cd75481c3",
+    "oid": 437523087822,
+    "crossed": false,
+    "fee": "0.0737",
+    "tid": 37009516153476,
+    "feeToken": "USDC",
+    "twapId": null
+  },
+  {
+    "coin": "HYPE",
+    "px": "59.4",
+    "sz": "2.48",
+    "side": "B",
+    "time": 1779461172430,
+    "startPosition": "7.99",
+    "dir": "Open Long",
+    "closedPnl": "0.0",
+    "hash": "0x191a89d659f7e5801a94043bfc0d0f02024400bbf4fb0452bce3352918fbbf6a",
+    "oid": 437523059826,
+    "crossed": false,
+    "fee": "0.021212",
+    "tid": 202517994657415,
+    "feeToken": "USDC",
+    "twapId": null
+  },
+  {
+    "coin": "HYPE",
+    "px": "60.02",
+    "sz": "2.48",
+    "side": "B",
+    "time": 1779459502999,
+    "startPosition": "5.51",
+    "dir": "Open Long",
+    "closedPnl": "0.0",
+    "hash": "0x569b0d69071b6bb85814043bfbaea9020564004ea21e8a8afa63b8bbc61f45a2",
+    "oid": 437523029468,
+    "crossed": false,
+    "fee": "0.021434",
+    "tid": 715790116302297,
+    "feeToken": "USDC",
+    "twapId": null
+  },
+  {
+    "coin": "HYPE",
+    "px": "60.64",
+    "sz": "1.38",
+    "side": "B",
+    "time": 1779459479089,
+    "startPosition": "4.13",
+    "dir": "Open Long",
+    "closedPnl": "0.0",
+    "hash": "0x20fe7490fcdfc9612278043bfbad490000398c7697d2e833c4c71fe3bbd3a34b",
+    "oid": 437523001708,
+    "crossed": false,
+    "fee": "0.01205",
+    "tid": 977320576850248,
+    "feeToken": "USDC",
+    "twapId": null
+  },
+  {
+    "coin": "HYPE",
+    "px": "61.26",
+    "sz": "1.38",
+    "side": "B",
+    "time": 1779457552310,
+    "startPosition": "2.75",
+    "dir": "Open Long",
+    "closedPnl": "0.0",
+    "hash": "0x79584888b0a3d45c7ad2043bfb41320201f8006e4ba6f32e1d20f3db6fa7ae47",
+    "oid": 437522903087,
+    "crossed": false,
+    "fee": "0.012173",
+    "tid": 309732558657841,
+    "feeToken": "USDC",
+    "twapId": null
+  },
+  {
+    "coin": "HYPE",
+    "px": "61.874",
+    "sz": "2.75",
+    "side": "B",
+    "time": 1779457298664,
+    "startPosition": "0.0",
+    "dir": "Open Long",
+    "closedPnl": "0.0",
+    "hash": "0xfdd41e780f4bfb9cff4d043bfb32f20204b2005daa4f1a6fa19cc9cace4fd587",
+    "oid": 437522835530,
+    "crossed": true,
+    "fee": "0.073506",
+    "tid": 999339606343951,
+    "feeToken": "USDC",
+    "twapId": null
+  },
+  {
+    "coin": "HYPE",
+    "px": "61.74",
+    "sz": "4.16",
+    "side": "A",
+    "time": 1779457268354,
+    "startPosition": "4.16",
+    "dir": "Close Long",
+    "closedPnl": "2.121184",
+    "hash": "0x229de006de855a152417043bfb3136020b7200ec798878e7c6668b599d8933ff",
+    "oid": 437446799226,
+    "crossed": false,
+    "fee": "0.036984",
+    "tid": 995491770970037,
+    "feeToken": "USDC",
+    "twapId": null
+  }
+]
+[0m
+a[0m$ [0mpython3 -c "
+import json, urllib.request, collections, datetime
+addr='0x0bb81e516c88881c54529e1790470cb5e9f8740d'
+def post(payload):
+    req=urllib.request.Request('https://api.hyperliquid.xyz/info', data=json.dumps(payload).encode(), headers={'Content-Type':'application/json'})
+    with urllib.request.urlopen(req, timeout=60) as r:
+        return json.loads(r.read().decode())
+
+fills=post({'type':'userFills','user':addr})
+print('total fills returned:', len(fills))
+# coins
+from collections import Counter
+coins=Counter(f['coin'] for f in fills)
+print('coins:', coins)
+dirs=Counter(f['dir'] for f in fills)
+print('dirs:', dirs)
+sides=Counter(f['side'] for f in fills)
+print('sides:', sides)
+# time range
+times=[f['time'] for f in fills]
+print('min time:', min(times), datetime.datetime.utcfromtimestamp(min(times)/1000))
+print('max time:', max(times), datetime.datetime.utcfromtimestamp(max(times)/1000))
+# closedPnl sum
+tot=sum(float(f.get('closedPnl') or 0) for f in fills)
+fees=sum(float(f.get('fee') or 0) for f in fills)
+print(f'sum closedPnl in this batch: {tot:.2f}, fees: {fees:.2f}, net: {tot-fees:.2f}')
+# first 5 (most recent?) and last 5
+fills_sorted=sorted(fills, key=lambda x: x['time'])
+print('--- oldest 5 ---')
+for f in fills_sorted[:5]:
+    print(datetime.datetime.utcfromtimestamp(f['time']/1000), f['coin'], f['side'], f['dir'], f['sz'], f['px'], f['closedPnl'])
+print('--- newest 5 ---')
+for f in fills_sorted[-5:]:
+    print(datetime.datetime.utcfromtimestamp(f['time']/1000), f['coin'], f['side'], f['dir'], f['sz'], f['px'], f['closedPnl'])
+"
+
+<string>:21: DeprecationWarning: datetime.datetime.utcfromtimestamp() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.fromtimestamp(timestamp, datetime.UTC).
+<string>:22: DeprecationWarning: datetime.datetime.utcfromtimestamp() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.fromtimestamp(timestamp, datetime.UTC).
+<string>:31: DeprecationWarning: datetime.datetime.utcfromtimestamp() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.fromtimestamp(timestamp, datetime.UTC).
+<string>:34: DeprecationWarning: datetime.datetime.utcfromtimestamp() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.fromtimestamp(timestamp, datetime.UTC).
+total fills returned: 2000
+coins: Counter({'HYPE': 2000})
+dirs: Counter({'Open Long': 1405, 'Close Long': 595})
+sides: Counter({'B': 1405, 'A': 595})
+min time: 1779457268354 2026-05-22 13:41:08.354000
+max time: 1789872845564 2026-09-20 02:54:05.564000
+sum closedPnl in this batch: 3428.49, fees: 168.45, net: 3260.03
+--- oldest 5 ---
+2026-05-22 13:41:08.354000 HYPE A Close Long 4.16 61.74 2.121184
+2026-05-22 13:41:38.664000 HYPE B Open Long 2.75 61.874 0.0
+2026-05-22 13:45:52.310000 HYPE B Open Long 1.38 61.26 0.0
+2026-05-22 14:17:59.089000 HYPE B Open Long 1.38 60.64 0.0
+2026-05-22 14:18:22.999000 HYPE B Open Long 2.48 60.02 0.0
+--- newest 5 ---
+2026-09-19 02:53:28.601000 HYPE B Open Long 3.66 94.125 0.0
+2026-09-19 04:31:13.529000 HYPE B Open Long 1.83 93.159 0.0
+2026-09-19 04:34:37.968000 HYPE B Open Long 1.83 92.218 0.0
+2026-09-19 21:13:39.551000 HYPE B Open Long 3.29 91.277 0.0
+2026-09-20 02:54:05.564000 HYPE B Open Long 3.29 90.336 0.0
+[0m
+a[0m$ [0mpython3 -c "
+import json, urllib.request, datetime
+addr='0x0bb81e516c88881c54529e1790470cb5e9f8740d'
+def post(payload):
+    req=urllib.request.Request('https://api.hyperliquid.xyz/info', data=json.dumps(payload).encode(), headers={'Content-Type':'application/json'})
+    with urllib.request.urlopen(req, timeout=60) as r:
+        return json.loads(r.read().decode())
+# try fills by time from 0
+try:
+    f2=post({'type':'userFillsByTime','user':addr,'startTime':0,'endTime':1790000000000})
+    print('fillsByTime count:', len(f2))
+    import collections
+    print('min', min(x['time'] for x in f2), 'max', max(x['time'] for x in f2))
+    print('coins:', collections.Counter(x['coin'] for x in f2))
+    print('dirs:', collections.Counter(x['dir'] for x in f2))
+    tot=sum(float(x.get('closedPnl') or 0) for x in f2)
+    fees=sum(float(x.get('fee') or 0) for x in f2)
+    print(f'closedPnl sum all: {tot:.2f} fees {fees:.2f} net {tot-fees:.2f}')
+except Exception as e:
+    import traceback; traceback.print_exc()
+# portfolio
+try:
+    pf=post({'type':'portfolio','user':addr})
+    print('=== PORTFOLIO keys:', pf.keys() if isinstance(pf,dict) else type(pf))
+    import json as j
+    print(j.dumps(pf, indent=2)[:5000])
+except Exception as e:
+    import traceback; traceback.print_exc()
+"
+
+fillsByTime count: 2000
+min 1760350456535 max 1772462815311
+coins: Counter({'HYPE': 2000})
+dirs: Counter({'Open Long': 1434, 'Close Long': 566})
+closedPnl sum all: 1310.71 fees 61.67 net 1249.04
+=== PORTFOLIO keys: <class 'list'>
+[
+  [
+    "day",
+    {
+      "accountValueHistory": [
+        [
+          1789818480053,
+          "8089.658521"
+        ],
+        [
+          1789826880013,
+          "8091.914433"
+        ],
+        [
+          1789834080026,
+          "8094.686338"
+        ],
+        [
+          1789842480072,
+          "8088.110639"
+        ],
+        [
+          1789850880032,
+          "8086.512644"
+        ],
+        [
+          1789859280100,
+          "8086.08058"
+        ],
+        [
+          1789867680043,
+          "8088.443367"
+        ],
+        [
+          1789876080070,
+          "8077.776607"
+        ],
+        [
+          1789884480000,
+          "8079.633464"
+        ],
+        [
+          1789891680057,
+          "8083.55636"
+        ],
+        [
+          1789900080000,
+          "8080.862974"
+        ],
+        [
+          1789907280066,
+          "8080.900807"
+        ],
+        [
+          1789907643034,
+          "8082.415907"
+        ]
+      ],
+      "pnlHistory": [
+        [
+          1789818480053,
+          "0.0"
+        ],
+        [
+          1789826880013,
+          "2.255912"
+        ],
+        [
+          1789834080026,
+          "5.027817"
+        ],
+        [
+          1789842480072,
+          "-1.547882"
+        ],
+        [
+          1789850880032,
+          "-3.145877"
+        ],
+        [
+          1789859280100,
+          "-3.577941"
+        ],
+        [
+          1789867680043,
+          "-1.215154"
+        ],
+        [
+          1789876080070,
+          "-11.881914"
+        ],
+        [
+          1789884480000,
+          "-10.025057"
+        ],
+        [
+          1789891680057,
+          "-6.102161"
+        ],
+        [
+          1789900080000,
+          "-8.795547"
+        ],
+        [
+          1789907280066,
+          "-8.757714"
+        ],
+        [
+          1789907643034,
+          "-7.242614"
+        ]
+      ],
+      "vlm": "597.5"
+    }
+  ],
+  [
+    "week",
+    {
+      "accountValueHistory": [
+        [
+          1789297680066,
+          "7829.267447"
+        ],
+        [
+          1789306080047,
+          "7808.43235"
+        ],
+        [
+          1789321680001,
+          "7893.844143"
+        ],
+        [
+          1789328880053,
+          "7878.32552"
+        ],
+        [
+          1789336080087,
+          "7907.105401"
+        ],
+        [
+          1789351680063,
+          "7886.499596"
+        ],
+        [
+          1789360080042,
+          "7946.007897"
+        ],
+        [
+          1789375680060,
+          "7943.850639"
+        ],
+        [
+          1789382880075,
+          "7946.446075"
+        ],
+        [
+          1789391280051,
+          "7944.273988"
+        ],
+        [
+          1789406880020,
+          "7956.335862"
+        ],
+        [
+          1789414080064,
+          "7959.369914"
+        ],
+        [
+          1789429680092,
+          "7951.003953"
+        ],
+        [
+          1789438080023,
+          "7950.10294"
+        ],
+        [
+          1789446480059,
+          "7940.230129"
+        ],
+        [
+          1789462080029,
+          "7931.911623"
+        ],
+        [
+          1789469280067,
+          "7941.603842"
+        ],
+        [
+          1789476480094,
+          "7940.013722"
+        ],
+        [
+          1789492080026,
+          "7882.712631"
+        ],
+        [
+          1789499280045,
+          "7926.068157"
+        ],
+        [
+          1789514880039,
+          "7942.754008"
+        ],
+        [
+          1789522080079,
+          "7949.224126"
+        ],
+        [
+          1789530480046,
+          "7950.564075"
+        ],
+        [
+          1789547280064,
+          "7931.815339"
+        ],
+        [
+          1789555680060,
+          "7968.905818"
+        ],
+        [
+          1789562880067,
+          "7996.227159"
+        ],
+        [
+          1789579680048,
+          "7998.748295"
+        ],
+        [
+          1789586880060,
+          "7995.560319"
+        ],
+        [
+          1789595280087,
+          "8005.089367"
+        ],
+        [
+          1789610880069,
+          "8021.96001"
+        ],
+        [
+          1789619280073,
+          "8023.507374"
+        ],
+        [
+          1789634880074,
+          "8027.950865"
+        ],
+        [
+          1789643280045,
+          "8024.931784"
+        ],
+        [
+          1789651680054,
+          "8041.136751"
+        ],
+        [
+          1789667280039,
+          "8045.302816"
+        ],
+        [
+          1789675680067,
+          "8051.865383"
+        ],
+        [
+          1789684080006,
+          "8050.633246"
+        ],
+        [
+          1789698480036,
+          "8061.284777"
+        ],
+        [
+          1789706880028,
+          "8063.137405"
+        ],
+        [
+          1789715280008,
+          "8067.325058"
+        ],
+        [
+          1789722480017,
+          "8069.413776"
+        ],
+        [
+          1789729680075,
+          "8074.630684"
+        ],
+        [
+          1789738080050,
+          "8081.217129"
+        ],
+        [
+          17897464800
+[0m
+a[0m$ [0mpython3 -c "
+import json, urllib.request, datetime, collections, time
+addr='0x0bb81e516c88881c54529e1790470cb5e9f8740d'
+def post(payload):
+    req=urllib.request.Request('https://api.hyperliquid.xyz/info', data=json.dumps(payload).encode(), headers={'Content-Type':'application/json'})
+    with urllib.request.urlopen(req, timeout=60) as r:
+        return json.loads(r.read().decode())
+
+# paginate by startTime chunks: Oct 2025 -> Sep 2026
+# timestamps ms: 1760350000000 (~Oct 13 2025) to 1789908000000 (Sep 20 2026)
+# chunk by 30 days = 2592000000 ms
+start=1759276800000  # Oct 1 2025
+end=1789948800000    # Sep 21 2026
+step=30*24*3600*1000
+all_fills=[]
+for s in range(start, end, step):
+    e=min(s+step, end)
+    try:
+        batch=post({'type':'userFillsByTime','user':addr,'startTime':s,'endTime':e})
+        print(f'{datetime.datetime.fromtimestamp(s/1000, datetime.UTC).date()} -> {datetime.datetime.fromtimestamp(e/1000, datetime.UTC).date()}: {len(batch)} fills')
+        all_fills.extend(batch)
+        time.sleep(0.2)
+    except Exception as ex:
+        print('error', s, e, ex)
+print('TOTAL:', len(all_fills))
+if all_fills:
+    coins=collections.Counter(x['coin'] for x in all_fills)
+    print('coins:', coins)
+    dirs=collections.Counter(x['dir'] for x in all_fills)
+    print('dirs:', dirs)
+    tot=sum(float(x.get('closedPnl') or 0) for x in all_fills)
+    fees=sum(float(x.get('fee') or 0) for x in all_fills)
+    print(f'closedPnl {tot:.2f} fees {fees:.2f} net {tot-fees:.2f}')
+    ts=sorted(x['time'] for x in all_fills)
+    print('range:', datetime.datetime.fromtimestamp(ts[0]/1000, datetime.UTC), '->', datetime.datetime.fromtimestamp(ts[-1]/1000, datetime.UTC))
+    # check any non-HYPE?
+    non=[x for x in all_fills if x['coin']!='HYPE']
+    print('non-HYPE:', len(non))
+    # check closes negative?
+    closes=[float(x['closedPnl']) for x in all_fills if 'Close' in x['dir']]
+    print('closes count', len(closes), 'positive:', sum(1 for c in closes if c>0), 'negative:', sum(1 for c in closes if c<0), 'avg', sum(closes)/len(closes) if closes else 0)
+    print('max close pnl', max(closes) if closes else None, 'min', min(closes) if closes else None)
+    # save to file for further analysis
+    import json as j
+    open('/tmp/opencode/all_fills.json','w').write(j.dumps(all_fills))
+    print('saved')
+"
+
+2025-10-01 -> 2025-10-31: 542 fills
+2025-10-31 -> 2025-11-30: 584 fills
+2025-11-30 -> 2025-12-30: 351 fills
+2025-12-30 -> 2026-01-29: 0 fills
+2026-01-29 -> 2026-02-28: 411 fills
+2026-02-28 -> 2026-03-30: 547 fills
+2026-03-30 -> 2026-04-29: 203 fills
+2026-04-29 -> 2026-05-29: 407 fills
+2026-05-29 -> 2026-06-28: 915 fills
+2026-06-28 -> 2026-07-28: 217 fills
+2026-07-28 -> 2026-08-27: 444 fills
+2026-08-27 -> 2026-09-21: 255 fills
+TOTAL: 4876
+coins: Counter({'HYPE': 4876})
+dirs: Counter({'Open Long': 3433, 'Close Long': 1443})
+closedPnl 5458.12 fees 268.43 net 5189.70
+range: 2025-10-13 10:14:16.535000+00:00 -> 2026-09-20 02:54:05.564000+00:00
+non-HYPE: 0
+closes count 1443 positive: 1440 negative: 3 avg 3.782483670824671
+max close pnl 107.591655 min -3.111585
+saved
+[0m
+a[0m$ [0mpython3 -c "
+import json, collections
+fills=json.load(open('/tmp/opencode/all_fills.json'))
+fills=sorted(fills, key=lambda x: x['time'])
+# Analyze buy ladders: look at consecutive Open Long sequences ending with Close
+# Example: pick a cycle in Sep 2026
+import datetime
+def ts(t): return datetime.datetime.fromtimestamp(t/1000, datetime.UTC).strftime('%m-%d %H:%M')
+# Show detailed sequence for last 30 fills
+for f in fills[-30:]:
+    print(ts(f['time']), f['dir'], f\"sz={f['sz']} px={f['px']} pnl={f['closedPnl']} startPos={f['startPosition']}\")
+print()
+print('=== crossed stats (market vs limit) ===')
+print(collections.Counter(f['crossed'] for f in fills))
+# size distribution
+sizes=[float(f['sz']) for f in fills if f['dir']=='Open Long']
+print(f'open sizes: min {min(sizes):.2f} max {max(sizes):.2f} avg {sum(sizes)/len(sizes):.2f}')
+closes=[float(f['sz']) for f in fills if 'Close' in f['dir']]
+print(f'close sizes: min {min(closes):.2f} max {max(closes):.2f} avg {sum(closes)/len(closes):.2f}')
+# price range over time
+pxs=[float(f['px']) for f in fills]
+print(f'px overall min {min(pxs):.2f} max {max(pxs):.2f}')
+# monthly price ranges
+import itertools
+for (y,m), grp in itertools.groupby(fills, key=lambda x: (datetime.datetime.fromtimestamp(x['time']/1000, datetime.UTC).year, datetime.datetime.fromtimestamp(x['time']/1000, datetime.UTC).month)):
+    g=list(grp)
+    ps=[float(x['px']) for x in g]
+    print(f'{y}-{m:02d}: n={len(g)} px {min(ps):.1f}-{max(ps):.1f} pnl_close_sum={sum(float(x[\"closedPnl\"]) for x in g):.1f}')
+"
+
+09-18 07:43 Close Long sz=3.93 px=88.144 pnl=2.88462 startPos=3.93
+09-18 07:44 Open Long sz=3.89 px=88.309 pnl=0.0 startPos=0.0
+09-18 10:01 Close Long sz=3.89 px=89.051 pnl=2.88638 startPos=3.89
+09-18 10:02 Open Long sz=1.26 px=89.017 pnl=0.0 startPos=0.0
+09-18 10:02 Open Long sz=2.6 px=89.017 pnl=0.0 startPos=1.26
+09-18 10:25 Close Long sz=3.86 px=89.765 pnl=2.88728 startPos=3.86
+09-18 10:25 Open Long sz=3.82 px=89.872 pnl=0.0 startPos=0.0
+09-18 10:31 Close Long sz=3.82 px=90.627 pnl=2.8841 startPos=3.82
+09-18 10:32 Open Long sz=3.79 px=90.593 pnl=0.0 startPos=0.0
+09-18 11:25 Open Long sz=1.9 px=89.733 pnl=0.0 startPos=3.79
+09-18 12:34 Close Long sz=5.69 px=91.064 pnl=4.314158 startPos=5.69
+09-18 12:34 Open Long sz=3.77 px=91.121 pnl=0.0 startPos=0.0
+09-18 12:38 Close Long sz=3.77 px=91.886 pnl=2.88405 startPos=3.77
+09-18 12:38 Open Long sz=3.74 px=91.895 pnl=0.0 startPos=0.0
+09-18 12:52 Open Long sz=1.87 px=90.965 pnl=0.0 startPos=3.74
+09-18 14:45 Close Long sz=5.61 px=92.354 pnl=4.31409 startPos=5.61
+09-18 14:45 Open Long sz=3.73 px=92.367 pnl=0.0 startPos=0.0
+09-18 15:32 Open Long sz=1.86 px=91.441 pnl=0.0 startPos=3.73
+09-18 23:00 Close Long sz=5.59 px=92.832 pnl=4.322188 startPos=5.59
+09-18 23:00 Open Long sz=2.57 px=92.922 pnl=0.0 startPos=0.0
+09-18 23:00 Open Long sz=1.13 px=92.943 pnl=0.0 startPos=2.57
+09-19 01:07 Close Long sz=3.7 px=93.709 pnl=2.88822 startPos=3.7
+09-19 01:08 Open Long sz=3.67 px=93.649 pnl=0.0 startPos=0.0
+09-19 01:18 Open Long sz=1.83 px=92.802 pnl=0.0 startPos=3.67
+09-19 02:53 Close Long sz=5.5 px=94.151 pnl=4.31145 startPos=5.5
+09-19 02:53 Open Long sz=3.66 px=94.125 pnl=0.0 startPos=0.0
+09-19 04:31 Open Long sz=1.83 px=93.159 pnl=0.0 startPos=3.66
+09-19 04:34 Open Long sz=1.83 px=92.218 pnl=0.0 startPos=5.49
+09-19 21:13 Open Long sz=3.29 px=91.277 pnl=0.0 startPos=7.32
+09-20 02:54 Open Long sz=3.29 px=90.336 pnl=0.0 startPos=10.61
+
+=== crossed stats (market vs limit) ===
+Counter({False: 3166, True: 1710})
+open sizes: min 0.01 max 131.67 avg 3.80
+close sizes: min 0.06 max 280.78 avg 9.02
+px overall min 23.32 max 94.15
+2025-10: n=564 px 33.6-49.9 pnl_close_sum=261.8
+2025-11: n=564 px 30.9-44.4 pnl_close_sum=375.4
+2025-12: n=349 px 23.3-36.2 pnl_close_sum=363.2
+2026-02: n=456 px 26.2-36.8 pnl_close_sum=255.6
+2026-03: n=503 px 30.0-43.6 pnl_close_sum=407.9
+2026-04: n=202 px 35.4-45.6 pnl_close_sum=176.5
+2026-05: n=511 px 40.6-73.0 pnl_close_sum=501.8
+2026-06: n=850 px 53.6-76.9 pnl_close_sum=1640.3
+2026-07: n=193 px 52.5-72.9 pnl_close_sum=421.3
+2026-08: n=486 px 51.4-86.5 pnl_close_sum=713.0
+2026-09: n=198 px 75.8-94.2 pnl_close_sum=341.2
+[0m
+a[0m$ [0mpython3 -c "
+import json, urllib.request, datetime, collections
+addr='0x0bb81e516c88881c54529e1790470cb5e9f8740d'
+def post(payload):
+    req=urllib.request.Request('https://api.hyperliquid.xyz/info', data=json.dumps(payload).encode(), headers={'Content-Type':'application/json'})
+    with urllib.request.urlopen(req, timeout=60) as r:
+        return json.loads(r.read().decode())
+# funding history (userFunding)
+try:
+    fh=post({'type':'userFunding','user':addr,'startTime':1759276800000,'endTime':1789948800000})
+    print('funding records:', len(fh))
+    tot=sum(float(x.get('delta',{}).get('usdc',0) or 0) for x in fh)
+    print(f'funding total USDC delta: {tot:.2f}')
+    print('sample:', json.dumps(fh[:3], indent=2)[:1500])
+    print('last3:', json.dumps(fh[-3:], indent=2)[:1500])
+    # funding by coin
+    print(collections.Counter(x.get('delta',{}).get('coin','?')+\"/\"+x.get('delta',{}).get('type','?') for x in fh))
+except Exception as e:
+    import traceback; traceback.print_exc()
+# non-funding ledger (deposits/withdraws/transfers)
+try:
+    led=post({'type':'userNonFundingLedgerUpdates','user':addr,'startTime':1759276800000,'endTime':1789948800000})
+    print('ledger records:', len(led))
+    print(collections.Counter(x.get('delta',{}).get('type','?') for x in led))
+    print(json.dumps(led[:5], indent=2)[:3000])
+except Exception as e:
+    import traceback; traceback.print_exc()
+"
+
+funding records: 485
+funding total USDC delta: -96.95
+sample: [
+  {
+    "time": 1760313600000,
+    "hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+    "delta": {
+      "type": "funding",
+      "coin": "HYPE",
+      "usdc": "0.007504",
+      "szi": "4.7481818182",
+      "fundingRate": "-0.00000335",
+      "nSamples": 11
+    }
+  },
+  {
+    "time": 1760400000000,
+    "hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+    "delta": {
+      "type": "funding",
+      "coin": "HYPE",
+      "usdc": "-0.085328",
+      "szi": "18.38125",
+      "fundingRate": "0.0000050297",
+      "nSamples": 24
+    }
+  },
+  {
+    "time": 1760486400000,
+    "hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+    "delta": {
+      "type": "funding",
+      "coin": "HYPE",
+      "usdc": "-0.00883",
+      "szi": "10.6254166667",
+      "fundingRate": "0.0000009163",
+      "nSamples": 24
+    }
+  }
+]
+last3: [
+  {
+    "time": 1789898400052,
+    "hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+    "delta": {
+      "type": "funding",
+      "coin": "HYPE",
+      "usdc": "-0.015793",
+      "szi": "13.9",
+      "fundingRate": "0.0000125",
+      "nSamples": null
+    }
+  },
+  {
+    "time": 1789902000044,
+    "hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+    "delta": {
+      "type": "funding",
+      "coin": "HYPE",
+      "usdc": "-0.015779",
+      "szi": "13.9",
+      "fundingRate": "0.0000125",
+      "nSamples": null
+    }
+  },
+  {
+    "time": 1789905600043,
+    "hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+    "delta": {
+      "type": "funding",
+      "coin": "HYPE",
+      "usdc": "-0.015888",
+      "szi": "13.9",
+      "fundingRate": "0.0000125",
+      "nSamples": null
+    }
+  }
+]
+Counter({'HYPE/funding': 485})
+ledger records: 21
+Counter({'send': 19, 'internalTransfer': 1, 'withdraw': 1})
+[
+  {
+    "time": 1760350241623,
+    "hash": "0xb7ecf4f5ebd4032db966042d64225801e5000cdb86d721ff5bb5a048aad7dd18",
+    "delta": {
+      "type": "internalTransfer",
+      "usdc": "2000.0",
+      "user": "0x5c7c1cddf6463aeb5020b472b864c397e826069f",
+      "destination": "0x0bb81e516c88881c54529e1790470cb5e9f8740d",
+      "fee": "1.0"
+    }
+  },
+  {
+    "time": 1761576901031,
+    "hash": "0xc243c11775b8e6d3c3bd042e4ecd3e02043500fd10bc05a5660c6c6a34bcc0be",
+    "delta": {
+      "type": "send",
+      "user": "0x0bb81e516c88881c54529e1790470cb5e9f8740d",
+      "destination": "0x8318a9aa3993365cd200f17eab2e71e56250e5be",
+      "sourceDex": "",
+      "destinationDex": "",
+      "token": "USDC",
+      "amount": "550.0",
+      "usdcValue": "550.0",
+      "fee": "0.0",
+      "nativeTokenFee": "0.0",
+      "nonce": 1761576890695,
+      "feeToken": ""
+    }
+  },
+  {
+    "time": 1761986460305,
+    "hash": "0xab23a5499e340431ac9d042e9de9120201d9002f393723034eec509c5d37de1c",
+    "delta": {
+      "type": "send",
+      "user": "0x0bb81e516c88881c54529e1790470cb5e9f8740d",
+      "destination": "0x5c7c1cddf6463aeb5020b472b864c397e826069f",
+      "sourceDex": "",
+      "destinationDex": "",
+      "token": "USDC",
+      "amount": "150.0",
+      "usdcValue": "150.0",
+      "fee": "0.0",
+      "nativeTokenFee": "0.0",
+      "nonce": 1761986448227,
+      "feeToken": ""
+    }
+  },
+  {
+    "time": 1762126572469,
+    "hash": "0x2475e0399b239e6025ef042eb90a68020252001f3626bd32c83e8b8c5a27784a",
+    "delta": {
+      "type": "send",
+      "user": "0x5c7c1cddf6463aeb5020b472b864c397e826069f",
+      "destination": "0x0bb81e516c88881c54529e1790470cb5e9f8740d",
+      "sourceDex": "",
+      "destinationDex": "",
+      "token": "USDC",
+      "amount": "1500.0",
+      "usdcValue": "1500.0",
+      "fee": "0.0",
+      "nativeTokenFee": "0.0",
+      "nonce": 1762126558489,
+      "feeToken": ""
+    }
+  },
+  {
+    "time": 1763221849989,
+    "hash": "0x8ed320e86ca62bc4904c042f894c5202041800ce07a94a96329bcc3b2baa05af",
+    "delta": {
+      "type": "send",
+      "user": "0x0bb81e516c88881c54529e1790470cb5e9f8740d",
+      "destination": "0x5c7c1cddf6463aeb5020b472b864c397e826069f",
+      "sourceDex": "",
+      "destinationDex": "",
+      "token": "USDC",
+      "amount": "275.0",
+      "usdcValue": "275.0",
+      "fee": "0.0",
+      "nativeTokenFee": "0.0",
+      "nonce": 1763221839919,
+      "feeToken": ""
+    }
+  }
+]
+[0m
+a[0m$ [0mpython3 -c "
+import json, datetime
+fills=json.load(open('/tmp/opencode/all_fills.json'))
+fills=sorted(fills, key=lambda x: x['time'])
+# Reconstruct net position over time (HYPE szi): buys +, sells -
+pos=0
+max_long=0
+max_long_time=None
+min_px=1e9
+# track position peaks
+for f in fills:
+    sz=float(f['sz'])
+    if f['side']=='B': pos+=sz
+    else: pos-=sz
+    if pos>max_long:
+        max_long=pos; max_long_time=f['time']; max_px=float(f['px'])
+print(f'max reconstructed long: {max_long:.2f} HYPE around {datetime.datetime.fromtimestamp(max_long_time/1000, datetime.UTC)} @ px {max_px}')
+# show context around max
+idx=[i for i,x in enumerate(fills) if x['time']==max_long_time][0]
+for f in fills[max(0,idx-8):idx+8]:
+    print(datetime.datetime.fromtimestamp(f['time']/1000, datetime.UTC).strftime('%m-%d %H:%M'), f['dir'], f\"sz={f['sz']} px={f['px']} pnl={f['closedPnl']}\")
+print()
+# find Dec 2025 low period
+print('=== Dec 2025 low fills (px<27) ===')
+lows=[f for f in fills if float(f['px'])<27]
+print('count:', len(lows))
+for f in lows[:20]:
+    print(datetime.datetime.fromtimestamp(f['time']/1000, datetime.UTC).strftime('%m-%d %H:%M'), f['dir'], f\"sz={f['sz']} px={f['px']} pnl={f['closedPnl']} startPos={f['startPosition']}\")
+print('...')
+for f in lows[-20:]:
+    print(datetime.datetime.fromtimestamp(f['time']/1000, datetime.UTC).strftime('%m-%d %H:%M'), f['dir'], f\"sz={f['sz']} px={f['px']} pnl={f['closedPnl']} startPos={f['startPosition']}\")
+"
+
+max reconstructed long: 280.78 HYPE around 2025-12-07 14:57:34.359000+00:00 @ px 28.23
+12-04 02:39 Open Long sz=3.11 px=36.186 pnl=0.0
+12-04 03:12 Open Long sz=1.71 px=35.83 pnl=0.0
+12-04 03:30 Open Long sz=1.71 px=35.47 pnl=0.0
+12-04 07:09 Open Long sz=3.08 px=34.74 pnl=0.0
+12-04 17:47 Open Long sz=10.94 px=34.02 pnl=0.0
+12-04 19:21 Open Long sz=20.52 px=33.29 pnl=0.0
+12-05 11:34 Open Long sz=37.62 px=31.85 pnl=0.0
+12-07 08:04 Open Long sz=70.11 px=30.4 pnl=0.0
+12-07 14:57 Open Long sz=131.67 px=28.23 pnl=0.0
+12-08 01:12 Close Long sz=280.78 px=30.36 pnl=69.942298
+12-08 01:13 Open Long sz=0.67 px=30.329 pnl=0.0
+12-08 01:13 Open Long sz=3.51 px=30.335 pnl=0.0
+12-08 01:34 Close Long sz=4.18 px=30.59 pnl=1.07008
+12-08 01:34 Open Long sz=4.15 px=30.51 pnl=0.0
+12-08 01:36 Close Long sz=4.15 px=30.77 pnl=1.079
+12-08 01:36 Open Long sz=4.12 px=30.739 pnl=0.0
+
+=== Dec 2025 low fills (px<27) ===
+count: 102
+12-17 03:35 Open Long sz=5.58 px=26.91 pnl=0.0 startPos=17.98
+12-17 15:43 Open Long sz=0.06 px=26.93 pnl=0.0 startPos=12.56
+12-17 15:43 Open Long sz=5.59 px=26.93 pnl=0.0 startPos=12.62
+12-17 15:55 Open Long sz=5.65 px=26.65 pnl=0.0 startPos=18.21
+12-17 16:29 Open Long sz=20.1 px=26.09 pnl=0.0 startPos=23.86
+12-17 16:41 Open Long sz=37.68 px=25.54 pnl=0.0 startPos=43.96
+12-17 23:27 Open Long sz=69.08 px=24.43 pnl=0.0 startPos=81.64
+12-18 18:49 Open Long sz=128.74 px=23.32 pnl=0.0 startPos=150.72
+12-19 11:13 Close Long sz=279.46 px=24.63 pnl=57.792328 startPos=279.46
+12-19 11:13 Open Long sz=7.17 px=24.614 pnl=0.0 startPos=0.0
+12-19 12:04 Open Long sz=3.58 px=24.37 pnl=0.0 startPos=7.17
+12-19 14:25 Open Long sz=3.58 px=24.13 pnl=0.0 startPos=10.75
+12-19 15:16 Close Long sz=11.77 px=24.64 pnl=2.446983 startPos=14.33
+12-19 15:16 Close Long sz=2.56 px=24.64 pnl=0.532224 startPos=2.56
+12-19 15:16 Open Long sz=6.05 px=24.624 pnl=0.0 startPos=0.0
+12-19 15:16 Open Long sz=1.12 px=24.624 pnl=0.0 startPos=6.05
+12-19 15:19 Open Long sz=3.58 px=24.39 pnl=0.0 startPos=7.17
+12-19 15:27 Open Long sz=3.58 px=24.15 pnl=0.0 startPos=10.75
+12-19 15:45 Open Long sz=6.45 px=23.9 pnl=0.0 startPos=14.33
+12-19 16:27 Close Long sz=20.78 px=24.48 pnl=4.214184 startPos=20.78
+...
+12-22 08:03 Open Long sz=0.79 px=25.55 pnl=0.0 startPos=0.0
+12-22 08:03 Open Long sz=6.19 px=25.55 pnl=0.0 startPos=0.79
+12-22 08:08 Open Long sz=3.49 px=25.33 pnl=0.0 startPos=6.98
+12-22 11:14 Open Long sz=3.49 px=25.08 pnl=0.0 startPos=10.47
+12-22 13:37 Open Long sz=6.28 px=24.82 pnl=0.0 startPos=13.96
+12-22 15:15 Open Long sz=6.28 px=24.57 pnl=0.0 startPos=20.24
+12-23 05:34 Open Long sz=22.34 px=24.05 pnl=0.0 startPos=26.52
+12-24 21:59 Close Long sz=48.86 px=24.8 pnl=10.0163 startPos=48.86
+12-24 21:59 Open Long sz=7.2 px=24.855 pnl=0.0 startPos=0.0
+12-24 22:41 Close Long sz=7.2 px=25.06 pnl=1.476 startPos=7.2
+12-24 22:42 Open Long sz=0.49 px=25.053 pnl=0.0 startPos=0.0
+12-24 22:42 Open Long sz=6.66 px=25.053 pnl=0.0 startPos=0.49
+12-25 00:29 Open Long sz=3.58 px=24.79 pnl=0.0 startPos=7.15
+12-25 02:26 Close Long sz=10.73 px=25.17 pnl=2.197504 startPos=10.73
+12-25 02:26 Open Long sz=7.12 px=25.165 pnl=0.0 startPos=0.0
+12-25 03:40 Open Long sz=3.56 px=24.91 pnl=0.0 startPos=7.12
+12-25 12:22 Close Long sz=4.06 px=24.659 pnl=-1.70926 startPos=10.68
+12-25 12:22 Close Long sz=6.62 px=24.658 pnl=-2.79364 startPos=6.62
+02-23 14:06 Open Long sz=33.33 px=26.77 pnl=0.0 startPos=39.39
+02-28 06:36 Open Long sz=34.54 px=26.24 pnl=0.0 startPos=40.83
+[0m
+a[0m$ [0mpython3 -c "
+import json, urllib.request, datetime, collections
+addr='0x0bb81e516c88881c54529e1790470cb5e9f8740d'
+def post(payload):
+    req=urllib.request.Request('https://api.hyperliquid.xyz/info', data=json.dumps(payload).encode(), headers={'Content-Type':'application/json'})
+    with urllib.request.urlopen(req, timeout=60) as r:
+        return json.loads(r.read().decode())
+led=post({'type':'userNonFundingLedgerUpdates','user':addr,'startTime':1750000000000,'endTime':1790000000000})
+print('total ledger:', len(led))
+for x in led:
+    d=x['delta']
+    t=datetime.datetime.fromtimestamp(x['time']/1000, datetime.UTC).strftime('%Y-%m-%d')
+    print(t, d.get('type'), d.get('usdc', d.get('amount','?')), d.get('user','')[:10] if 'user' in d else '', '->', d.get('destination','')[:10] if 'destination' in d else '')
+# order history sample
+try:
+    oh=post({'type':'orderHistory','user':addr})
+    print('orderHistory count:', len(oh))
+    # last 5
+    for o in oh[-5:]:
+        print(json.dumps(o)[:500])
+except Exception as e:
+    import traceback; traceback.print_exc()
+"
+
+Traceback (most recent call last):
+  File "<string>", line 16, in <module>
+  File "<string>", line 6, in post
+  File "/usr/lib/python3.12/urllib/request.py", line 215, in urlopen
+    return opener.open(url, data, timeout)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 521, in open
+    response = meth(req, response)
+               ^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 630, in http_response
+    response = self.parent.error(
+               ^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 559, in error
+    return self._call_chain(*args)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 492, in _call_chain
+    result = func(*args)
+             ^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 639, in http_error_default
+    raise HTTPError(req.full_url, code, msg, hdrs, fp)
+urllib.error.HTTPError: HTTP Error 422: Unprocessable Entity
+total ledger: 21
+2025-10-13 internalTransfer 2000.0 0x5c7c1cdd -> 0x0bb81e51
+2025-10-27 send 550.0 0x0bb81e51 -> 0x8318a9aa
+2025-11-01 send 150.0 0x0bb81e51 -> 0x5c7c1cdd
+2025-11-02 send 1500.0 0x5c7c1cdd -> 0x0bb81e51
+2025-11-15 send 275.0 0x0bb81e51 -> 0x5c7c1cdd
+2025-11-25 send 250.0 0x0bb81e51 -> 0x5c7c1cdd
+2025-12-16 send 1000.0 0x92eabda8 -> 0x0bb81e51
+2025-12-25 withdraw 549.0  -> 
+2025-12-25 send 3653.39 0x0bb81e51 -> 0x6c30f718
+2026-02-05 send 2000.0 0x1d14c622 -> 0x0bb81e51
+2026-02-05 send 4.2 0x0bb81e51 -> 0x1d14c622
+2026-02-05 send 1995.8 0x0bb81e51 -> 0x0bb81e51
+2026-02-28 send 1799.0 0xafe62f92 -> 0x0bb81e51
+2026-03-10 send 501.0 0x0bb81e51 -> 0xafe62f92
+2026-04-06 send 500.0 0x0bb81e51 -> 0x68350a86
+2026-05-04 send 3591.31 0x0bb81e51 -> 0x68350a86
+2026-05-16 send 4149.02 0xafe62f92 -> 0x0bb81e51
+2026-05-29 send 3585.0 0xafe62f92 -> 0x0bb81e51
+2026-06-06 send 1000.0 0x0bb81e51 -> 0xafe62f92
+2026-06-22 send 1001.0 0x0bb81e51 -> 0xafe62f92
+2026-08-17 send 1001.0 0x0bb81e51 -> 0xafe62f92
+[0m
+a[0m$ [0mpython3 -c "
+import json, urllib.request
+addr='0x0bb81e516c88881c54529e1790470cb5e9f8740d'
+def post(payload):
+    req=urllib.request.Request('https://api.hyperliquid.xyz/info', data=json.dumps(payload).encode(), headers={'Content-Type':'application/json'})
+    import json as j
+    try:
+        with urllib.request.urlopen(req, timeout=30) as r:
+            return j.loads(r.read().decode())
+    except Exception as e:
+        import urllib.error
+        try: print(e.read().decode()[:500])
+        except: print(e)
+        raise
+for t in [{'type':'historicalOrders','user':addr},{'type':'userTwapSliceFills','user':addr}]:
+    try:
+        r=post(t)
+        print(t, '->', len(r) if isinstance(r,list) else str(r)[:500])
+        if isinstance(r,list) and r:
+            print(json.dumps(r[0], indent=2)[:800])
+            print(json.dumps(r[-1], indent=2)[:800])
+    except Exception as e:
+        print('fail', t, e)
+"
+
+fail {'type': 'historicalOrders', 'user': '0x0bb81e516c88881c54529e1790470cb5e9f8740d'} cannot access local variable 'urllib' where it is not associated with a value
+fail {'type': 'userTwapSliceFills', 'user': '0x0bb81e516c88881c54529e1790470cb5e9f8740d'} cannot access local variable 'urllib' where it is not associated with a value
+[0m
+a[0m$ [0mpython3 -c "
+import json, urllib.request as req2
+addr='0x0bb81e516c88881c54529e1790470cb5e9f8740d'
+def post(payload):
+    r=req2.Request('https://api.hyperliquid.xyz/info', data=json.dumps(payload).encode(), headers={'Content-Type':'application/json'})
+    with req2.urlopen(r, timeout=30) as resp:
+        return json.loads(resp.read().decode())
+for t in [{'type':'historicalOrders','user':addr}]:
+    try:
+        r=post(t)
+        print('len', len(r) if isinstance(r,list) else type(r))
+        if isinstance(r,list) and r:
+            print(json.dumps(r[0], indent=2)[:1000])
+    except Exception as e:
+        print('fail', e)
+        import traceback; traceback.print_exc()
+"
+
+len 1282
+{
+  "order": {
+    "coin": "HYPE",
+    "side": "A",
+    "limitPx": "92.95",
+    "sz": "13.9",
+    "oid": 550321849509,
+    "timestamp": 1789872861374,
+    "triggerCondition": "N/A",
+    "isTrigger": false,
+    "triggerPx": "0.0",
+    "children": [],
+    "isPositionTpsl": false,
+    "reduceOnly": true,
+    "orderType": "Limit",
+    "origSz": "13.9",
+    "tif": "Gtc",
+    "cloid": null
+  },
+  "status": "open",
+  "statusTimestamp": 1789872861374
+}
+[0m
+a[0m$ [0mpython3 -c "
+import json, urllib.request as req2, collections
+addr='0x0bb81e516c88881c54529e1790470cb5e9f8740d'
+def post(payload):
+    r=req2.Request('https://api.hyperliquid.xyz/info', data=json.dumps(payload).encode(), headers={'Content-Type':'application/json'})
+    with req2.urlopen(r, timeout=30) as resp:
+        return json.loads(resp.read().decode())
+h=post({'type':'historicalOrders','user':addr})
+print('total orders:', len(h))
+coins=collections.Counter(o['order']['coin'] for o in h)
+print('coins:', coins)
+sides=collections.Counter(o['order']['side'] for o in h)
+print('sides A=ask/sell B=bid/buy:', sides)
+status=collections.Counter(o['status'] for o in h)
+print('status:', status)
+otypes=collections.Counter(o['order']['orderType'] for o in h)
+print('orderType:', otypes)
+ro=collections.Counter(o['order']['reduceOnly'] for o in h)
+print('reduceOnly:', ro)
+# sample filled sell (take profit) vs filled buy
+fills=[o for o in h if o['status']=='filled']
+print('filled:', len(fills), 'filled sides:', collections.Counter(o['order']['side'] for o in fills))
+# show 3 filled sells
+for o in [x for x in fills if x['order']['side']=='A'][:3]:
+    print(json.dumps(o, indent=2)[:600])
+"
+
+total orders: 1282
+coins: Counter({'HYPE': 1282})
+sides A=ask/sell B=bid/buy: Counter({'B': 1079, 'A': 203})
+status: Counter({'open': 640, 'canceled': 490, 'filled': 151, 'reduceOnlyRejected': 1})
+orderType: Counter({'Limit': 1282})
+reduceOnly: Counter({False: 1079, True: 203})
+filled: 151 filled sides: Counter({'B': 102, 'A': 49})
+{
+  "order": {
+    "coin": "HYPE",
+    "side": "A",
+    "limitPx": "94.151",
+    "sz": "0.0",
+    "oid": 549437331434,
+    "timestamp": 1789780733067,
+    "triggerCondition": "N/A",
+    "isTrigger": false,
+    "triggerPx": "0.0",
+    "children": [],
+    "isPositionTpsl": false,
+    "reduceOnly": true,
+    "orderType": "Limit",
+    "origSz": "5.5",
+    "tif": "Gtc",
+    "cloid": null
+  },
+  "status": "filled",
+  "statusTimestamp": 1789786380667
+}
+{
+  "order": {
+    "coin": "HYPE",
+    "side": "A",
+    "limitPx": "93.709",
+    "sz": "0.0",
+    "oid": 549351136253,
+    "timestamp": 1789772498165,
+    "triggerCondition": "N/A",
+    "isTrigger": false,
+    "triggerPx": "0.0",
+    "children": [],
+    "isPositionTpsl": false,
+    "reduceOnly": true,
+    "orderType": "Limit",
+    "origSz": "3.7",
+    "tif": "Gtc",
+    "cloid": null
+  },
+  "status": "filled",
+  "statusTimestamp": 1789780058455
+}
+{
+  "order": {
+    "coin": "HYPE",
+    "side": "A",
+    "limitPx": "92.832",
+    "sz": "0.0",
+    "oid": 549020869690,
+    "timestamp": 1789745559616,
+    "triggerCondition": "N/A",
+    "isTrigger": false,
+    "triggerPx": "0.0",
+    "children": [],
+    "isPositionTpsl": false,
+    "reduceOnly": true,
+    "orderType": "Limit",
+    "origSz": "5.59",
+    "tif": "Gtc",
+    "cloid": null
+  },
+  "status": "filled",
+  "statusTimestamp": 1789772419765
+}
+[0m
+a[0m$ [0mpython3 -c "
+import json
+fills=json.load(open('/tmp/opencode/all_fills.json'))
+fills=sorted(fills, key=lambda x: x['time'])
+# Estimate TP % : for each Close, compare close px vs avg entry of preceding opens since last flat (pos==0)
+# Simplified: use startPosition + dir to reconstruct cycles: when startPosition==0 and Open -> new cycle start; accumulate cost; when Close with sz==startPosition -> cycle end
+cycles=[]; cost=0; qty=0; start=None
+for f in fills:
+    sz=float(f['sz']); px=float(f['px'])
+    if f['dir']=='Open Long':
+        if float(f['startPosition'])==0 and qty!=0:
+            pass # shouldn't happen
+        if qty==0: start=f['time']
+        cost+=sz*px; qty+=sz
+    else:
+        # Close Long
+        if qty>0:
+            avg=cost/qty
+            pnl=float(f['closedPnl'])
+            ret=(px-avg)/avg*100
+            cycles.append((ret, pnl, qty, avg, px))
+            # assume full close if sz>=qty-1e-9 else partial
+            if sz>=qty-1e-9:
+                cost=0; qty=0
+            else:
+                # partial: reduce proportionally
+                cost-=avg*sz; qty-=sz
+        else:
+            cycles.append((None, float(f['closedPnl']), 0, None, px))
+rets=[c[0] for c in cycles if c[0] is not None]
+print('cycles approx:', len(cycles))
+print(f'TP ret% avg {sum(rets)/len(rets):.3f}% min {min(rets):.3f}% max {max(rets):.3f}%')
+import collections
+# histogram
+bins=[0,0.5,0.8,1.0,1.5,2.0,5.0]
+# show last 10 cycles
+for c in cycles[-10:]:
+    print(f'ret {c[0]:.3f}% pnl {c[1]:.2f} qty {c[2]:.2f} avg {c[3]:.2f} exit {c[4]:.2f}')
+"
+
+cycles approx: 1443
+TP ret% avg 0.843% min -1.683% max 4.071%
+ret 0.840% pnl 2.88 qty 3.93 avg 87.41 exit 88.14
+ret 0.840% pnl 2.89 qty 3.89 avg 88.31 exit 89.05
+ret 0.840% pnl 2.89 qty 3.86 avg 89.02 exit 89.77
+ret 0.840% pnl 2.88 qty 3.82 avg 89.87 exit 90.63
+ret 0.840% pnl 4.31 qty 5.69 avg 90.31 exit 91.06
+ret 0.840% pnl 2.88 qty 3.77 avg 91.12 exit 91.89
+ret 0.840% pnl 4.31 qty 5.61 avg 91.59 exit 92.35
+ret 0.840% pnl 4.32 qty 5.59 avg 92.06 exit 92.83
+ret 0.840% pnl 2.89 qty 3.70 avg 92.93 exit 93.71
+ret 0.840% pnl 4.31 qty 5.50 avg 93.37 exit 94.15
+[0m
+a[0m$ [0mpython3 -c "
+import json, datetime
+fills=json.load(open('/tmp/opencode/all_fills.json'))
+fills=sorted(fills, key=lambda x: x['time'])
+# find cycles with 2+ opens: group by closes
+qty=0; opens=[]
+dips=[]
+mults=[]
+for f in fills:
+    if f['dir']=='Open Long':
+        if qty==0: opens=[f]
+        else: opens.append(f)
+        qty+=float(f['sz'])
+        if len(opens)>=2:
+            prev=float(opens[-2]['px']); cur=float(opens[-1]['px'])
+            dips.append((cur-prev)/prev*100)
+            mults.append(float(opens[-1]['sz'])/float(opens[-2]['sz']))
+    else:
+        if float(f['sz'])>=qty-1e-9:
+            qty=0; opens=[]
+        else:
+            qty-=float(f['sz'])
+import statistics
+print(f'add-on dips n={len(dips)} avg {statistics.mean(dips):.2f}% median {statistics.median(dips):.2f}% min {min(dips):.2f}% max {max(dips):.2f}%')
+print(f'size mult n={len(mults)} avg {statistics.mean(mults):.2f}x median {statistics.median(mults):.2f}x min {min(mults):.2f}x max {max(mults):.2f}x')
+"
+
+add-on dips n=2086 avg -0.96% median -1.01% min -7.15% max 0.11%
+size mult n=2086 avg 1.86x median 1.00x min 0.00x max 111.00x
+[0m
+a[0m$ [0mpython3 -c "
+import json, statistics
+fills=json.load(open('/tmp/opencode/all_fills.json'))
+fills=sorted(fills, key=lambda x: x['time'])
+qty=0; opens=[]; by_depth={}
+for f in fills:
+    if f['dir']=='Open Long':
+        if qty==0: opens=[f]
+        else:
+            opens.append(f)
+            depth=len(opens)-1  # 1=first add, 2=second...
+            prev=float(opens[-2]['px']); cur=float(opens[-1]['px'])
+            dip=(cur-prev)/prev*100
+            mult=float(opens[-1]['sz'])/float(opens[-2]['sz'])
+            by_depth.setdefault(depth, []).append((dip,mult,float(f['sz']),float(f['px'])))
+        qty+=float(f['sz'])
+    else:
+        if float(f['sz'])>=qty-1e-9: qty=0; opens=[]
+        else: qty-=float(f['sz'])
+for d in sorted(by_depth):
+    lst=by_depth[d]
+    print(f'depth {d}: n={len(lst)} dip_avg={statistics.mean(x[0] for x in lst):.2f}% mult_avg={statistics.mean(x[1] for x in lst):.2f}x mult_med={statistics.median(x[1] for x in lst):.2f}x')
+"
+
+depth 1: n=774 dip_avg=-0.70% mult_avg=1.62x mult_med=0.50x
+depth 2: n=488 dip_avg=-0.86% mult_avg=1.29x mult_med=1.00x
+depth 3: n=316 dip_avg=-0.92% mult_avg=1.93x mult_med=1.80x
+depth 4: n=222 dip_avg=-0.94% mult_avg=2.10x mult_med=1.00x
+depth 5: n=134 dip_avg=-1.60% mult_avg=2.79x mult_med=3.55x
+depth 6: n=84 dip_avg=-1.71% mult_avg=3.49x mult_med=1.88x
+depth 7: n=40 dip_avg=-2.38% mult_avg=2.50x mult_med=1.83x
+depth 8: n=16 dip_avg=-3.20% mult_avg=2.43x mult_med=1.86x
+depth 9: n=9 dip_avg=-3.16% mult_avg=10.78x mult_med=1.88x
+depth 10: n=2 dip_avg=-3.24% mult_avg=1.13x mult_med=1.13x
+depth 11: n=1 dip_avg=0.00% mult_avg=3.71x mult_med=3.71x
+[0m
+Derived from Hyperliquid L1 directly — the HyperX page for `0x0bb81e516c88881c54529e1790470cb5e9f8740d` renders `No trading data available`, so I pulled `clearinghouseState`, `spotClearinghouseState`, `openOrders`, `historicalOrders`, `userFillsByTime`, `userFunding`, `userNonFundingLedgerUpdates` from `https://api.hyperliquid.xyz/info`.
+
+## TL;DR
+
+Single-market, long-only, automated limit-grid martingale on **HYPE-PERP only**. No shorts, no spot, no other coin ever.
+
+Logic: open small base long, add ~-1% lower in geometrically growing size, exit whole stack ~+0.84% above average entry via `reduceOnly` limit TP. Repeat 11 months. 99.8% win rate by design, tail-risk if HYPE trends down without bounce.
+
+## Current snapshot (2026-09-20)
+
+- Perps: `LONG 13.9 HYPE @ 92.1758`, `10x cross`, value `$1,265`, uPnL `-$15.6`, margin used `$126.5`, account value `$4,229`, withdrawable `$50.5`
+- Spot: `8,082 USDC` (`4,219 hold`), no other tokens
+- Open TP: `Sell 13.9 @ 92.95 reduceOnly`
+- Open ladder bids (all `Limit GTC`, non-reduceOnly):
+  - `11.71 @ 88.454 (~$1,035)`
+  - `21.96 @ 86.572 (~$1,901)`
+  - `40.26 @ 82.808 (~$3,333)`
+  - `75.03 @ 79.044 (~$5,930)`
+  - `140.91 @ 73.398 (~$10,342)`
+  - `265.35 @ 67.752 (~$17,978)`
+
+That is the fingerprint: sizes ~1.85x per step down, gaps -2% to -7% widening downward.
+
+## Full history (2025-10-13 to 2026-09-20)
+
+Paginated `userFillsByTime` in 30d chunks:
+
+- `4,876 fills`, `100% HYPE`, `3,433 Open Long / 1,443 Close Long`, zero short fills
+- `closedPnl +$5,458`, fees `$268`, funding `-$97` (485 records, all HYPE), net ~`+$5,090`
+- Closes: `1,440 positive / 3 negative`, avg `+$3.78`, max `+$107.6` / `+$69.9`, min `-$3.1`
+- `historicalOrders: 1,282 Limit only`, sells `203 all reduceOnly=True`, buys `1,079 reduceOnly=False`; `crossed=False (maker) 3,166 vs True (taker) 1,710`
+- Profitable every active month, e.g. Oct25 `+$262`, Nov25 `+$375`, Dec25 `+$363`, Feb26 `+$256`, Mar26 `+$408`, Apr26 `+$177`, May26 `+$502`, Jun26 `+$1,640`, Jul26 `+$421`, Aug26 `+$713`, Sep (partial) `+$341`. Gap `2025-12-30 to 2026-01-29: 0 fills`.
+- Price traded: `$23.32 to $94.15`, rode HYPE uptrend the whole period.
+
+## Inferred rules
+
+1. **Universe:** `HYPE-PERP` only. Never hedge.
+2. **Entry:** base size ~2.8-3.4% of equity in notional — e.g. ~4 HYPE x $30 (~$120) when equity ~$3.5k in Dec25, now ~3.7 HYPE x $92 (~$340) on ~$12k total (spot+perp).
+3. **Add:** on ~-1% adverse move. Measured over 2,086 adds: avg `-0.96%`, median `-1.01%`.
+   - depth1: `-0.70%`, `~0.5x` (e.g. 3.73 + 1.86)
+   - depth2-4: `-0.86% to -0.94%`, `~1.3-2.1x`
+   - depth5+: `-1.6% to -3.2%`, `~2.5-3.5x`, up to 9-11 adds
+4. **Exit:** full-stack limit TP at `avgEntry + 0.84%`. Measured over 1,443 cycles: avg `+0.843%`, recent 10 cycles exactly `+0.840%`. Yields `+$2.88` on base stack, `+$4.31` on 1.5x averaged stack at current prices.
+5. **Leverage:** setting `10x cross`, actual low except drawdowns. Max reconstructed `~280 HYPE` (~$8k at $28-30) on ~$3.5k deposits = ~2-3x realized.
+6. **Order handling:** GTC maker bids left resting, single reduceOnly TP rewritten after each fill. 640/490 open/canceled churn in recent `historicalOrders` window is cancel/replace grid maintenance.
+
+## Two canonical examples
+
+Micro (2026-09-18): `Buy 3.73 @92.367`, `Buy 1.86 @91.441 (-1.0%)`, `Sell 5.59 @92.832 +$4.32 (+0.84% vs VWAP)`. Then immediately `Buy 2.57 @92.922` new cycle.
+
+Macro (2025-12-04/08 crash): `3.11 @36.18 -> 1.71 @35.83 -> 1.71 @35.47 -> 3.08 @34.74 -> 10.94 @34.02 -> 20.52 @33.29 -> 37.62 @31.85 -> 70.11 @30.40 -> 131.67 @28.23`, total `280.7 HYPE`, `Sell @30.36 +$69.94`. Survived `-22%` leg, `-36%` peak-to-trough from first entry. Same 12-17/19: `279.4 HYPE` low `23.32`, exit `24.63 +$57.79`. Only 3 losing closes in full sample (e.g. 2025-12-25 `-$1.71/-$2.79`), no hard stop.
+
+Deposits show related-wallet funding (`0x5c7c...`, `0xafe6...`): in `2000+1500+1000+2000+1799+4149+3585`, out similar, so ROI on static capital cannot be computed cleanly — edge is per-cycle scalping, not buy-and-hold.
+
+## Risks / when it breaks
+
+- No stop, no short, no diversification. A >40-50% HYPE flush that fills full `$40k+` ladder on `$12k` equity = high cross-leverage / liquidation.
+- Funding drag: persistent long paid `$97` total; negligible in uptrend, grows if crowded long.
+- Capital inefficient, profits capped at ~0.84% per cycle; relies on bounce frequency. January 2026 inactivity = zero return when bot off / market flat.
+- Copying requires mirroring ladder + TP exactly; naive market-following gets adverse fills and misses maker rebate.
+
+This is consistent with a bot, not discretionary: fixed 0.84% TP, fixed -1% / 0.5x-2x add table, 11-month single-coin discipline, 100% Limit + reduceOnly sells. Not financial advice; verify live via `clearinghouseState` + `userFillsByTime` before copying.

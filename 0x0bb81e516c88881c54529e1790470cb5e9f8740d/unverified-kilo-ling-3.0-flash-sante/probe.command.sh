@@ -1,0 +1,1 @@
+kilo run -m kilo/inclusionai/ling-3.0-flash-sante:free --auto --dir /home/paf/Documents/code/misc/hyperliquid-strategy-sweeps/unverified-kilo-ling-3.0-flash-sante/work --variant thinking --agent plan Reply\ with\ exactly:\ OK

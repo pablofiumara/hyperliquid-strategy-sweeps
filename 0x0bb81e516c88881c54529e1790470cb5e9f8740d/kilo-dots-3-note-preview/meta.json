@@ -1,0 +1,14 @@
+{
+ "label": "kilo-dots-3-note-preview",
+ "tool": "kilo",
+ "model": "kilo/dots-studio/dots-3-note-preview:free",
+ "variant": "thinking",
+ "free_gate": "ok",
+ "probe": "OK",
+ "status": "DONE",
+ "exit": 0,
+ "duration_s": 90.0,
+ "bytes": 40656,
+ "extra": "",
+ "prompt_file": "prompt.txt"
+}

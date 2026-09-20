@@ -1,0 +1,40 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: hl
+      POSTGRES_PASSWORD: hl
+      POSTGRES_DB: hl
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./app/backend/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hl -d hl"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+    ports:
+      - "5432:5432"
+
+  backend:
+    build: ./app/backend
+    environment:
+      DATABASE_URL: postgresql://hl:hl@db:5432/hl
+      DATA_DIR: /data
+    volumes:
+      - .:/data:ro
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+
+  frontend:
+    build: ./app/frontend
+    depends_on:
+      - backend
+    ports:
+      - "8080:80"
+
+volumes:
+  pgdata:

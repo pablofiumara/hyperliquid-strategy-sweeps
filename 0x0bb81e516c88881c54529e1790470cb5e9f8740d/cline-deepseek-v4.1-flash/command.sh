@@ -1,0 +1,1 @@
+cline -P cline -m cline-free/deepseek-v4.1-flash --auto-approve true -y -c /home/paf/Documents/code/misc/hyperliquid-strategy-sweeps/cline-deepseek-v4.1-flash/work --thinking xhigh derive\ the\ trading\ strategy\ or\ strategies\ used\ by\ https://hyperx.trade/hyperliquid/trader\?address=0x0bb81e516c88881c54529e1790470cb5e9f8740d

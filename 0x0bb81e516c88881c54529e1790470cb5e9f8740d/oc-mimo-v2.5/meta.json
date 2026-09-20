@@ -1,0 +1,14 @@
+{
+ "label": "oc-mimo-v2.5",
+ "tool": "opencode",
+ "model": "opencode/mimo-v2.5-free",
+ "variant": "",
+ "free_gate": "ok",
+ "probe": "OK",
+ "status": "DONE",
+ "exit": 0,
+ "duration_s": 327.0,
+ "bytes": 69019,
+ "extra": "",
+ "prompt_file": "prompt.txt"
+}

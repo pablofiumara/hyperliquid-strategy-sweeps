@@ -1,0 +1,14 @@
+{
+ "label": "kilo-ling-3.0-flash-vl",
+ "tool": "kilo",
+ "model": "kilo/inclusionai/ling-3.0-flash-vl:free",
+ "variant": "thinking",
+ "free_gate": "ok",
+ "probe": "OK",
+ "status": "DONE",
+ "exit": 0,
+ "duration_s": 159.0,
+ "bytes": 111914,
+ "extra": "",
+ "prompt_file": "prompt.txt"
+}

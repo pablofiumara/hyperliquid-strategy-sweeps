@@ -1,0 +1,14 @@
+{
+ "label": "unverified-kilo-ling-3.0-flash-sante",
+ "tool": "kilo",
+ "model": "kilo/inclusionai/ling-3.0-flash-sante:free",
+ "variant": "thinking",
+ "free_gate": "ok",
+ "probe": "OK",
+ "status": "DONE",
+ "exit": 0,
+ "duration_s": 113.0,
+ "bytes": 88268,
+ "extra": "",
+ "prompt_file": "prompt.txt"
+}

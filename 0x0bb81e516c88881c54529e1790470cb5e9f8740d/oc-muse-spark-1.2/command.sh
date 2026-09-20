@@ -1,0 +1,1 @@
+opencode run -m opencode/muse-spark-1.2-contributor-free --auto --dir /home/paf/Documents/code/misc/hyperliquid-strategy-sweeps/oc-muse-spark-1.2/work --variant xhigh derive\ the\ trading\ strategy\ or\ strategies\ used\ by\ https://hyperx.trade/hyperliquid/trader\?address=0x0bb81e516c88881c54529e1790470cb5e9f8740d

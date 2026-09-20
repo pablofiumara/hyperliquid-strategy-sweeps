@@ -1,0 +1,14 @@
+{
+ "label": "unverified-kilo-nemotron-3.5-lightning",
+ "tool": "kilo",
+ "model": "kilo/nvidia/nemotron-3.5-lightning:free",
+ "variant": "thinking",
+ "free_gate": "ok",
+ "probe": "OK",
+ "status": "FAILED",
+ "exit": 1,
+ "duration_s": 618.0,
+ "bytes": 234,
+ "extra": "",
+ "prompt_file": "prompt.txt"
+}

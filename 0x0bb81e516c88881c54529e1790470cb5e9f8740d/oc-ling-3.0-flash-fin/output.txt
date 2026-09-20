@@ -1,0 +1,376 @@
+[0m
+> build · ling-3.0-flash-fin-free
+[0m
+I'll analyze the trading strategy for this Hyperliquid trader. Let me fetch the webpage and gather information.
+[0m✗ [0mInvalid Tool
+The arguments provided to the tool are invalid: Invalid input for tool webfetch: JSON parsing failed: Text: {"format": "markdown", "url": "https://hyperx.trade/hyperliquid/trader?address=0x0bb81.
+Error message: JSON Parse error: Unterminated string
+[0m
+Let me fetch the trader page and search for more information about this address
+[0m✗ [0mWebFetch https://hyperx.trade/hyperliquid/trader/0x0bb81e516c88881c54529e1790470cb5e9f8740d failed
+[91m[1mError: [0mStatusCode: non 2xx status code (404 GET https://hyperx.trade/hyperliquid/trader/0x0bb81e516c88881c54529e1790470cb5e9f8740d)
+[0m% [0mWebFetch https://hyperx.trade/hyperliquid/trader?address=0x0bb81e516c88881c54529e1790470cb5e9f8740d
+[0m◈ [0mExa Web Search "hyperliquid trader 0x0bb81e516c88881c54529e1790470cb5e9f8740d strategy"
+The page didn't show trading data. Let me search for this specific wallet on other analytics platforms and the Hyperliquid API.
+[0m✗ [0mWebFetch https://api.hyperliquid.xyz/info/trading?address=0x0bb81e516c88881c54529e1790470cb5e9f8740d failed
+[91m[1mError: [0mStatusCode: non 2xx status code (404 GET https://api.hyperliquid.xyz/info/trading?address=0x0bb81e516c88881c54529e1790470cb5e9f8740d)
+[0m% [0mWebFetch https://hyperbot.network/trader/0x0bb81e516c88881c54529e1790470cb5e9f8740d
+[0m◈ [0mExa Web Search ""0x0bb81e516c88881c54529e1790470cb5e9f8740d" hyperliquid"
+[0m✗ [0mWebFetch https://api.hyperliquid.xyz/info?type=user_state&user=0x0bb81e516c88881c54529e1790470cb5e9f8740d failed
+[91m[1mError: [0mStatusCode: non 2xx status code (405 GET https://api.hyperliquid.xyz/info?type=user_state&user=0x0bb81e516c88881c54529e1790470cb5e9f8740d)
+Let me query the Hyperliquid API directly and try Hyperbot for this wallet's data
+[0m✗ [0mWebFetch https://api.hyperliquid.xyz/info?type=userFills&user=0x0bb81e516c88881c54529e1790470cb5e9f8740d&aggregateByTime=true failed
+[91m[1mError: [0mStatusCode: non 2xx status code (405 GET https://api.hyperliquid.xyz/info?type=userFills&user=0x0bb81e516c88881c54529e1790470cb5e9f8740d&aggregateByTime=true)
+[0m% [0mWebFetch https://hyperbot.network/trader/0x0bb81e516c88881c54529e1790470cb5e9f8740d
+aaa[0m
+[0m$ [0mcurl -s -X POST https://api.hyperliquid.xyz/info \
+  -H "Content-Type: application/json" \
+  -d '{"type":"user_state","user":"0x0bb81e516c88881c54529e1790470cb5e9f8740d"}' 2>&1 | head -200
+Failed to deserialize the JSON body into the target type
+[0m
+The API requires POST requests. Let me use curl to query the Hyperliquid API directly
+[0m$ [0mcurl -s -X POST https://api.hyperliquid.xyz/info \
+  -H "Content-Type: application/json" \
+  -d '{"type":"openOrders","user":"0x0bb81e516c88881c54529e1790470cb5e9f8740d"}' 2>&1 | head -200
+[{"coin":"HYPE","side":"A","limitPx":"92.95","sz":"13.9","oid":550321849509,"timestamp":1789872861374,"origSz":"13.9","reduceOnly":true},{"coin":"HYPE","side":"B","limitPx":"67.752","sz":"265.35","oid":549495642439,"timestamp":1789786420726,"origSz":"265.35"},{"coin":"HYPE","side":"B","limitPx":"73.398","sz":"140.91","oid":549495631809,"timestamp":1789786419634,"origSz":"140.91"},{"coin":"HYPE","side":"B","limitPx":"79.044","sz":"75.03","oid":549495620037,"timestamp":1789786418464,"origSz":"75.03"},{"coin":"HYPE","side":"B","limitPx":"82.808","sz":"40.26","oid":549495610534,"timestamp":1789786417313,"origSz":"40.26"},{"coin":"HYPE","side":"B","limitPx":"86.572","sz":"21.96","oid":549495599990,"timestamp":1789786416090,"origSz":"21.96"},{"coin":"HYPE","side":"B","limitPx":"88.454","sz":"11.71","oid":549495588741,"timestamp":1789786414946,"origSz":"11.71"}]
+[0m
+[0m$ [0mcurl -s -X POST https://api.hyperliquid.xyz/info \
+  -H "Content-Type: application/json" \
+  -d '{"type":"userFills","user":"0x0bb81e516c88881c54529e1790470cb5e9f8740d","aggregateByTime":true}' 2>&1 | head -500
+...output truncated...
+
+Full output saved to: /home/paf/.local/share/opencode/tool-output/tool_0becdd4ba001b1RQHyMFVJbybG
+
+lose Long","closedPnl":"1.426568","hash":"0x916573dbcc3a094192df043bdbee8602017500c1673d2813352e1f2e8b3de32c","oid":435112078175,"crossed":false,"fee":"0.024704","tid":637256027874182,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"53.3328777429","sz":"3.19","side":"B","time":1779315459294,"startPosition":"0.0","dir":"Open Long","closedPnl":"0.0","hash":"0xb527efd285a790a6b6a1043bdbc9060201a400b820aaaf7858f09b2544ab6a91","oid":435111339345,"crossed":true,"fee":"0.073496","tid":900802562162622,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"53.35","sz":"3.22","side":"A","time":1779315446631,"startPosition":"3.22","dir":"Close Long","closedPnl":"1.42324","hash":"0x58bfcb1ecb4507445a39043bdbc854010800e30466482616fc8876718a48e12e","oid":435080582865,"crossed":false,"fee":"0.024737","tid":846348930008535,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"52.908","sz":"3.22","side":"B","time":1779313802976,"startPosition":"0.0","dir":"Open Long","closedPnl":"0.0","hash":"0x3d7aa918e24c42693ef4043bdb6b5102014700fe7d4f613be143546ba1401c53","oid":435080089416,"crossed":true,"fee":"0.073597","tid":708117609980764,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"52.95","sz":"6.44","side":"A","time":1779313780024,"startPosition":"6.44","dir":"Close Long","closedPnl":"2.83038","hash":"0x0000000000000000000000000000000000000000000000000000000000000000","oid":435035177066,"crossed":false,"fee":"0.049103","tid":528975185421488,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"51.86","sz":"1.61","side":"B","time":1779310384124,"startPosition":"4.83","dir":"Open Long","closedPnl":"0.0","hash":"0x682b9a0cd193b53669a5043bdaa87e02026300f26c96d4080bf4455f90978f21","oid":434980623463,"crossed":false,"fee":"0.012023","tid":912037265184460,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"52.38","sz":"1.61","side":"B","time":1779307716011,"startPosition":"3.22","dir":"Open Long","closedPnl":"0.0","hash":"0xe6d8cd68fae6d3e1e852043bda115701c300e54e95e9f2b38aa178bbb9eaadcc","oid":434980598657,"crossed":false,"fee":"0.012143","tid":383430408647122,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"52.901","sz":"3.22","side":"B","time":1779307129641,"startPosition":"0.0","dir":"Open Long","closedPnl":"0.0","hash":"0x5d47ba12654f0b815ec1043bd9f02302015d00f800422a53011065652442e56c","oid":434980560704,"crossed":true,"fee":"0.073587","tid":575009843450027,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"52.94","sz":"3.24","side":"A","time":1779307117343,"startPosition":"3.24","dir":"Close Long","closedPnl":"1.43208","hash":"0x82add22fc79865538427043bd9ef6e0202130015629b842526767d82869c3f3e","oid":434946634022,"crossed":false,"fee":"0.024699","tid":1079368016289396,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"52.498","sz":"3.24","side":"B","time":1779305156034,"startPosition":"0.0","dir":"Open Long","closedPnl":"0.0","hash":"0x1bda3f2fea9367541d53043bd9808801c100571585968626bfa2ea82a997413e","oid":434945955114,"crossed":true,"fee":"0.07348","tid":595717799554295,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"52.44","sz":"4.89","side":"A","time":1779305137987,"startPosition":"4.89","dir":"Close Long","closedPnl":"2.1516","hash":"0x3f408275a19aa2c840ba043bd97f8500007b9a5b3c9dc19ae3092dc8609e7cb2","oid":434885737522,"crossed":false,"fee":"0.036926","tid":1097135719629347,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"51.67","sz":"1.63","side":"B","time":1779301652028,"startPosition":"3.26","dir":"Open Long","closedPnl":"0.0","hash":"0x0000000000000000000000000000000000000000000000000000000000000000","oid":434797507263,"crossed":false,"fee":"0.012127","tid":256581468937047,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"52.165","sz":"3.26","side":"B","time":1779297312299,"startPosition":"0.0","dir":"Open Long","closedPnl":"0.0","hash":"0xa270fa0c5093f8aea3ea043bd7c59b02038200f1eb9717804639a55f0f97d299","oid":434797462152,"crossed":true,"fee":"0.073465","tid":966295437066763,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"52.01","sz":"3.3","side":"A","time":1779297295560,"startPosition":"3.3","dir":"Close Long","closedPnl":"1.4421","hash":"0x60e9567cb0cda8656263043bd7c4aa0203f200624bc0c73704b201cf6fc18250","oid":434627220528,"crossed":false,"fee":"0.024715","tid":481135754833228,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"51.573","sz":"3.3","side":"B","time":1779288990374,"startPosition":"0.0","dir":"Open Long","closedPnl":"0.0","hash":"0x77f82a500588d8897971043bd5f10a02053e0035a08bf75b1bc0d5a2c48cb274","oid":434626490333,"crossed":true,"fee":"0.073522","tid":652987219320997,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"51.58","sz":"5.26","side":"A","time":1779288975205,"startPosition":"5.26","dir":"Close Long","closedPnl":"2.242864","hash":"0x4a1c0cdedca3eeca4b95043bd5f02c02025600c477a70d9cede4b8319ba7c8b4","oid":434515688868,"crossed":false,"fee":"0.039068","tid":711545472917412,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"50.81","sz":"1.75","side":"B","time":1779285314302,"startPosition":"3.51","dir":"Open Long","closedPnl":"0.0","hash":"0x7012042a97835516718b043bd522ee0202ea0010328673e813daaf7d56872f01","oid":434501116470,"crossed":false,"fee":"0.012804","tid":399782888339263,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"51.325","sz":"3.51","side":"B","time":1779284815939,"startPosition":"0.0","dir":"Open Long","closedPnl":"0.0","hash":"0xef18c95ed2bae0ecf092043bd506c20203f100446dbdffbe92e174b191bebad7","oid":434501051701,"crossed":true,"fee":"0.077825","tid":592574938543286,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"51.16","sz":"3.55","side":"A","time":1779284801108,"startPosition":"3.55","dir":"Close Long","closedPnl":"1.5123","hash":"0xd7ddaee298d60ab6d957043bd505ed02058c00c833d929887ba65a3557d9e4a1","oid":434494084447,"crossed":false,"fee":"0.026152","tid":938571441500959,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"50.734","sz":"3.55","side":"B","time":1779284519950,"startPosition":"0.0","dir":"Open Long","closedPnl":"0.0","hash":"0x614f6f02321ee05862c9043bd4f62702099e00e7cd11ff2a05181a54f112ba43","oid":434492731457,"crossed":true,"fee":"0.077805","tid":793228971623343,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"50.83","sz":"3.57","side":"A","time":1779284483859,"startPosition":"3.57","dir":"Close Long","closedPnl":"1.52439","hash":"0xfbc75a3826ba5004fd41043bd4f4280205b3001dc1bd6ed79f90058ae5be29ef","oid":434458530236,"crossed":false,"fee":"0.02613","tid":321304327901103,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"50.403","sz":"3.57","side":"B","time":1779283170753,"startPosition":"0.0","dir":"Open Long","closedPnl":"0.0","hash":"0x1f6fc248379d635b20e9043bd4a9d00201a9002dd290822dc3386d9af6913d45","oid":434457565294,"crossed":true,"fee":"0.077733","tid":799426387845388,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"50.4","sz":"3.6","side":"A","time":1779283135425,"startPosition":"3.6","dir":"Close Long","closedPnl":"1.512","hash":"0xb48e9bee411cbb87b608043bd4a7d0010100b3d3dc1fda595857474100109572","oid":434421286659,"crossed":false,"fee":"0.026127","tid":1102068194012951,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"49.98","sz":"3.6","side":"B","time":1779280891132,"startPosition":"0.0","dir":"Open Long","closedPnl":"0.0","hash":"0xf6b7af5d49551716f831043bd428b60208270042e45835e99a805ab00858f101","oid":434420230555,"crossed":true,"fee":"0.077728","tid":76545318607004,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"50.07","sz":"5.41","side":"A","time":1779280858625,"startPosition":"5.41","dir":"Close Long","closedPnl":"2.241904","hash":"0x86f408f62e1c0d96886d043bd426e001010020dbc91f2c682abcb448ed1fe781","oid":434368154103,"crossed":false,"fee":"0.039006","tid":1104885039640099,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"49.32","sz":"1.8","side":"B","time":1779277244221,"startPosition":"3.61","dir":"Open Long","closedPnl":"0.0","hash":"0x8085dbef00e48f8a81ff043bd35a1e0000c0f3d49be7ae5c244e8741bfe86975","oid":434341625350,"crossed":false,"fee":"0.012783","tid":606963181579661,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"49.823","sz":"3.61","side":"B","time":1779275226897,"startPosition":"0.0","dir":"Open Long","closedPnl":"0.0","hash":"0xd2ff2c818d8468dfd478043bd2e78a02013e0067288787b176c7d7d44c8842ca","oid":434341573821,"crossed":true,"fee":"0.077699","tid":742310482813592,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"49.83","sz":"3.64","side":"A","time":1779275209930,"startPosition":"3.64","dir":"Close Long","closedPnl":"1.49604","hash":"0xdbc3f112320dab75dd3d043bd2e69701c50008f7cd00ca477f8c9c64f1018560","oid":434304877793,"crossed":false,"fee":"0.026118","tid":569149697271709,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"49.419","sz":"3.64","side":"B","time":1779272786657,"startPosition":"0.0","dir":"Open Long","closedPnl":"0.0","hash":"0x858fef8e48fae3198709043bd25cee0201190073e3fe01eb29589ae107febd04","oid":434304284186,"crossed":true,"fee":"0.07771","tid":1017945438990666,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"49.47","sz":"3.67","side":"A","time":1779272759144,"startPosition":"3.67","dir":"Close Long","closedPnl":"1.5047","hash":"0x94964eda794eaf7e9610043bd25b5702019900c01441ce50385efa2d38428969","oid":434295377692,"crossed":false,"fee":"0.026143","tid":862855881507625,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"49.06","sz":"3.67","side":"B","time":1779272104367,"startPosition":"0.0","dir":"Open Long","closedPnl":"0.0","hash":"0x5c832e7e1dc31d8e5dfc043bd235f502018b0063b8c63c60004bd9d0dcc6f779","oid":434294837052,"crossed":true,"fee":"0.077781","tid":211629649507152,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"49.07","sz":"3.69","side":"A","time":1779272071453,"startPosition":"3.69","dir":"Close Long","closedPnl":"1.52028","hash":"0x43dd5b809e99d06a4557043bd2341302010a0066399cef3ce7a606d35d9daa54","oid":434197227089,"crossed":false,"fee":"0.026073","tid":338755291761787,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"48.658","sz":"3.69","side":"B","time":1779265515543,"startPosition":"0.0","dir":"Open Long","closedPnl":"0.0","hash":"0x2d1fb23cba61de3f2e99043bd0bff101f900ca225564fd11d0e85d8f7965b829","oid":434196570387,"crossed":true,"fee":"0.077564","tid":833891887343900,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"48.66","sz":"5.56","side":"A","time":1779265504834,"startPosition":"5.56","dir":"Close Long","closedPnl":"2.270704","hash":"0xd3ca9cb184260013d544043bd0bf55010100b4971f291ee5779348044329d9fe","oid":434031036805,"crossed":false,"fee":"0.038959","tid":680204124362072,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"47.93","sz":"1.85","side":"B","time":1779255067729,"startPosition":"3.71","dir":"Open Long","closedPnl":"0.0","hash":"0x5d0a970761c0618c5e84043bce6ec402018000ecfcc3805e00d3425a20c43b77","oid":433999992504,"crossed":false,"fee":"0.012768","tid":377831100588036,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"48.412","sz":"3.71","side":"B","time":1779253350176,"startPosition":"0.0","dir":"Open Long","closedPnl":"0.0","hash":"0xe9c6fc15c0ea707feb40043bce0d4001d60013fb5bed8f518d8fa7687fee4a6a","oid":433999944785,"crossed":true,"fee":"0.07759","tid":282520827575467,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"48.43","sz":"10.67","side":"A","time":1779253321987,"startPosition":"10.67","dir":"Close Long","closedPnl":"4.281871","hash":"0x76a5dbcc7b5fbdc7781f043bce0ba102067000b21652dc991a6e871f3a5397b2","oid":433694715672,"crossed":false,"fee":"0.074411","tid":38898598953914,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"47.27","sz":"3.31","side":"B","time":1779236338020,"startPosition":"7.36","dir":"Open Long","closedPnl":"0.0","hash":"0xf2fe69dafe656db9f478043bca469d01dd0081c099688c8c96c7152dbd6947a4","oid":433297208855,"crossed":false,"fee":"0.02253","tid":46620237988482,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"47.76","sz":"1.84","side":"B","time":1779228100432,"startPosition":"5.52","dir":"Open Long","closedPnl":"0.0","hash":"0xc38897801b12bd70c502043bc871cc0203b50065b615dc42675142d2da16975b","oid":433297185884,"crossed":false,"fee":"0.012654","tid":124280039458197,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"48.25","sz":"1.84","side":"B","time":1779215331359,"startPosition":"3.68","dir":"Open Long","closedPnl":"0.0","hash":"0x0db2a272ab504a7a0f2c043bc59f1a02045300584653694cb17b4dc56a542464","oid":433297173395,"crossed":false,"fee":"0.012784","tid":8648761992899,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"48.735","sz":"3.68","side":"B","time":1779210938865,"startPosition":"0.0","dir":"Open Long","closedPnl":"0.0","hash":"0xb13344d5e54652a0b2ad043bc4a69a01ca005cbb8049717254fbf028a44a2c8b","oid":433297157511,"crossed":true,"fee":"0.077476","tid":1015064274363572,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"48.67","sz":"7.37","side":"A","time":1779210904011,"startPosition":"7.37","dir":"Close Long","closedPnl":"2.95537","hash":"0x694f29f83d9d23da6ac8043bc4a49e02028300ddd89042ac0d17d54afc90fdc5","oid":432847096797,"crossed":false,"fee":"0.051652","tid":912701759739028,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"47.66","sz":"1.84","side":"B","time":1779191672583,"startPosition":"5.53","dir":"Open Long","closedPnl":"0.0","hash":"0x016ba5584aac656402e5043bc06829020185003de5af8436a53450ab09a03f4e","oid":432804962644,"crossed":false,"fee":"0.012627","tid":1033900838601718,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"48.14","sz":"1.84","side":"B","time":1779189665644,"startPosition":"3.69","dir":"Open Long","closedPnl":"0.0","hash":"0xacf8c9ffbd4ea3fcae72043bbff62502015300e55841c2ce50c175527c427de7","oid":432804944543,"crossed":false,"fee":"0.012755","tid":802767630799390,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"48.637","sz":"3.69","side":"B","time":1779189067321,"startPosition":"0.0","dir":"Open Long","closedPnl":"0.0","hash":"0x12bf9f9c9e37f8811439043bbfd43c018700b782393b1753b6884aef5d3bd26b","oid":432804920404,"crossed":true,"fee":"0.077531","tid":1030122253609252,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"48.56","sz":"5.56","side":"A","time":1779189043793,"startPosition":"5.56","dir":"Close Long","closedPnl":"2.267368","hash":"0x9ddf5ecc4c1ded8c9f59043bbfd2e001e10076b1e7110c5e41a80a1f0b11c777","oid":432596486927,"crossed":false,"fee":"0.038879","tid":51798590518574,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"47.84","sz":"1.85","side":"B","time":1779177330006,"startPosition":"3.71","dir":"Open Long","closedPnl":"0.0","hash":"0x0000000000000000000000000000000000000000000000000000000000000000","oid":432566699892,"crossed":false,"fee":"0.012744","tid":754718136022161,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"48.308","sz":"3.71","side":"B","time":1779175657230,"startPosition":"0.0","dir":"Open Long","closedPnl":"0.0","hash":"0x0c6ddea30579f2f40de7043bbcda0c02020b0088a07d11c6b03689f5c47dccde","oid":432566666386,"crossed":true,"fee":"0.077424","tid":134479190527739,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"48.28","sz":"5.59","side":"A","time":1779175642850,"startPosition":"5.59","dir":"Close Long","closedPnl":"2.230969","hash":"0x8ac950050b21c94f8c43043bbcd93702050700eaa624e8212e91fb57ca25a33a","oid":432396155091,"crossed":false,"fee":"0.038863","tid":1003408631867996,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"47.57","sz":"1.86","side":"B","time":1779165019071,"startPosition":"3.73","dir":"Open Long","closedPnl":"0.0","hash":"0xc4058c2b37775ff3c57f043bba7cff02022c0010d27a7ec567ce377df67b39de","oid":432375445598,"crossed":false,"fee":"0.012741","tid":461615203314923,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"48.036","sz":"3.73","side":"B","time":1779163739407,"startPosition":"0.0","dir":"Open Long","closedPnl":"0.0","hash":"0x58c21e2abd8cc8485a3b043bba340b0203f90010588fe71afc8ac97d7c80a232","oid":432375421583,"crossed":true,"fee":"0.077403","tid":983271712162710,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"48.05","sz":"10.73","side":"A","time":1779163708454,"startPosition":"10.73","dir":"Close Long","closedPnl":"4.292","hash":"0x8649b5672c4c444587c3043bba3245020123004cc74f63172a1260b9eb401e30","oid":432262649899,"crossed":false,"fee":"0.074243","tid":570012046634746,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"46.9","sz":"3.33","side":"B","time":1779156898434,"startPosition":"7.4","dir":"Open Long","closedPnl":"0.0","hash":"0x0befbd834df6d0c10d69043bb8af130202700068e8f9ef93afb868d60cfaaaab","oid":432130691431,"crossed":false,"fee":"0.022489","tid":747032670001853,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"47.38","sz":"1.85","side":"B","time":1779153879432,"startPosition":"5.55","dir":"Open Long","closedPnl":"0.0","hash":"0x30ed5a0b98c98dd63267043bb8035101ef0071f133ccaca8d4b6055e57cd67c0","oid":432130674224,"crossed":false,"fee":"0.012622","tid":380916831462513,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"47.87","sz":"1.85","side":"B","time":1779151108124,"startPosition":"3.7","dir":"Open Long","closedPnl":"0.0","hash":"0x4c949916acf83af54e0e043bb765b80203e700fc47fb59c7f05d44696bfc14df","oid":432130663560,"crossed":false,"fee":"0.012752","tid":628360162427178,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"48.3502189189","sz":"3.7","side":"B","time":1779149674000,"startPosition":"0.0","dir":"Open Long","closedPnl":"0.0","hash":"0x4338aba99663c1a544b2043bb713ec020192008f3166e077e70156fc55679b8f","oid":432130644064,"crossed":true,"fee":"0.077282","tid":723953037967157,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"48.35","sz":"3.73","side":"A","time":1779149649028,"startPosition":"3.73","dir":"Close Long","closedPnl":"1.51065","hash":"0xf7c77504299c2174f941043bb7127e0201e300e9c49f40479b902056e89ffb5f","oid":432118714318,"crossed":false,"fee":"0.025969","tid":622898388007518,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"47.945","sz":"3.73","side":"B","time":1779149043772,"startPosition":"0.0","dir":"Open Long","closedPnl":"0.0","hash":"0x5ae539f655bf05845c5e043bb6f0080202c300dbf0b22456feade54914b2df6e","oid":432117524155,"crossed":true,"fee":"0.077256","tid":698972425249737,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"47.95","sz":"7.45","side":"A","time":1779149019857,"startPosition":"7.45","dir":"Close Long","closedPnl":"2.980745","hash":"0xfd42191ad00b43ddfebb043bb6eea702015500006b0e62b0a10ac46d8f0f1dc8","oid":432002946860,"crossed":false,"fee":"0.05144","tid":353182313165367,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"47.0","sz":"1.86","side":"B","time":1779141676633,"startPosition":"5.59","dir":"Open Long","closedPnl":"0.0","hash":"0x08a0a92aa266defc0a1a043bb54c8502019500103d69fdceac69547d616ab8e6","oid":431974433017,"crossed":false,"fee":"0.012588","tid":316719704207688,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"47.48","sz":"1.86","side":"B","time":1779140117706,"startPosition":"3.73","dir":"Open Long","closedPnl":"0.0","hash":"0xfe467629670bc2e9ffc0043bb4f3e20202de000f020ee1bca20f217c260f9cd4","oid":431974392840,"crossed":false,"fee":"0.012717","tid":441902039543400,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"47.859","sz":"3.73","side":"B","time":1779140024768,"startPosition":"0.0","dir":"Open Long","closedPnl":"0.0","hash":"0x686bce7c47af2e6c69e5043bb4ee920202080061e2a24d3e0c3479cf06a30857","oid":431974352970,"crossed":true,"fee":"0.077118","tid":1081141107543704,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"47.9","sz":"7.45","side":"A","time":1779140012933,"startPosition":"7.45","dir":"Close Long","closedPnl":"2.97702","hash":"0x730fa55f9fea60c57489043bb4ede70204c300453aed7f9716d850b25eee3ab0","oid":431966323549,"crossed":false,"fee":"0.051387","tid":663065559623796,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"46.92","sz":"1.86","side":"B","time":1779139522111,"startPosition":"5.59","dir":"Open Long","closedPnl":"0.0","hash":"0x0b32e06efa2109fb0cac043bb4d1fe0201540054952428cdaefb8bc1b924e3e5","oid":431957435353,"crossed":false,"fee":"0.012567","tid":958776560908890,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"47.4","sz":"1.86","side":"B","time":1779139087945,"startPosition":"3.73","dir":"Open Long","closedPnl":"0.0","hash":"0x0eeca9fb60a1c0321066043bb4b92602023400e0fba4df04b2b5554e1fa59a1c","oid":431957416239,"crossed":false,"fee":"0.012695","tid":2932626116909,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"47.84","sz":"3.73","side":"B","time":1779138942910,"startPosition":"0.0","dir":"Open Long","closedPnl":"0.0","hash":"0xa37206df96910ce3a4eb043bb4b0cc02012d00c531942bb5473ab2325594e6ce","oid":431957391474,"crossed":true,"fee":"0.077087","tid":241781264887078,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"47.62","sz":"3.78","side":"A","time":1779138907150,"startPosition":"3.78","dir":"Close Long","closedPnl":"1.50444","hash":"0x984d804f6b0f91ec99c7043bb4aebb02032100350602b0be3c162ba22a036bd7","oid":431954877862,"crossed":false,"fee":"0.02592","tid":383392562181892,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"47.222","sz":"3.78","side":"B","time":1779138754532,"startPosition":"0.0","dir":"Open Long","closedPnl":"0.0","hash":"0x2b3dcee5a89984e22cb7043bb4a5fc02015d00cb439ca3b4cf067a38679d5ecc","oid":431953862293,"crossed":true,"fee":"0.077111","tid":539185699281703,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"47.04","sz":"3.83","side":"A","time":1779138717259,"startPosition":"3.83","dir":"Close Long","closedPnl":"1.48987","hash":"0x231ba31a7b4611f82495043bb4a3ce0204260000164930cac6e44e6d3a49ebe2","oid":431953057871,"crossed":false,"fee":"0.025943","tid":846012499428099,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"46.651","sz":"3.83","side":"B","time":1779138647478,"startPosition":"0.0","dir":"Open Long","closedPnl":"0.0","hash":"0x955c061cbed5016d96d5043bb49fcb020116000259d8203f3924b16f7dd8db58","oid":431952229854,"crossed":true,"fee":"0.077186","tid":551773512237007,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"46.54","sz":"5.79","side":"A","time":1779138635590,"startPosition":"5.79","dir":"Close Long","closedPnl":"2.219886","hash":"0xd40b2791befd8294d584043bb49f1c020413007759f0a16677d3d2e47df15c7f","oid":431929147543,"crossed":false,"fee":"0.038803","tid":725545609641258,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"45.85","sz":"1.93","side":"B","time":1779136995522,"startPosition":"3.86","dir":"Open Long","closedPnl":"0.0","hash":"0x9c6cdb027d2c48c79de6043bb441b30205bb00e8182f6799403586553c2022b2","oid":431875339298,"crossed":false,"fee":"0.012742","tid":319252290255308,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"46.31","sz":"3.86","side":"B","time":1779133983614,"startPosition":"0.0","dir":"Open Long","closedPnl":"0.0","hash":"0x9ac8928c49f6dcb29c42043bb3967c0203630071e4f9fb843e913ddf08fab69d","oid":431875296771,"crossed":true,"fee":"0.077222","tid":494522373167737,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"46.39","sz":"14.44","side":"A","time":1779133963614,"startPosition":"14.44","dir":"Close Long","closedPnl":"5.594056","hash":"0x6a611734cb42e1586bda043bb395610107002f1a6646002a0e29c2878a46bb43","oid":430797811547,"crossed":false,"fee":"0.096461","tid":236439323647380,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"45.09","sz":"3.42","side":"B","time":1779085224778,"startPosition":"11.02","dir":"Open Long","closedPnl":"0.0","hash":"0xf6796c5116cbad3ff7f3043ba8d5360211960036b1cecc129a4217a3d5cf872a","oid":430427911427,"crossed":false,"fee":"0.022205","tid":274640407700526,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"45.56","sz":"3.42","side":"B","time":1779072922860,"startPosition":"7.6","dir":"Open Long","closedPnl":"0.0","hash":"0x469c3525794e11014815043ba6184002014c000b14412fd3ea64e0783841eaeb","oid":430427861085,"crossed":false,"fee":"0.022437","tid":167132917456057,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"46.03","sz":"1.9","side":"B","time":1779067403343,"startPosition":"5.7","dir":"Open Long","closedPnl":"0.0","hash":"0x34dd40d9744ddc6c3656043ba4ddd50203d300bf0f40fb3ed8a5ec2c3341b656","oid":430427784817,"crossed":false,"fee":"0.012593","tid":987910127234053,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"46.5","sz":"1.9","side":"B","time":1779066892140,"startPosition":"3.8","dir":"Open Long","closedPnl":"0.0","hash":"0x0000000000000000000000000000000000000000000000000000000000000000","oid":430427704006,"crossed":false,"fee":"0.012722","tid":834260523408944,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"46.96","sz":"3.8","side":"B","time":1779065999189,"startPosition":"0.0","dir":"Open Long","closedPnl":"0.0","hash":"0x1f772f63fa81ff4220f0043ba48e1702010d004995851e14c33fdab6b985d92c","oid":430427683310,"crossed":true,"fee":"0.077089","tid":1056975467979274,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"46.9","sz":"3.83","side":"A","time":1779065963362,"startPosition":"3.83","dir":"Close Long","closedPnl":"1.498679","hash":"0x37e660be4b0eb8883960043ba48c0b02029100a3e601d75adbaf0c110a029272","oid":430396785395,"crossed":false,"fee":"0.025866","tid":579068156717339,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"46.5087493473","sz":"3.83","side":"B","time":1779064709526,"startPosition":"0.0","dir":"Open Long","closedPnl":"0.0","hash":"0x9f17c74885062f8ca091043ba444c7020285002e20094e5e42e0729b440a0977","oid":430395419852,"crossed":true,"fee":"0.07695","tid":147665094139526,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"46.5","sz":"14.36","side":"A","time":1779064686537,"startPosition":"14.36","dir":"Close Long","closedPnl":"5.590348","hash":"0x73227470750ef606749c043ba443780202500056100214d816eb1fc33402cff1","oid":430293220790,"crossed":false,"fee":"0.096154","tid":898096741095205,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"45.19","sz":"3.4","side":"B","time":1779061246703,"startPosition":"10.96","dir":"Open Long","closedPnl":"0.0","hash":"0xbedfd819aca9a65ac059043ba380e3020b8300ff47acc52c62a8836c6bad8045","oid":430171601153,"crossed":false,"fee":"0.022125","tid":147038032431163,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"45.66","sz":"3.4","side":"B","time":1779059283043,"startPosition":"7.56","dir":"Open Long","closedPnl":"0.0","hash":"0xb13a6adee04d83b4b2b4043ba310fd0202cb00c47b40a286550316319f415d9f","oid":430171592078,"crossed":false,"fee":"0.022355","tid":422316137946863,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"46.13","sz":"1.89","side":"B","time":1779058289821,"startPosition":"5.67","dir":"Open Long","closedPnl":"0.0","hash":"0x54bd8db4bae8c51c5637043ba2d8600201d6009a55ebe3eef886390779ec9f06","oid":430171583626,"crossed":false,"fee":"0.012554","tid":16900852675500,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"46.6","sz":"1.89","side":"B","time":1779055327586,"startPosition":"3.78","dir":"Open Long","closedPnl":"0.0","hash":"0x8b1e1150e85237db8c97043ba22f3a0103002936835556ad2ee6bca3a75611c6","oid":430171568461,"crossed":false,"fee":"0.012682","tid":488504106059308,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"47.09","sz":"3.78","side":"B","time":1779055156502,"startPosition":"0.0","dir":"Open Long","closedPnl":"0.0","hash":"0xd4c87ea0706e4917d642043ba2257302044f00860b6167e9789129f32f622302","oid":430171547709,"crossed":true,"fee":"0.076896","tid":899623928358113,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"47.04","sz":"7.56","side":"A","time":1779055131509,"startPosition":"7.56","dir":"Close Long","closedPnl":"2.96352","hash":"0xa2aee878ae8eace0a428043ba224030203b1005e4981cbb2467793cb6d8286cb","oid":430112494320,"crossed":false,"fee":"0.051209","tid":668175755830938,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"46.06","sz":"1.89","side":"B","time":1779050496967,"startPosition":"5.67","dir":"Open Long","closedPnl":"0.0","hash":"0x1781032a5bcf813618fa043ba11a640000bc1b0ff6c2a008bb49ae7d1ac35b20","oid":430073787159,"crossed":false,"fee":"0.012535","tid":677436011633325,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"46.53","sz":"1.89","side":"B","time":1779049146065,"startPosition":"3.78","dir":"Open Long","closedPnl":"0.0","hash":"0x0000000000000000000000000000000000000000000000000000000000000000","oid":430073759069,"crossed":false,"fee":"0.012663","tid":357626662091507,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"47.001","sz":"3.78","side":"B","time":1779047599399,"startPosition":"0.0","dir":"Open Long","closedPnl":"0.0","hash":"0xe9abe4b037c01097eb25043ba073e102018f0095d2c32f698d749002f6c3ea82","oid":430073705496,"crossed":true,"fee":"0.07675","tid":330232641451724,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"47.03","sz":"3.81","side":"A","time":1779047586225,"startPosition":"3.81","dir":"Close Long","closedPnl":"1.47828","hash":"0xf98432d20761d234fafd043ba0731b0204f700b7a264f1079d4cde24c665ac1f","oid":430071962304,"crossed":false,"fee":"0.025802","tid":726797269884354,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"46.642","sz":"3.81","side":"B","time":1779047386442,"startPosition":"0.0","dir":"Open Long","closedPnl":"0.0","hash":"0xe95aa5e77f4aa781ead4043ba067a102020700cd1a4dc6538d23513a3e4e816c","oid":430071496549,"crossed":true,"fee":"0.076769","tid":43534459900546,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"46.63","sz":"3.84","side":"A","time":1779047355257,"startPosition":"3.84","dir":"Close Long","closedPnl":"1.48224","hash":"0x4fc788c7ee639b295141043ba065d6000002a0ad8966b9fbf390341aad677513","oid":430062269780,"crossed":false,"fee":"0.025784","tid":468518341209806,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"46.244","sz":"3.84","side":"B","time":1779046698570,"startPosition":"0.0","dir":"Open Long","closedPnl":"0.0","hash":"0xccff14c2f200a574ce78043ba0409802010000a88d03c44670c7c015b1047f5f","oid":430061792037,"crossed":true,"fee":"0.076713","tid":365224329962765,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"46.37","sz":"3.86","side":"A","time":1779046662394,"startPosition":"3.86","dir":"Close Long","closedPnl":"1.48996","hash":"0x163b433b7ca7350217b4043ba03e8a0000765b2117aa53d4ba03ee8e3bab0eec","oid":430050074726,"crossed":false,"fee":"0.025774","tid":597374235828194,"liquidation":{"liquidatedUser":"0x5eadc60e27b8608991648fee36d01f3e55a3cf7e","markPx":"46.353","method":"market"},"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"45.984","sz":"3.86","side":"B","time":1779045750424,"startPosition":"0.0","dir":"Open Long","closedPnl":"0.0","hash":"0x392e318dc1efb5873aa7043ba00a4902027900735ce2d459dcf6dce080e38f71","oid":430049341915,"crossed":true,"fee":"0.076679","tid":924688292138933,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"45.99","sz":"3.89","side":"A","time":1779045718696,"startPosition":"3.89","dir":"Close Long","closedPnl":"1.50932","hash":"0xdd3b9b6ab82e80fddeb5043ba0087d020179005053219fcf810446bd77225ae8","oid":430034950902,"crossed":false,"fee":"0.025761","tid":1087587535936607,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"45.602","sz":"3.89","side":"B","time":1779044591174,"startPosition":"0.0","dir":"Open Long","closedPnl":"0.0","hash":"0x7d2868a64aad43da7ea2043b9fc7ca0201a0008be5a062ac20f113f909a11dc5","oid":430034365609,"crossed":true,"fee":"0.076633","tid":1111304072630747,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"45.89","sz":"3.9","side":"A","time":1779044555833,"startPosition":"3.9","dir":"Close Long","closedPnl":"1.5015","hash":"0xc74ad895c105ffd5c8c4043b9fc5c10201e3007b5c091ea76b1383e88009d9c0","oid":430031799122,"crossed":false,"fee":"0.025771","tid":918008093704763,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"45.505","sz":"3.9","side":"B","time":1779044377536,"startPosition":"0.0","dir":"Open Long","closedPnl":"0.0","hash":"0xaf8824106ef1644cb101043b9fbb9102040a00f609f4831e5350cf632df53e37","oid":430031138542,"crossed":true,"fee":"0.076666","tid":820300595959046,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"45.37","sz":"3.94","side":"A","time":1779044341228,"startPosition":"3.94","dir":"Close Long","closedPnl":"1.48144","hash":"0xf33326171b2bc580f4ac043b9fb97d02022900fcb62ee45396fbd169da2f9f6b","oid":430029886285,"crossed":false,"fee":"0.025741","tid":842277768979521,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"44.994","sz":"3.94","side":"B","time":1779044218689,"startPosition":"0.0","dir":"Open Long","closedPnl":"0.0","hash":"0xc3f65263271f3f58c570043b9fb26b02011a0048c2125e2a67befdb5e6131943","oid":430029225071,"crossed":true,"fee":"0.076583","tid":879401962252482,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"44.95","sz":"3.98","side":"A","time":1779044189528,"startPosition":"3.98","dir":"Close Long","closedPnl":"1.4925","hash":"0x4755d86815f94e9548cf043b9fb0bd02011e004db0fc6d67eb1e83bad4fd287f","oid":430015775903,"crossed":false,"fee":"0.025761","tid":537921581636026,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"44.575","sz":"3.98","side":"B","time":1779043218102,"startPosition":"0.0","dir":"Open Long","closedPnl":"0.0","hash":"0x065522a9a0c28dfe07ce043b9f799d01f3003a8f3bc5acd0aa1dcdfc5fc667e8","oid":430014994355,"crossed":true,"fee":"0.07664","tid":920081317462074,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"44.53","sz":"4.02","side":"A","time":1779043186408,"startPosition":"4.02","dir":"Close Long","closedPnl":"1.49946","hash":"0xaa0b6857331a9596ab85043b9f77d102025c003cce1db4684dd413a9f21e6f81","oid":429985499392,"crossed":false,"fee":"0.025777","tid":196656139415983,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"44.157","sz":"4.02","side":"B","time":1779041112408,"startPosition":"0.0","dir":"Open Long","closedPnl":"0.0","hash":"0xada7f350c905e9faaf21043b9f00ff0201ad0036640908cc51709ea38809c3e5","oid":429984638525,"crossed":true,"fee":"0.076684","tid":928533614628910,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"44.14","sz":"6.06","side":"A","time":1779041077806,"startPosition":"6.06","dir":"Close Long","closedPnl":"2.210082","hash":"0xb26a495b0d7e0010b3e4043b9eff050201ee0040a8711ee25632f4adcc71d9fb","oid":429868490809,"crossed":false,"fee":"0.038518","tid":564093197952052,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"43.49","sz":"2.02","side":"B","time":1779032739588,"startPosition":"4.04","dir":"Open Long","closedPnl":"0.0","hash":"0x72fb0831adc8d4807474043b9d230c01d800201748cbf35216c3b3846cccae6b","oid":429840226203,"crossed":false,"fee":"0.01265","tid":482577634899418,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"43.918","sz":"4.04","side":"B","time":1779030618936,"startPosition":"0.0","dir":"Open Long","closedPnl":"0.0","hash":"0x3524f12c714434be369e043b9ca9f802023400120c475390d8ed9c7f30480ea8","oid":429840183561,"crossed":true,"fee":"0.076649","tid":998831437491841,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"43.86","sz":"4.08","side":"A","time":1779030604627,"startPosition":"4.08","dir":"Close Long","closedPnl":"1.50144","hash":"0x4f754ac0fe0da89e50ef043b9ca92401040062a69900c770f33df613bd018288","oid":429831658651,"crossed":false,"fee":"0.025768","tid":430835622208314,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"43.492","sz":"4.08","side":"B","time":1779029852492,"startPosition":"0.0","dir":"Open Long","closedPnl":"0.0","hash":"0x64a2cf1f7fd01a01661c043b9c7e1d018c00e7051ad338d3086b7a723ed3f3ec","oid":429831283294,"crossed":true,"fee":"0.076657","tid":917842079355932,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"43.5","sz":"6.13","side":"A","time":1779029831612,"startPosition":"6.13","dir":"Close Long","closedPnl":"2.230094","hash":"0x5e8ea29eac604ff56008043b9c7cea017c00ba8447636ec702574df16b6429e0","oid":429699807504,"crossed":false,"fee":"0.038398","tid":519943525296745,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"42.85","sz":"2.04","side":"B","time":1779019499059,"startPosition":"4.09","dir":"Open Long","closedPnl":"0.0","hash":"0x944f450add5348df95c9043b9a2f7902045800f0785667b13817f05d9c5722ca","oid":429630050946,"crossed":false,"fee":"0.012587","tid":245925984085470,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"43.279","sz":"4.09","side":"B","time":1779013519598,"startPosition":"0.0","dir":"Open Long","closedPnl":"0.0","hash":"0x7417d6141d6e82d47591043b98dafe01a800edf9b861a1a617e08166dc625cbf","oid":429630004373,"crossed":true,"fee":"0.076468","tid":968746516532496,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"43.35","sz":"4.12","side":"A","time":1779013490713,"startPosition":"4.12","dir":"Close Long","closedPnl":"1.47496","hash":"0xc7c1b3544983750cc93b043b98d9600203500039e48693de6b8a5ea708874ef7","oid":429608408147,"crossed":false,"fee":"0.025718","tid":815845058262606,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"42.992","sz":"4.12","side":"B","time":1779012043860,"startPosition":"0.0","dir":"Open Long","closedPnl":"0.0","hash":"0x57e26cbdf1f5d153595c043b98871102023a00a38cf8f025fbab1810b0f9ab3d","oid":429607870393,"crossed":true,"fee":"0.076518","tid":387675434703513,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"42.95","sz":"4.16","side":"A","time":1779012008134,"startPosition":"4.16","dir":"Close Long","closedPnl":"1.49344","hash":"0x20e4a4a774a94d88225e043b98850b02013b008d0fac6c5ac4ad4ffa33ad2772","oid":429408746505,"crossed":false,"fee":"0.025728","tid":250741084966534,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"42.591","sz":"4.16","side":"B","time":1778993346748,"startPosition":"0.0","dir":"Open Long","closedPnl":"0.0","hash":"0x600283172ea3224f617c043b9459e902010500fcc9a6412103cb2e69eda6fc3a","oid":429408060979,"crossed":true,"fee":"0.076541","tid":293763684560875,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"42.86","sz":"6.23","side":"A","time":1778993312388,"startPosition":"6.23","dir":"Close Long","closedPnl":"2.207289","hash":"0x816b3939ef44854682e4043b9457ee01c600511f8a47a4182533e48cae485f31","oid":429383040223,"crossed":false,"fee":"0.03845","tid":349388247489207,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"42.22","sz":"2.08","side":"B","time":1778991238546,"startPosition":"4.15","dir":"Open Long","closedPnl":"0.0","hash":"0xa497081f0eab6e4fa610043b93e0f4018e002004a9ae8d21485fb371cdaf483a","oid":429366548979,"crossed":false,"fee":"0.012645","tid":722025128121821,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"42.649","sz":"4.15","side":"B","time":1778990111493,"startPosition":"0.0","dir":"Open Long","closedPnl":"0.0","hash":"0x196c9effb932117a1ae6043b93a06502012a00e55435304cbd354a527835eb64","oid":429366527835,"crossed":true,"fee":"0.076461","tid":371287658050469,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"42.7","sz":"4.18","side":"A","time":1778990088925,"startPosition":"4.18","dir":"Close Long","closedPnl":"1.47972","hash":"0xd1e665674e015098d360043b939f1a01b6007d4ce9046f6a75af10ba0d052a83","oid":429355533103,"crossed":false,"fee":"0.025701","tid":743764489000511,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"42.346","sz":"4.18","side":"B","time":1778989187249,"startPosition":"0.0","dir":"Open Long","closedPnl":"0.0","hash":"0x18dad940ee1c8c8a1a54043b936b620201f70026891fab5cbca38493ad106674","oid":429354914105,"crossed":true,"fee":"0.076466","tid":960908874742743,"feeToken":"USDC","twapId":null},{"coin":"HYPE","px":"42.35","sz":"6.3","side":"A","time":1778989150124,"startPosition":"6.3","dir":"Close Long","closedPnl":"2.20689","hash":"0x9da9a88808afaffb9f23043b93693d010100c06da3a2cecd417253dac7a389e6","oid":429222310028,"crossed":false,"fee":"0.038419","tid":314149981205788,"feeToken":"USDC","twapId":null}]
+[0m
+aaNow let me get the user's current state and more context
+[0m$ [0mcurl -s -X POST https://api.hyperliquid.xyz/info \
+  -H "Content-Type: application/json" \
+  -d '{"type":"user_state","user":"0x0bb81e516c88881c54529e1790470cb5e9f8740d"}' 2>&1 | python3 -m json.tool 2>/dev/null || echo "Failed to parse"
+Failed to parse
+[0m
+[0m$ [0mcurl -s -X POST https://api.hyperliquid.xyz/info \
+  -H "Content-Type: application/json" \
+  -d '{"type":"user_funding","user":"0x0bb81e516c88881c54529e1790470cb5e9f8740d"}' 2>&1 | python3 -m json.tool 2>/dev/null | head -50 || echo "Failed to parse"
+(no output)
+[0m
+a[0m$ [0mcurl -s -X POST https://api.hyperliquid.xyz/info \
+  -H "Content-Type: application/json" \
+  -d '{"type":"user_state","user":"0x0bb81e516c88881c54529e1790470cb5e9f8740d"}' 2>&1 | head -100
+Failed to deserialize the JSON body into the target type
+[0m
+aLet me get the user state and analyze the data more carefully
+[0m$ [0mcurl -s -X POST "https://api.hyperliquid.xyz/info" \
+  -H "Content-Type: application/json" \
+  -d '{"type":"userFills","user":"0x0bb81e516c88881c54529e1790470cb5e9f8740d","aggregateByTime":true}' 2>&1 | python3 -c "
+import json, sys
+data = json.load(sys.stdin)
+if isinstance(data, list):
+    print(f'Total fills: {len(data)}')
+    coins = set()
+    for f in data:
+        coins.add(f.get('coin',''))
+    print(f'Coins traded: {coins}')
+    # Analyze direction
+    open_long = sum(1 for f in data if f.get('dir') == 'Open Long')
+    close_long = sum(1 for f in data if f.get('dir') == 'Close Long')
+    open_short = sum(1 for f in data if f.get('dir') == 'Open Short')
+    close_short = sum(1 for f in data if f.get('dir') == 'Close Short')
+    print(f'Open Long: {open_long}, Close Long: {close_long}')
+    print(f'Open Short: {open_short}, Close Short: {close_short}')
+    # Get closed PnL
+    total_pnl = sum(float(f.get('closedPnl', 0)) for f in data if f.get('closedPnl', '0.0') != '0.0')
+    print(f'Total closed PnL: {total_pnl}')
+    # Average position size for open longs
+    print(f'\\nFirst 5 and last 5 fills:')
+    for f in data[:5]:
+        print(f'  {f.get(\"time\")}: {f.get(\"dir\")} {f.get(\"coin\")} size={f.get(\"sz\")} px={f.get(\"px\")} closedPnl={f.get(\"closedPnl\")}')
+    print('  ...')
+    for f in data[-5:]:
+        print(f'  {f.get(\"time\")}: {f.get(\"dir\")} {f.get(\"coin\")} size={f.get(\"sz\")} px={f.get(\"px\")} closedPnl={f.get(\"closedPnl\")}')
+else:
+    print(json.dumps(data, indent=2)[:500])
+"
+Total fills: 2000
+Coins traded: {'HYPE'}
+Open Long: 1363, Close Long: 637
+Open Short: 0, Close Short: 0
+Total closed PnL: 3594.154554
+
+First 5 and last 5 fills:
+  1789872845564: Open Long HYPE size=3.29 px=90.336 closedPnl=0.0
+  1789852419551: Open Long HYPE size=3.29 px=91.277 closedPnl=0.0
+  1789792477968: Open Long HYPE size=1.83 px=92.218 closedPnl=0.0
+  1789792273529: Open Long HYPE size=1.83 px=93.159 closedPnl=0.0
+  1789786408601: Open Long HYPE size=3.66 px=94.125 closedPnl=0.0
+  ...
+  1778991238546: Open Long HYPE size=2.08 px=42.22 closedPnl=0.0
+  1778990111493: Open Long HYPE size=4.15 px=42.649 closedPnl=0.0
+  1778990088925: Close Long HYPE size=4.18 px=42.7 closedPnl=1.47972
+  1778989187249: Open Long HYPE size=4.18 px=42.346 closedPnl=0.0
+  1778989150124: Close Long HYPE size=6.3 px=42.35 closedPnl=2.20689
+[0m
+a[0m$ [0mcurl -s -X POST "https://api.hyperliquid.xyz/info" \
+  -H "Content-Type: application/json" \
+  -d '{"type":"user_state","user":"0x0bb81e516c88881c54529e1790470cb5e9f8740d"}' 2>&1
+Failed to deserialize the JSON body into the target type
+[0m
+aLet me get more details on the current position and trading
+[0m$ [0mcurl -s -X POST "https://api.hyperliquid.xyz/info" \
+  -H "Content-Type: application/json" \
+  -d '{"type":"userFills","user":"0x0bb81e516c88881c54529e1790470cb5e9f8740d","aggregateByTime":true}' 2>&1 | python3 -c "
+import json, sys
+data = json.load(sys.stdin)
+
+# Analyze the pattern of open/close
+print('=== TRADING PATTERN ANALYSIS ===')
+print(f'Total fills: {len(data)}')
+
+# Group by time periods and analyze the cycle
+# Look at the most recent trades to understand the pattern
+recent = data[:20]
+print('\\nMost recent trades (most recent first):')
+for f in recent:
+    ts = f.get('time', 0)
+    import datetime
+    dt = datetime.datetime.fromtimestamp(ts/1000)
+    print(f'  {dt.strftime(\"%H:%M:%S\")}: {f.get(\"dir\")} {f.get(\"coin\")} sz={f.get(\"sz\")} px={f.get(\"px\")} pnl={f.get(\"closedPnl\")}')
+
+# Analyze position sizes over time
+print('\\n=== POSITION SIZE ANALYSIS ===')
+sizes_open = [float(f.get('sz', 0)) for f in data if f.get('dir') == 'Open Long']
+sizes_close = [float(f.get('sz', 0)) for f in data if f.get('dir') == 'Close Long']
+print(f'Avg open size: {sum(sizes_open)/len(sizes_open):.2f}' if sizes_open else 'No opens')
+print(f'Avg close size: {sum(sizes_close)/len(sizes_close):.2f}' if sizes_close else 'No closes')
+print(f'Max open size: {max(sizes_open):.2f}' if sizes_open else '')
+print(f'Min open size: {min(sizes_open):.2f}' if sizes_open else '')
+
+# Price range
+prices = [float(f.get('px', 0)) for f in data]
+print(f'\\nPrice range: {min(prices):.2f} - {max(prices):.2f}')
+print(f'Current price area (recent): {prices[:10]}')
+
+# Closed PnL analysis
+closed = [f for f in data if float(f.get('closedPnl', '0.0')) > 0]
+print(f'\\nTotal closed PnL trades: {len(closed)}')
+total_pnl = sum(float(f.get('closedPnl', '0.0')) for f in closed)
+print(f'Total realized PnL: {total_pnl:.4f}')
+if closed:
+    print(f'Avg PnL per closed trade: {total_pnl/len(closed):.4f}')
+    print(f'Max PnL: {max(float(f.get(\"closedPnl\",0)) for f in closed):.4f}')
+    print(f'Min PnL: {min(float(f.get(\"closedPnl\",0)) for f in closed):.4f}')
+" 2>&1
+=== TRADING PATTERN ANALYSIS ===
+Total fills: 2000
+
+Most recent trades (most recent first):
+  23:54:05: Open Long HYPE sz=3.29 px=90.336 pnl=0.0
+  18:13:39: Open Long HYPE sz=3.29 px=91.277 pnl=0.0
+  01:34:37: Open Long HYPE sz=1.83 px=92.218 pnl=0.0
+  01:31:13: Open Long HYPE sz=1.83 px=93.159 pnl=0.0
+  23:53:28: Open Long HYPE sz=3.66 px=94.125 pnl=0.0
+  23:53:00: Close Long HYPE sz=5.5 px=94.151 pnl=4.31145
+  22:18:34: Open Long HYPE sz=1.83 px=92.802 pnl=0.0
+  22:08:02: Open Long HYPE sz=3.67 px=93.649 pnl=0.0
+  22:07:38: Close Long HYPE sz=3.7 px=93.709 pnl=2.88822
+  20:00:58: Open Long HYPE sz=3.7 px=92.9284135135 pnl=0.0
+  20:00:19: Close Long HYPE sz=5.59 px=92.832 pnl=4.322188
+  12:32:34: Open Long HYPE sz=1.86 px=91.441 pnl=0.0
+  11:45:21: Open Long HYPE sz=3.73 px=92.367 pnl=0.0
+  11:45:01: Close Long HYPE sz=5.61 px=92.354 pnl=4.31409
+  09:52:43: Open Long HYPE sz=1.87 px=90.965 pnl=0.0
+  09:38:59: Open Long HYPE sz=3.74 px=91.895 pnl=0.0
+  09:38:38: Close Long HYPE sz=3.77 px=91.886 pnl=2.88405
+  09:34:19: Open Long HYPE sz=3.77 px=91.121 pnl=0.0
+  09:34:04: Close Long HYPE sz=5.69 px=91.064 pnl=4.314158
+  08:25:17: Open Long HYPE sz=1.9 px=89.733 pnl=0.0
+
+=== POSITION SIZE ANALYSIS ===
+Avg open size: 4.77
+Avg close size: 10.19
+Max open size: 102.09
+Min open size: 0.07
+
+Price range: 42.22 - 94.15
+Current price area (recent): [90.336, 91.277, 92.218, 93.159, 94.125, 94.151, 92.802, 93.649, 93.709, 92.9284135135]
+
+Total closed PnL trades: 637
+Total realized PnL: 3594.1546
+Avg PnL per closed trade: 5.6423
+Max PnL: 107.5917
+Min PnL: 0.0396
+[0m
+aaLet me get the current position and try to understand the full strategy
+[0m$ [0m# Get the open orders in detail
+curl -s -X POST "https://api.hyperliquid.xyz/info" \
+  -H "Content-Type: application/json" \
+  --data-binary '{"type":"openOrders","user":"0x0bb81e516c88881c54529e1790470cb5e9f8740d"}' 2>&1 | python3 -c "
+import json, sys
+data = json.load(sys.stdin)
+print(f'Total open orders: {len(data)}')
+for o in data:
+    print(f'  {o}')
+"
+Total open orders: 7
+  {'coin': 'HYPE', 'side': 'A', 'limitPx': '92.95', 'sz': '13.9', 'oid': 550321849509, 'timestamp': 1789872861374, 'origSz': '13.9', 'reduceOnly': True}
+  {'coin': 'HYPE', 'side': 'B', 'limitPx': '67.752', 'sz': '265.35', 'oid': 549495642439, 'timestamp': 1789786420726, 'origSz': '265.35'}
+  {'coin': 'HYPE', 'side': 'B', 'limitPx': '73.398', 'sz': '140.91', 'oid': 549495631809, 'timestamp': 1789786419634, 'origSz': '140.91'}
+  {'coin': 'HYPE', 'side': 'B', 'limitPx': '79.044', 'sz': '75.03', 'oid': 549495620037, 'timestamp': 1789786418464, 'origSz': '75.03'}
+  {'coin': 'HYPE', 'side': 'B', 'limitPx': '82.808', 'sz': '40.26', 'oid': 549495610534, 'timestamp': 1789786417313, 'origSz': '40.26'}
+  {'coin': 'HYPE', 'side': 'B', 'limitPx': '86.572', 'sz': '21.96', 'oid': 549495599990, 'timestamp': 1789786416090, 'origSz': '21.96'}
+  {'coin': 'HYPE', 'side': 'B', 'limitPx': '88.454', 'sz': '11.71', 'oid': 549495588741, 'timestamp': 1789786414946, 'origSz': '11.71'}
+[0m
+[0m$ [0mcurl -s -X POST "https://api.hyperliquid.xyz/info" \
+  -H "Content-Type: application/json" \
+  --data-binary '{"type":"user_state","user":"0x0bb81e516c88881c54529e1790470cb5e9f8740d"}' 2>&1 | python3 -m json.tool 2>/dev/null || curl -s -X POST "https://api.hyperliquid.xyz/info" \
+  -H "Content-Type: application/json" \
+  --data-binary '{"type":"user_state","user":"0x0bb81e516c88881c54529e1790470cb5e9f8740d"}' 2>&1
+Failed to deserialize the JSON body into the target type
+[0m
+a[0m$ [0mcurl -s -X POST "https://api.hyperliquid.xyz/info" \
+  -H "Content-Type: application/json" \
+  --data-binary '{"type":"user_state","user":"0x0bb81e516c88881c54529e1790470cb5e9f8740d"}' 2>&1 | head -50
+Failed to deserialize the JSON body into the target type
+[0m
+aLet me try to get the user state and analyze the strategy pattern more deeply
+[0m$ [0m# Analyze the trading cycle pattern more deeply
+curl -s -X POST "https://api.hyperliquid.xyz/info" \
+  -H "Content-Type: application/json" \
+  --data-binary '{"type":"userFills","user":"0x0bb81e516c88881c54529e1790470cb5e9f8740d","aggregateByTime":true}' 2>&1 | python3 -c "
+import json, sys
+data = json.load(sys.stdin)
+
+# Look at the pattern: group consecutive open+close pairs
+# The cycle seems to be: Open Long -> Open Long -> ... -> Close Long -> repeat
+print('=== TRADING CYCLE ANALYSIS ===')
+
+# Find clusters of consecutive trades
+closes = [f for f in data if f.get('dir') == 'Close Long']
+opens = [f for f in data if f.get('dir') == 'Open Long']
+
+# Analyze the close patterns - what's the PnL per cycle?
+print(f'\\nTotal open long fills: {len(opens)}')
+print(f'Total close long fills: {len(closes)}')
+
+# The trader seems to open multiple positions and then close them all
+# Look at the close PnL pattern
+close_pnls = [float(f.get('closedPnl', '0.0')) for f in closes if float(f.get('closedPnl', '0.0')) > 0]
+print(f'\\nNumber of profitable closes: {len(close_pnls)}')
+if close_pnls:
+    print(f'Average PnL per close: {sum(close_pnls)/len(close_pnls):.4f}')
+    print(f'Total realized PnL: {sum(close_pnls):.4f}')
+
+# Look at the open order structure - this is a LADDER strategy
+print('\\n=== OPEN ORDERS - LADDER STRUCTURE ===')
+print('Buy orders (scaling in / averaging down):')
+buy_orders = [(o['limitPx'], o['sz']) for o in json.loads(sys.argv[1]) if o['side'] == 'B'] if False else [(67.752, 265.35), (73.398, 140.91), (79.044, 75.03), (82.808, 40.26), (86.572, 21.96), (88.454, 11.71)]
+for price, size in buy_orders:
+    print(f'  Buy {size} HYPE at ${price}')
+print(f'Sell order (reduce-only / take profit):')
+print(f'  Sell 13.9 HYPE at $92.95 (reduce only)')
+
+# Calculate total notional in ladder
+total_notional = sum(size * price for price, size in buy_orders)
+print(f'\\nTotal ladder notional: ${total_notional:.2f}')
+print(f'Total HYPE in ladder: {sum(sz for _, sz in buy_orders):.2f} HYPE')
+" 2>&1
+=== TRADING CYCLE ANALYSIS ===
+
+Total open long fills: 1363
+Total close long fills: 637
+
+Number of profitable closes: 637
+Average PnL per close: 5.6423
+Total realized PnL: 3594.1546
+
+=== OPEN ORDERS - LADDER STRUCTURE ===
+Buy orders (scaling in / averaging down):
+  Buy 265.35 HYPE at 
+  Buy 140.91 HYPE at 
+  Buy 75.03 HYPE at 
+  Buy 40.26 HYPE at 
+  Buy 21.96 HYPE at 
+  Buy 11.71 HYPE at 
+Sell order (reduce-only / take profit):
+  Sell 13.9 HYPE at 2.95 (reduce only)
+
+Total ladder notional: 
+Total HYPE in ladder: 555.22 HYPE
+[0m
+a[0m$ [0mcurl -s -X POST "https://api.hyperliquid.xyz/info" \
+  -H "Content-Type: application/json" \
+  -d '{"type":"user_state","user":"0x0bb81e516c88881c54529e1790470cb5e9f8740d"}' 2>&1 | head -50 || echo "Failed"
+Failed to deserialize the JSON body into the target type
+[0m
+aLet me try one more approach to get the user state and verify the strategy
+[0m$ [0m# Get fills from a specific recent time period to understand the strategy cycle better
+curl -s -X POST "https://api.hyperliquid.xyz/info" \
+  -H "Content-Type: application/json" \
+  --data-binary '{"type":"userFills","user":"0x0bb81e516c88881c54529e1790470cb5e9f8740d","aggregateByTime":true}' 2>&1 | python3 -c "
+import json, sys, datetime
+data = json.load(sys.stdin)
+
+# Filter last 24 hours of data (approximate based on timestamps)
+# Most recent timestamp is 1789872845564, let's look at recent trades
+recent = [f for f in data if f.get('time', 0) > 1789870000000]
+print(f'Recent fills (>1789870000000): {len(recent)}')
+for f in recent[:30]:
+    ts = f.get('time', 0)
+    dt = datetime.datetime.fromtimestamp(ts/1000)
+    pnl = float(f.get('closedPnl', '0.0'))
+    print(f'  {dt.strftime(\"%m-%d %H:%M:%S\")}: {f.get(\"dir\")} sz={f.get(\"sz\")} px={f.get(\"px\")} pnl={pnl:.4f}')
+
+print('\\n=== KEY INSIGHTS ===')
+# The open orders show a classic LADDER BUY strategy
+# 6 buy orders at decreasing prices forming a ladder
+# Plus a reduce-only sell order (take profit/stop loss)
+print('Open orders structure:')
+print('  6 limit BUY orders at descending prices (ladder/scale-in)')
+print('  1 reduce-only SELL order at $92.95 (profit target)')
+print()
+print('This is a SCALING IN / LADDER BUY strategy on HYPE perpetual')
+print('with systematic profit-taking on close.')
+" 2>&1
+Recent fills (>1789870000000): 1
+  09-19 23:54:05: Open Long sz=3.29 px=90.336 pnl=0.0000
+
+=== KEY INSIGHTS ===
+Open orders structure:
+  6 limit BUY orders at descending prices (ladder/scale-in)
+  1 reduce-only SELL order at 2.95 (profit target)
+
+This is a SCALING IN / LADDER BUY strategy on HYPE perpetual
+with systematic profit-taking on close.
+[0m
+Based on my analysis of the on-chain data for wallet `0x0bb81e516c88881c54529e1790470cb5e9f8740d`, here is the derived trading strategy:
+
+---
+
+## Trading Strategy: **Long-Only Ladder Scale-In on HYPE Perpetual**
+
+### Core Profile
+- **Asset**: Exclusively trades **HYPE/USDC perpetual** (no other coins)
+- **Direction**: **100% LONG** — never opens short positions
+- **Total realized PnL**: **~$3,594** across 637 closed trades
+- **Win rate on closed trades**: **100%** (all 637 closes were profitable)
+
+### Strategy Mechanics
+
+1. **Ladder Buy / Scale-In**: The trader places **6 limit buy orders at descending prices** ($67.75 → $88.45), totaling ~555 HYPE in notional. This is a classic dollar-cost-averaging ladder to average down entry prices as the market dips.
+
+2. **Systematic Profit-Taking**: Each cycle follows this pattern:
+   - Open multiple long positions at different price levels
+   - Close positions at a profit target (typically ~$4-5 PnL per cycle)
+   - Repeat — 1363 open longs and 637 close longs across the history
+
+3. **Current Open Orders** (live):
+   - 6 buy orders at $67.75, $73.40, $79.04, $82.81, $86.57, $88.45 (scaling in)
+   - 1 reduce-only sell order at $92.95 for 13.9 HYPE (profit target)
+
+### Strategy Classification
+- **Type**: Bullish trend-following with DCA averaging
+- **Style**: Medium-frequency swing trading on HYPE perpetual
+- **Leverage**: Uses cross-margin with significant position sizing
+- **Key Trait**: Only goes long, accumulates on dips, takes profits on rallies
+
+The trader is essentially running a **persistent bullish ladder strategy** on HYPE — systematically buying the dip across multiple price levels and taking profits when the price recovers, repeating continuously.

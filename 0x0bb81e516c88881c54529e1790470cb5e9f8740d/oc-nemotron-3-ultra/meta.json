@@ -1,0 +1,14 @@
+{
+ "label": "oc-nemotron-3-ultra",
+ "tool": "opencode",
+ "model": "opencode/nemotron-3-ultra-free",
+ "variant": "",
+ "free_gate": "ok",
+ "probe": "OK",
+ "status": "DONE",
+ "exit": 0,
+ "duration_s": 10.0,
+ "bytes": 714,
+ "extra": "",
+ "prompt_file": "prompt.txt"
+}

@@ -1,0 +1,14 @@
+{
+ "label": "unverified-kilo-inkling-small",
+ "tool": "kilo",
+ "model": "kilo/thinkingmachines/inkling-small:free",
+ "variant": "max",
+ "free_gate": "ok",
+ "probe": "ERROR",
+ "status": "SKIPPED_NOT_FREE",
+ "exit": 124,
+ "duration_s": 0.0,
+ "bytes": 56,
+ "extra": "",
+ "prompt_file": "prompt.txt"
+}

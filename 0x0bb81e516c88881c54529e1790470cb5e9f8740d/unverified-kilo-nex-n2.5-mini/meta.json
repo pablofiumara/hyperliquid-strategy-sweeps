@@ -1,0 +1,14 @@
+{
+ "label": "unverified-kilo-nex-n2.5-mini",
+ "tool": "kilo",
+ "model": "kilo/nex-agi/nex-n2.5-mini:free",
+ "variant": "high",
+ "free_gate": "ok",
+ "probe": "OK",
+ "status": "DONE",
+ "exit": 0,
+ "duration_s": 548.0,
+ "bytes": 327425,
+ "extra": "",
+ "prompt_file": "prompt.txt"
+}

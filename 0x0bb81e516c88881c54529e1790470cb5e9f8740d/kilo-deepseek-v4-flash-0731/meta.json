@@ -1,0 +1,14 @@
+{
+ "label": "kilo-deepseek-v4-flash-0731",
+ "tool": "kilo",
+ "model": "kilo/deepseek/deepseek-v4-flash-0731:free",
+ "variant": "max",
+ "free_gate": "ok",
+ "probe": "ERROR",
+ "status": "SKIPPED_NOT_FREE",
+ "exit": 1,
+ "duration_s": 0.0,
+ "bytes": 960,
+ "extra": "",
+ "prompt_file": "prompt.txt"
+}

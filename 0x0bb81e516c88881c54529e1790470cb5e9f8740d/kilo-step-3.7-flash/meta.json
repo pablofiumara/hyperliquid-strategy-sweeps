@@ -1,0 +1,14 @@
+{
+ "label": "kilo-step-3.7-flash",
+ "tool": "kilo",
+ "model": "kilo/stepfun/step-3.7-flash:free",
+ "variant": "high",
+ "free_gate": "ok",
+ "probe": "OK",
+ "status": "DONE",
+ "exit": 0,
+ "duration_s": 211.0,
+ "bytes": 54642,
+ "extra": "",
+ "prompt_file": "prompt.txt"
+}

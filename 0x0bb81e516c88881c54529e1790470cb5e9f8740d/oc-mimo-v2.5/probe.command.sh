@@ -1,0 +1,1 @@
+opencode run -m opencode/mimo-v2.5-free --auto --dir /home/paf/Documents/code/misc/hyperliquid-strategy-sweeps/oc-mimo-v2.5/work --agent plan Reply\ with\ exactly:\ OK

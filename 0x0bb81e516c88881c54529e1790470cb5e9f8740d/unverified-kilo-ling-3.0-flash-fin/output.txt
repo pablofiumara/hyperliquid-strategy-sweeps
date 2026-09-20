@@ -1,0 +1,8 @@
+[0m
+> code · inclusionai/ling-3.0-flash-fin:free
+[0m
+[0m✗ [0mSkill "kilo-config" failed
+[91m[1mError: [0mThe user rejected permission to use this specific tool call.
+I need to derive the trading strategy of a Hyperliquid trader. Let me start by loading the relevant skill, fetching the trader's page, and exploring the codebase
+[0m→ [0mRead .
+[0m% [0mWebFetch https://hyperx.trade/hyperliquid/trader?address=0x0bb81e516c88881c54529e1790470cb5e9f8740d

@@ -1,0 +1,14 @@
+{
+ "label": "oc-nemotron-3.5-lightning",
+ "tool": "opencode",
+ "model": "opencode/nemotron-3.5-lightning-free",
+ "variant": "",
+ "free_gate": "ok",
+ "probe": "OK",
+ "status": "DONE",
+ "exit": 0,
+ "duration_s": 419.0,
+ "bytes": 8566,
+ "extra": "",
+ "prompt_file": "prompt.txt"
+}

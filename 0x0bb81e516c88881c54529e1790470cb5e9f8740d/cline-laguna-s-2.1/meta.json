@@ -1,0 +1,14 @@
+{
+ "label": "cline-laguna-s-2.1",
+ "tool": "cline",
+ "model": "poolside/laguna-s-2.1:free",
+ "variant": "xhigh",
+ "free_gate": "ok",
+ "probe": "OK",
+ "status": "TIMEOUT",
+ "exit": 124,
+ "duration_s": 1500.0,
+ "bytes": 453502,
+ "extra": "",
+ "prompt_file": "prompt.txt"
+}

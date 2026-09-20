@@ -1,0 +1,14 @@
+{
+ "label": "oc-jev-1.13",
+ "tool": "opencode",
+ "model": "opencode/jev-1.13-free",
+ "variant": "",
+ "free_gate": "ok",
+ "probe": "ERROR",
+ "status": "SKIPPED_NOT_FREE",
+ "exit": 1,
+ "duration_s": 0.0,
+ "bytes": 76,
+ "extra": "",
+ "prompt_file": "prompt.txt"
+}

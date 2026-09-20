@@ -1,0 +1,14 @@
+{
+ "label": "cline-muse-spark-1.3-contributor",
+ "tool": "cline",
+ "model": "cline-free/muse-spark-1.3-contributor",
+ "variant": "xhigh",
+ "free_gate": "ok",
+ "probe": "OK",
+ "status": "DONE",
+ "exit": 0,
+ "duration_s": 398.0,
+ "bytes": 9101,
+ "extra": "",
+ "prompt_file": "prompt.txt"
+}

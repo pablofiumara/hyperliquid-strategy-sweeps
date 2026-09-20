@@ -1,0 +1,1 @@
+kilo run -m kilo/nex-agi/nex-n2.5-mini:free --auto --dir /home/paf/Documents/code/misc/hyperliquid-strategy-sweeps/unverified-kilo-nex-n2.5-mini/work --variant high --agent plan Reply\ with\ exactly:\ OK

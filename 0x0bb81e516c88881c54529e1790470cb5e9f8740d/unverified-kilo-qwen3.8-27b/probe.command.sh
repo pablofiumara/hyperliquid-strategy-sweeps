@@ -1,0 +1,1 @@
+kilo run -m kilo/qwen/qwen3.8-27b:free --auto --dir /home/paf/Documents/code/misc/hyperliquid-strategy-sweeps/unverified-kilo-qwen3.8-27b/work --variant xhigh --agent plan Reply\ with\ exactly:\ OK

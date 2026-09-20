@@ -1,0 +1,14 @@
+{
+ "label": "kilo-nemotron-3-super",
+ "tool": "kilo",
+ "model": "kilo/nvidia/nemotron-3-super-120b-a12b:free",
+ "variant": "medium",
+ "free_gate": "ok",
+ "probe": "OK",
+ "status": "DONE",
+ "exit": 0,
+ "duration_s": 164.0,
+ "bytes": 58308,
+ "extra": "",
+ "prompt_file": "prompt.txt"
+}

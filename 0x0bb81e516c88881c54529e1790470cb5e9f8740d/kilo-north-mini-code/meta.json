@@ -1,0 +1,14 @@
+{
+ "label": "kilo-north-mini-code",
+ "tool": "kilo",
+ "model": "kilo/cohere/north-mini-code:free",
+ "variant": "thinking",
+ "free_gate": "ok",
+ "probe": "OK",
+ "status": "DONE",
+ "exit": 0,
+ "duration_s": 18.0,
+ "bytes": 1821,
+ "extra": "",
+ "prompt_file": "prompt.txt"
+}

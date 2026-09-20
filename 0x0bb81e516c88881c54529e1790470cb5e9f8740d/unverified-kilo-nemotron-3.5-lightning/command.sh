@@ -1,0 +1,1 @@
+kilo run -m kilo/nvidia/nemotron-3.5-lightning:free --auto --dir /home/paf/Documents/code/misc/hyperliquid-strategy-sweeps/unverified-kilo-nemotron-3.5-lightning/work --variant thinking derive\ the\ trading\ strategy\ or\ strategies\ used\ by\ https://hyperx.trade/hyperliquid/trader\?address=0x0bb81e516c88881c54529e1790470cb5e9f8740d

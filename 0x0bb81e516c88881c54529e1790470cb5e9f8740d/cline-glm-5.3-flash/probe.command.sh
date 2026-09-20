@@ -1,0 +1,1 @@
+cline -P cline -m z-ai/glm-5.3-flash --auto-approve true -y -c /home/paf/Documents/code/misc/hyperliquid-strategy-sweeps/cline-glm-5.3-flash/work --thinking xhigh -p Reply\ with\ exactly:\ OK
