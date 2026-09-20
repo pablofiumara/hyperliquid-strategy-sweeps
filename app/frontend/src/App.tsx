@@ -146,6 +146,14 @@ function RunList({
               ) : (
                 <p className="dim" style={{ fontSize: 12 }}>no disagreements — models agree.</p>
               )}
+              {summary.trade_example ? (
+                <div className="card" style={{ marginTop: 14, background: "#0a1a12", border: "1px solid #1f5d3a" }}>
+                  <div style={{ fontSize: 11, textTransform: "uppercase", color: "#5dd39e", marginBottom: 6, fontWeight: 700 }}>
+                    📌 Trade Example (copy this)
+                  </div>
+                  <p style={{ fontSize: 14, lineHeight: 1.55 }}>{summary.trade_example}</p>
+                </div>
+              ) : null}
             </>
           ) : (
             <p className="dim" style={{ fontSize: 13 }}>

@@ -37,6 +37,7 @@ export type WalletSummary = {
   confidence: string;
   generated_by: string;
   generated_at: string;
+trade_example: string;
 };
 
 export const getSummary = (addr: string) =>

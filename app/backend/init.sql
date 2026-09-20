@@ -21,6 +21,7 @@ CREATE TABLE IF NOT EXISTS wallet_summaries (
     wallet       TEXT PRIMARY KEY REFERENCES wallets(address) ON DELETE CASCADE,
     consensus_strategy TEXT,
     key_params         TEXT,
+    trade_example      TEXT,
     disagreements      JSONB,
     model_count        INT,
     strategy_report_count INT,
@@ -38,3 +39,6 @@ CREATE TABLE IF NOT EXISTS ratings (
 );
 
 CREATE INDEX IF NOT EXISTS runs_model_idx ON runs(model);
+
+-- Idempotent migration: trade_example was added after the table existed.
+ALTER TABLE wallet_summaries ADD COLUMN IF NOT EXISTS trade_example TEXT;

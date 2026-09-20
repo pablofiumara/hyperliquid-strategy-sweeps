@@ -33,6 +33,16 @@ class SummaryOutput(BaseModel):
         default_factory=list,
         description="Points where strategy reports disagree or contradict each other",
     )
+    trade_example: str = Field(
+        description=(
+            "A SHORT, concrete example a copy trader could follow: what to buy "
+            "(coin, notional), when, at what price, when to add, and when to sell "
+            "(target price / %). Use only what the reports describe; if reports "
+            "disagree on the exact numbers, state the range and which report each "
+            "figure came from. Keep it to 3-5 sentences and end with a one-line "
+            "summary like 'Buy X HYPE at ~$Y, sell the whole stack at +0.84%.'"
+        ),
+    )
     confidence: Confidence = Field(description="Confidence in the consensus")
 
 def _read_reports(wallet_dir: Path) -> tuple[list[tuple[str, str]], int, int]:
@@ -78,6 +88,13 @@ def _build_prompt(
         f"3. disagreements: list of specific factual contradictions (empty list if none)\n"
         f"4. confidence: 'high' if >=70% of strategy reports agree on core points, "
         f"'medium' if mixed, 'low' if fewer than {max(1, strategy_count // 3)} strategy reports\n\n"
+        f"5. trade_example: a SHORT concrete example a copy trader could follow -- "
+        f"what to buy (coin + notional), WHEN, at what price, when to ADD (martingale "
+        f"ladder steps), and when to SELL (target price / %). Use only what the "
+        f"reports describe. If reports disagree on exact numbers, state the range "
+        f"and which report each figure came from. 3-5 sentences, end with a one-line "
+        f"summary like 'Buy ~4 HYPE at ~$92, add at -1% steps, sell the whole "
+        f"stack at +0.84%.'\n\n"
         f"STRATEGY REPORTS (compact):\n" + "\n\n".join(strategy_blocks)
     )
 
@@ -123,6 +140,7 @@ def generate_summary(
             "model_count": 0,
             "strategy_report_count": 0,
             "no_strategy_count": 0,
+            "trade_example": "",
             "confidence": "low",
             "generated_by": "none",
             "generated_at": "1970-01-01T00:00:00Z",
@@ -139,6 +157,7 @@ def generate_summary(
                 "consensus_strategy": out.consensus_strategy,
                 "key_params": out.key_params,
                 "disagreements": list(out.disagreements),
+                "trade_example": out.trade_example,
                 "model_count": total,
                 "strategy_report_count": strategy_count,
                 "no_strategy_count": no_strategy,
@@ -159,6 +178,7 @@ def generate_summary(
         "consensus_strategy": "",
         "key_params": "",
         "disagreements": [],
+        "trade_example": "",
         "confidence": "low",
         "generated_by": "error",
         "generated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
