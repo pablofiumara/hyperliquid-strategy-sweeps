@@ -59,8 +59,9 @@ lib/extract_report.py  build strategy_report.md in every run dir, ALL wallets (s
     output.txt         full ANSI transcript (tool chatter first, FINAL ANSWER at tail)
     strategy_report.md THE deliverable: only the strategy description (see §4)
     meta.json          run record: wallet, status, exit, duration, bytes (one source)
-    work/              agent scratch during the run; reports are moved out and
-                       scratch/empty work/ dirs removed post-sweep (see §6)
+    work/              (legacy, cline runs only) agent scratch during the run;
+                       reports are moved out and the whole work/ dir is
+                       removed post-sweep (see §6) -- absent on every dir now
 ```
 
 Wallet dir names are the raw address (`0x…40hex`); `extract_report.py` finds
@@ -163,10 +164,11 @@ How it decides what to keep (single deliverable, learned from sweep-#1 bugs):
    `NO STRATEGY — run was skipped/failed/timed out ...` (reason from
    `manifest.tsv` status).
 4. A dir has ONLY `strategy_report.md` — the script deletes any `wallet.txt`
-   or leftover `work/*.md` duplicates it finds, and removes empty `work/` dirs.
+   or leftover `work/*.md` duplicates it finds, and removes all `work/`
+  contents (agent scratch) plus any leftover wallet.txt / probe.txt.
 
 Current state: 31 runs = 31 `strategy_report.md` (22 with a strategy
-description + 9 `NO STRATEGY` flags), 0 `wallet.txt`, 0 `work/*.md`.
+description + 9 `NO STRATEGY` flags), 0 `wallet.txt`, 0 `work/` dirs.
 `output.txt` is the evidence trail — don't delete it; `strategy_report.md` is
 self-contained if you only want the answers.
 
@@ -219,6 +221,10 @@ metadata only (oc-lfm-2.5, oc-nemotron-3-ultra never pulled real data).
 - Kept overlaps (intentional): manifest.tsv is a derived aggregation of all
   meta.json (not a copy); output.txt doubles as the transcript of
   SKIPPED_NOT_FREE runs, whose only activity was the failed probe.
+- Dedup #5 (work/ agent scratch vs strategy_report.md): cline runs leave a
+  work/ dir with raw API dumps (fills_page_*.json) and analysis scripts.
+  extract_report.py now deletes ALL work/ contents after moving the report
+  (Dedup #5). Future sweeps: work/ is gone from every dir.
 - After any rerun or model-list change: rerun the sweep, then
   `python3 lib/extract_report.py`, then update §5/§7 numbers here.
 

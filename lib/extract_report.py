@@ -22,6 +22,7 @@ Usage: python3 lib/extract_report.py [dir ...]   # dirs optional; default = all
 import argparse
 import pathlib
 import re
+import shutil
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 
@@ -182,10 +183,20 @@ def migrate(dirs, statuses) -> None:
         elif not moved:
             print(f"KEEP   {d.name}: strategy_report.md already present")
 
-        # cleanup: empty work/ dirs left behind after the move
+        # cleanup: work/ is agent scratch (raw API dumps, analysis scripts).
+        # The report already lives at strategy_report.md (moved above), so
+        # everything left in work/ is disposable. If the report was NOT moved
+        # (already existed), delete the duplicate too. (Dedup #5)
         work = d / "work"
-        if work.is_dir() and not any(work.iterdir()):
-            work.rmdir()
+        if work.is_dir():
+            for item in work.iterdir():
+                if item.is_dir():
+                    shutil.rmtree(item, ignore_errors=True)
+                else:
+                    item.unlink()
+                print(f"DEL    {d.name}/work/{item.name} (agent scratch)")
+            if not any(work.iterdir()):
+                work.rmdir()
 
         # cleanup: probe.txt is a transient -- verdict lives in meta.json,
         # informative text is preserved in output.txt (Dedup #4)
