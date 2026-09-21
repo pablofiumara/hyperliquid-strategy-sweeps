@@ -56,7 +56,7 @@ def save_summary(data: dict) -> None:
             (wallet, consensus_strategy, key_params, trade_example, disagreements,
              model_count, strategy_report_count, no_strategy_count,
              confidence, generated_by, generated_at)
-        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,COALESCE(NULLIF(%s,'')::timestamptz, now()))
+        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,COALESCE(NULLIF(%s,'')::timestamptz, now()))
         ON CONFLICT (wallet) DO UPDATE SET
             consensus_strategy    = EXCLUDED.consensus_strategy,
             key_params            = EXCLUDED.key_params,

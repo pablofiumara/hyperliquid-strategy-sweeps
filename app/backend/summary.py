@@ -1,5 +1,7 @@
+import json
 import os
 import time
+import urllib.request
 from enum import Enum
 from pathlib import Path
 from typing import Any, Optional
@@ -9,8 +11,8 @@ from pydantic import BaseModel, Field
 OLLAMA_BASE_URL = os.environ.get(
     "OLLAMA_BASE_URL", "http://host.docker.internal:11434/v1"
 )
-PRIMARY_MODEL = "llama3.2:3b"   # ~10s, fast
-FALLBACK_MODEL = "qwen3:8b"      # ~80s, higher quality
+PRIMARY_MODEL = "llama3.2:3b"   # ~45-90s on CPU, one structured call
+FALLBACK_MODEL = "qwen3:8b"      # slower, higher quality
 
 
 class Confidence(str, Enum):
@@ -67,6 +69,8 @@ def _build_prompt(
     no_strategy: int,
 ) -> str:
     def compact(text: str, max_chars: int = 600) -> str:
+        # Local 3B models overflow on long reports; ~600 chars x 8 reports
+        # fits num_ctx=8192, and includes each report's TL;DR numbers.
         return text.replace("\n", " ").replace("\r", " ")[:max_chars]
 
     strategy_blocks: list[str] = []
@@ -77,6 +81,14 @@ def _build_prompt(
         else:
             strategy_blocks.append(f"=== {label} ===\n{compact(text)}")
 
+    # Cap the number of reports sent to the model (context budget).
+    MAX_REPORTS = 8
+    if len(strategy_blocks) > MAX_REPORTS:
+        keep = strategy_blocks[:MAX_REPORTS]
+        dropped = len(strategy_blocks) - MAX_REPORTS
+        keep.append(f"=== +{dropped} more reports omitted (same content) ===")
+        strategy_blocks = keep
+
     return (
         f"You are a quant analyst summarizing trading-bot strategy reports for one wallet.\n\n"
         f"Total reports: {total}. Strategy reports: {strategy_count}. "
@@ -84,10 +96,13 @@ def _build_prompt(
         f"({', '.join(no_strat_list) if no_strategy else 'none'}).\n\n"
         f"Read the {strategy_count} STRATEGY reports below and extract:\n"
         f"1. consensus_strategy: ONE sentence the majority agrees on\n"
-        f"2. key_params: entry rule, exit rule, coin, direction, sizing, leverage\n"
+        f"2. key_params: ONE plain-text line (no JSON, no brackets, no lists) "
+        f"with entry rule, exit rule, coin, direction, sizing, leverage\n"
         f"3. disagreements: list of specific factual contradictions (empty list if none)\n"
         f"4. confidence: 'high' if >=70% of strategy reports agree on core points, "
-        f"'medium' if mixed, 'low' if fewer than {max(1, strategy_count // 3)} strategy reports\n\n"
+        f"'medium' if mixed, 'low' if they are thin or contradictory. "
+        f"(Note: only {len(strategy_blocks)} of {strategy_count} strategy reports "
+        f"are shown above; they are a representative sample.)\n\n"
         f"5. trade_example: a SHORT concrete example a copy trader could follow -- "
         f"what to buy (coin + notional), WHEN, at what price, when to ADD (martingale "
         f"ladder steps), and when to SELL (target price / %). Use only what the "
@@ -100,24 +115,44 @@ def _build_prompt(
 
 
 def _run_agent(model_name: str, prompt: str) -> SummaryOutput:
-    """Run a pydantic-ai Agent against the Ollama provider (sync wrapper)."""
-    import anyio
+    """One structured-output call to Ollama (/api/chat with a JSON-schema grammar).
 
-    from pydantic_ai import Agent
-    from pydantic_ai.models.ollama import OllamaModel
-    from pydantic_ai.providers.ollama import OllamaProvider
-
-    provider = OllamaProvider(base_url=OLLAMA_BASE_URL)
-    agent = Agent(
-        OllamaModel(model_name, provider=provider),
-        output_type=SummaryOutput,
-        system_prompt=(
-            "Output ONLY the structured summary matching the schema. "
-            "Be accurate — do not invent facts; use only what is in the reports."
-        ),
+    A single grammar-constrained call is ~45-90s and cannot loop; pydantic-ai's
+    tool-call round trips retried for minutes on llama3.2:3b.
+    """
+    schema = {
+        "type": "object",
+        "properties": {
+            "consensus_strategy": {"type": "string"},
+            "key_params": {"type": "string"},
+            "disagreements": {"type": "array", "items": {"type": "string"}},
+            "trade_example": {"type": "string"},
+            "confidence": {"type": "string", "enum": ["high", "medium", "low"]},
+        },
+        "required": [
+            "consensus_strategy",
+            "key_params",
+            "disagreements",
+            "trade_example",
+            "confidence",
+        ],
+    }
+    base = OLLAMA_BASE_URL[:-3] if OLLAMA_BASE_URL.endswith("/v1") else OLLAMA_BASE_URL
+    payload = {
+        "model": model_name,
+        "messages": [{"role": "user", "content": prompt}],
+        "stream": False,
+        "format": schema,
+        "options": {"temperature": 0, "num_ctx": 8192},
+    }
+    req = urllib.request.Request(
+        f"{base}/api/chat",
+        data=json.dumps(payload).encode(),
+        headers={"Content-Type": "application/json"},
     )
-    result = anyio.run(agent.run, prompt)
-    return result.output
+    with urllib.request.urlopen(req, timeout=600) as resp:
+        body = json.loads(resp.read().decode())
+    return SummaryOutput.model_validate_json(body["message"]["content"])
 
 
 def generate_summary(
