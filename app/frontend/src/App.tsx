@@ -19,6 +19,37 @@ type View =
 
 const POLL_MS = 5000;
 
+/** Remember where the user scrolled in a view and restore it when they
+   come back -- so clicking a model and returning doesn't dump them back
+   at the top of a long list. */
+function useRestoreScroll(key: string) {
+  useEffect(() => {
+    const store = `scroll:${key}`;
+    let timer: number | undefined;
+    const save = () => {
+      clearTimeout(timer);
+      timer = window.setTimeout(
+        () => sessionStorage.setItem(store, String(window.scrollY)),
+        150
+      );
+    };
+    // restore on mount (next frame, after the list has rendered)
+    const raf = requestAnimationFrame(() => {
+      const v = Number(sessionStorage.getItem(store) || 0);
+      if (v > 0) window.scrollTo(0, v);
+    });
+    window.addEventListener("scroll", save, { passive: true });
+    window.addEventListener("beforeunload", save);
+    return () => {
+      cancelAnimationFrame(raf);
+      clearTimeout(timer);
+      window.removeEventListener("scroll", save);
+      window.removeEventListener("beforeunload", save);
+      save();
+    };
+  }, [key]);
+}
+
 /** Format a model's context window as a short human string (e.g. 262144 -> "256k"). */
 function fmtCtx(n: number | null | undefined): string {
   if (!n || n <= 0) return "—";
@@ -141,6 +172,7 @@ export default function App() {
 function WalletList({ onOpen }: { onOpen: (a: string) => void }) {
   const [wallets, setWallets] = useState<Wallet[] | null>(null);
   const [err, setErr] = useState("");
+  useRestoreScroll("wallets");
   usePoll(() => {
     getWallets()
       .then((w) => {
@@ -181,6 +213,7 @@ function RunList({
   const [summary, setSummary] = useState<WalletSummary | null | undefined>(undefined);
   const [sumErr, setSumErr] = useState("");
   const [generating, setGenerating] = useState(false);
+  useRestoreScroll(`runs:${wallet}`);
   usePoll(() => {
     getRuns(wallet)
       .then((r) => {
