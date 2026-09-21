@@ -39,6 +39,17 @@ def context_size(model: str | None) -> int:
     return _CONTEXT.get(model, 0)
 
 
+def _is_real_report(p: pathlib.Path) -> bool:
+    """True when strategy_report.md is an actual answer, not a NO STRATEGY flag."""
+    if not p.is_file():
+        return False
+    try:
+        head = p.read_text(errors="replace")[:300]
+    except OSError:
+        return False
+    return not head.startswith("NO STRATEGY") and "NO STRATEGY" not in head
+
+
 def import_all() -> dict:
     wallets = runs = 0
     for wdir in sorted(DATA_DIR.iterdir()):
@@ -61,14 +72,16 @@ def import_all() -> dict:
             db.execute(
                 """
                 INSERT INTO runs (wallet, label, tool, model, variant, status,
-                                  probe, duration_s, bytes, report_path, context_size)
-                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                                  probe, duration_s, bytes, report_path,
+                                  context_size, has_real_report)
+                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
                 ON CONFLICT (wallet, label) DO UPDATE SET
                     tool=EXCLUDED.tool, model=EXCLUDED.model,
                     variant=EXCLUDED.variant, status=EXCLUDED.status,
                     probe=EXCLUDED.probe, duration_s=EXCLUDED.duration_s,
                     bytes=EXCLUDED.bytes, report_path=EXCLUDED.report_path,
-                    context_size=EXCLUDED.context_size
+                    context_size=EXCLUDED.context_size,
+                    has_real_report=EXCLUDED.has_real_report
                 """,
                 (
                     wdir.name, m.get("label", mdir.name), m.get("tool"),
@@ -76,6 +89,7 @@ def import_all() -> dict:
                     m.get("probe"), m.get("duration_s"), m.get("bytes"),
                     str(report) if report.is_file() else None,
                     context_size(m.get("model")),
+                    _is_real_report(report),
                 ),
             )
             runs += 1

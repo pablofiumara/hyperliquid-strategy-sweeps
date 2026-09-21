@@ -6,6 +6,7 @@ export type Run = {
   model: string | null;
   variant: string | null;
   status: string;
+  display_status: string;
   duration_s: number | null;
   my_rating: number;
   global_score: number;

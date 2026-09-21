@@ -48,7 +48,7 @@ def wallets():
     return db.query(
         """
         SELECT w.address, COUNT(r.id) AS runs,
-               COUNT(*) FILTER (WHERE r.status='DONE') AS done
+               COUNT(*) FILTER (WHERE r.has_real_report) AS done
         FROM wallets w LEFT JOIN runs r ON r.wallet = w.address
         GROUP BY w.address ORDER BY w.address
         """
@@ -63,7 +63,11 @@ def wallet_runs(address: str):
                r.duration_s, r.bytes, r.context_size,
                COALESCE(rt.value, 0)  AS my_rating,
                COALESCE(g.total, 0)   AS global_score,
-               (report_path IS NOT NULL AND r.status = 'DONE') AS has_report
+               r.has_real_report      AS has_report,
+               CASE
+                   WHEN r.has_real_report AND r.status <> 'DONE' THEN 'DONE'
+                   ELSE r.status
+               END                    AS display_status
         FROM runs r
         LEFT JOIN ratings rt ON rt.run_id = r.id
         LEFT JOIN (

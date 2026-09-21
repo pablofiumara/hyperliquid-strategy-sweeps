@@ -185,6 +185,16 @@ self-contained if you only want the answers.
 
 `manifest.tsv` summary: **19 DONE / 4 FAILED / 3 TIMEOUT / 4 SKIPPED_NOT_FREE**.
 
+- **Displayed status vs raw status.** A run's raw `status` (DONE/FAILED/TIMEOUT/
+  SKIPPED_NOT_FREE) is stored in `meta.json`. The UI shows `display_status`,
+  which is `DONE` whenever the run produced a real answer
+  (`has_real_report`, set by `importer._is_real_report` from
+  `strategy_report.md`) — even if the raw status is TIMEOUT or FAILED. So a
+  run that was killed by the 1500s wall-clock limit *after* writing a complete
+  report shows as DONE, not TIMEOUT. `has_report` in the API is the same
+  boolean; the wallets view's "done" count sums `has_real_report`, not
+  `status='DONE'`.
+
 - DONE (16 verified + 3 unverified-*): kilo strong (laguna-s-2.1,
   step-3.7-flash, nemotron-3-ultra, ling-3.0-flash-vl, dots-3-note-preview),
   opencode strong (muse-spark-1.2/1.3, mimo-v2.5, big-pickle).
@@ -193,6 +203,12 @@ self-contained if you only want the answers.
 - TIMEOUT at 1500 s (partial output in output.txt; rerunnable with `--force`):
   cline-glm-5.3-flash + cline-laguna-s-2.1 (both still wrote full strategy
   reports, now at strategy_report.md), kilo-laguna-xs-2.1 (no answer).
+
+  Note: cline-glm-5.3-flash and cline-laguna-s-2.1 were killed by the
+  wall-clock limit *after* their agents had already written and submitted
+  complete reports (see output.txt tails — `submit_and_exit` recorded). Their
+  raw status is TIMEOUT (exit 124) but the UI shows DONE via `display_status`,
+  because `has_real_report` is true.
 - FAILED, causes (none rerunnable at time of failure):
   - cline-deepseek-v4.1-flash — **daily free limit reached**, "Try again in 6h".
     Wrote its strategy report first; rerun later with `--force`.

@@ -287,7 +287,7 @@ function RunList({
               {r.global_score > 0 ? "+" : ""}
               {r.global_score}
             </span>
-            <span className={`pill ${r.status}`}>{r.status}</span>
+            <span className={`pill ${r.display_status}`}>{r.display_status}</span>
           </div>
         </div>
       ))}
@@ -327,7 +327,7 @@ function RunPage({ wallet, label, onBack }: { wallet: string; label: string; onB
         <div>
           <div>{run.label}</div>
           <div className="dim" style={{ fontSize: 12 }}>
-            {run.model} · {run.status} · probe {run.probe} · {run.duration_s}s
+            {run.model} · {run.display_status} · probe {run.probe} · {run.duration_s}s
             {" · ctx " + fmtCtx(run.context_size)}
           </div>
         </div>

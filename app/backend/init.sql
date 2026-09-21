@@ -46,3 +46,9 @@ ALTER TABLE wallet_summaries ADD COLUMN IF NOT EXISTS trade_example TEXT;
 
 -- Idempotent migration: context_size was added after the table existed.
 ALTER TABLE runs ADD COLUMN IF NOT EXISTS context_size INT;
+
+-- Idempotent migration: has_real_report marks runs whose strategy_report.md
+-- is an actual answer (not a "NO STRATEGY — ..." flag). A run can time out
+-- (exit 124) yet still have produced a complete report; the pill should
+-- show DONE in that case.
+ALTER TABLE runs ADD COLUMN IF NOT EXISTS has_real_report BOOLEAN DEFAULT FALSE;
