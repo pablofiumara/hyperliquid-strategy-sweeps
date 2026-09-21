@@ -133,6 +133,7 @@ export default function App() {
           onBack={() => navigate({ page: "runs", wallet: view.wallet })}
         />
       )}
+      <BottomBar view={view} navigate={navigate} />
     </div>
   );
 }
@@ -361,5 +362,30 @@ function RunPage({ wallet, label, onBack }: { wallet: string; label: string; onB
         <p className="dim">No strategy report for this run.</p>
       )}
     </>
+  );
+}
+
+/** Fixed bottom bar: always reachable, even deep in a long model list. */
+function BottomBar({ view, navigate }: { view: View; navigate: (v: View) => void }) {
+  const toWallets = () => navigate({ page: "wallets" });
+
+  if (view.page === "wallets") {
+    return (
+      <div className="bottombar">
+        <button className="primary" disabled>
+          ⛓ wallets
+        </button>
+      </div>
+    );
+  }
+  return (
+    <div className="bottombar">
+      <button onClick={toWallets}>← Wallets</button>
+      {view.page === "run" && (
+        <button className="primary" onClick={() => navigate({ page: "runs", wallet: view.wallet })}>
+          ← {view.label}
+        </button>
+      )}
+    </div>
   );
 }
