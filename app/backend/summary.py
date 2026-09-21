@@ -1,12 +1,19 @@
-import json
 import os
 import time
-import urllib.request
 from enum import Enum
 from pathlib import Path
 from typing import Any, Optional
 
 from pydantic import BaseModel, Field
+
+try:
+    from pydantic_ai import Agent, ModelSettings
+    from pydantic_ai.models.openai import OpenAIChatModel
+    from pydantic_ai.providers.openai import OpenAIProvider
+
+    _HAS_PYDANTIC_AI = True
+except Exception:  # pragma: no cover - defensive; app should not reach here in prod
+    _HAS_PYDANTIC_AI = False
 
 OLLAMA_BASE_URL = os.environ.get(
     "OLLAMA_BASE_URL", "http://host.docker.internal:11434/v1"
@@ -115,44 +122,28 @@ def _build_prompt(
 
 
 def _run_agent(model_name: str, prompt: str) -> SummaryOutput:
-    """One structured-output call to Ollama (/api/chat with a JSON-schema grammar).
+    """One structured-output call through pydantic-ai (OpenAI-compatible Ollama).
 
-    A single grammar-constrained call is ~45-90s and cannot loop; pydantic-ai's
-    tool-call round trips retried for minutes on llama3.2:3b.
+    pydantic-ai enforces the SummaryOutput schema via function-calling / JSON
+    mode, so the returned object is already validated -- no manual JSON parsing.
+    A single call is ~45-90s on the local 3B model; no tool loop is needed.
     """
-    schema = {
-        "type": "object",
-        "properties": {
-            "consensus_strategy": {"type": "string"},
-            "key_params": {"type": "string"},
-            "disagreements": {"type": "array", "items": {"type": "string"}},
-            "trade_example": {"type": "string"},
-            "confidence": {"type": "string", "enum": ["high", "medium", "low"]},
-        },
-        "required": [
-            "consensus_strategy",
-            "key_params",
-            "disagreements",
-            "trade_example",
-            "confidence",
-        ],
-    }
-    base = OLLAMA_BASE_URL[:-3] if OLLAMA_BASE_URL.endswith("/v1") else OLLAMA_BASE_URL
-    payload = {
-        "model": model_name,
-        "messages": [{"role": "user", "content": prompt}],
-        "stream": False,
-        "format": schema,
-        "options": {"temperature": 0, "num_ctx": 8192},
-    }
-    req = urllib.request.Request(
-        f"{base}/api/chat",
-        data=json.dumps(payload).encode(),
-        headers={"Content-Type": "application/json"},
+    model = OpenAIChatModel(
+        model_name,
+        provider=OpenAIProvider(base_url=OLLAMA_BASE_URL),
     )
-    with urllib.request.urlopen(req, timeout=600) as resp:
-        body = json.loads(resp.read().decode())
-    return SummaryOutput.model_validate_json(body["message"]["content"])
+    agent = Agent(
+        model,
+        output_type=SummaryOutput,
+        system_prompt=(
+            "You are a quant analyst summarizing trading-bot strategy reports "
+            "for one wallet. Reply ONLY with the structured fields; no prose "
+            "outside the schema. Be concrete and use only what the reports say."
+        ),
+        model_settings=ModelSettings(temperature=0, timeout=120),
+    )
+    result = agent.run_sync(prompt)
+    return result.output
 
 
 def generate_summary(
