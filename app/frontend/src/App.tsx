@@ -168,7 +168,7 @@ export default function App() {
           onBack={() => navigate({ page: "runs", wallet: view.wallet })}
         />
       )}
-      <BottomBar view={view} navigate={navigate} />
+      {view.page !== "run" && <BottomBar view={view} navigate={navigate} />}
     </div>
   );
 }
@@ -348,7 +348,7 @@ function RunPage({ wallet, label, onBack }: { wallet: string; label: string; onB
   }, 10000);
 
   async function vote(value: -1 | 1) {
-    if (!run || run.my_rating === value) return; // already rated this way
+    if (!run || run.my_rating === value) return;
     const res = await rate(run.id, value);
     const fresh = await getRunByLabel(wallet, label);
     setRun({ ...fresh, global_score: res.model_global_score });
@@ -376,37 +376,51 @@ function RunPage({ wallet, label, onBack }: { wallet: string; label: string; onB
           {run.global_score}
         </span>
       </div>
-      <div className="rater">
-        <button
-          className={run.my_rating === 1 ? "active-pos" : ""}
-          onClick={() => vote(1)}
-        >
-          👍 Interesting
-        </button>
-        <button
-          className={run.my_rating === -1 ? "active-neg" : ""}
-          onClick={() => vote(-1)}
-        >
-          👎 Not interesting
-        </button>
-        <span className="dim" style={{ alignSelf: "center" }}>
-          model score across all wallets: {run.global_score > 0 ? "+" : ""}
-          {run.global_score}
-        </span>
-      </div>
       {run.report ? (
         <pre className="report">{run.report}</pre>
       ) : (
         <p className="dim">No strategy report for this run.</p>
       )}
+      <FixedRatingBar run={run} onVote={vote} onBack={onBack} />
     </>
   );
 }
 
-/** Fixed bottom bar: always reachable, even deep in a long model list. */
-function BottomBar({ view, navigate }: { view: View; navigate: (v: View) => void }) {
-  const toWallets = () => navigate({ page: "wallets" });
+/** Fixed bottom bar on the run page: rating buttons always reachable, even
+   halfway down a long strategy report. */
+function FixedRatingBar({
+  run,
+  onVote,
+  onBack,
+}: {
+  run: RunDetail;
+  onVote: (v: -1 | 1) => void;
+  onBack: () => void;
+}) {
+  return (
+    <div className="bottombar">
+      <button onClick={onBack}>← {run.label}</button>
+      <button
+        className={run.my_rating === 1 ? "primary" : ""}
+        onClick={() => onVote(1)}
+      >
+        👍 Interesting
+      </button>
+      <button
+        className={run.my_rating === -1 ? "primary" : ""}
+        onClick={() => onVote(-1)}
+      >
+        👎 Not interesting
+      </button>
+      <span className="dim" style={{ alignSelf: "center" }}>
+        +{run.global_score}
+      </span>
+    </div>
+  );
+}
 
+/** Fixed bottom bar: always reachable, even deep in a long list. */
+function BottomBar({ view, navigate }: { view: View; navigate: (v: View) => void }) {
   if (view.page === "wallets") {
     return (
       <div className="bottombar">
@@ -416,14 +430,13 @@ function BottomBar({ view, navigate }: { view: View; navigate: (v: View) => void
       </div>
     );
   }
+  // runs view
   return (
     <div className="bottombar">
-      <button onClick={toWallets}>← Wallets</button>
-      {view.page === "run" && (
-        <button className="primary" onClick={() => navigate({ page: "runs", wallet: view.wallet })}>
-          ← {view.label}
-        </button>
-      )}
+      <button onClick={() => navigate({ page: "wallets" })}>← Wallets</button>
+      <button className="primary">
+        {view.wallet.slice(0, 12)}…{view.wallet.slice(-4)}
+      </button>
     </div>
   );
 }

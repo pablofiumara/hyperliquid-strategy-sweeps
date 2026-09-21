@@ -82,8 +82,8 @@ h1 a { color: var(--text); text-decoration: none; }
 
 .loading { color: var(--dim); padding: 40px 0; text-align: center; }
 
-/* Bottom nav bar: reachable from anywhere in the list, even deep in the
-   scroll (no need to scroll back up to return to wallets). */
+/* Fixed bottom bar: navigation (wallets/models) and rating buttons, always
+   reachable even deep in a long list or strategy report. */
 .bottombar {
   position: fixed;
   left: 0;
@@ -95,6 +95,7 @@ h1 a { color: var(--text); text-decoration: none; }
   display: flex;
   gap: 10px;
   z-index: 50;
+  flex-wrap: wrap;
 }
 .bottombar button {
   background: var(--bg);
@@ -105,6 +106,7 @@ h1 a { color: var(--text); text-decoration: none; }
   font-size: 14px;
   cursor: pointer;
   flex: 1;
+  min-width: 100px;
 }
 .bottombar button:hover { border-color: var(--accent); }
 .bottombar .primary {
@@ -113,6 +115,7 @@ h1 a { color: var(--text); text-decoration: none; }
   color: #0d1117;
   font-weight: 700;
 }
+.bottombar .dim { align-self: center; }
 
 table { width: 100%; border-collapse: collapse; margin-top: 12px; }
 th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); }
