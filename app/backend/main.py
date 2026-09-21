@@ -7,6 +7,7 @@ from pydantic import BaseModel
 
 import db
 from importer import DATA_DIR, import_all
+from cleanup import cleanup_all, cleanup_wallet
 
 
 def _norm_summary(row):
@@ -153,4 +154,18 @@ def generate_wallet_summary(address: str):
     if data.get("error"):
         raise HTTPException(502, f"Ollama failed: {data['error']}")
     db.save_summary(data)
+    # The model's answer is now captured in strategy_report.md; purge the
+    # disposable scratch (raw API dumps, scripts, duplicate reports) so the
+    # workspace stays small and one-fact-one-file holds.
+    cleanup_wallet(address)
     return _norm_summary(db.get_summary(address))
+
+
+@app.post("/api/wallets/{address}/cleanup")
+def wallet_cleanup(address: str):
+    return cleanup_wallet(address)
+
+
+@app.post("/api/cleanup")
+def global_cleanup():
+    return cleanup_all()
