@@ -22,32 +22,44 @@ const POLL_MS = 5000;
 /** Remember where the user scrolled in a view and restore it when they
    come back -- so clicking a model and returning doesn't dump them back
    at the top of a long list. */
-function useRestoreScroll(key: string) {
+function useRestoreScroll(key: string, ready: boolean = true) {
   useEffect(() => {
+    if (!ready) return;
     const store = `scroll:${key}`;
     let timer: number | undefined;
-    const save = () => {
+    const saveDebounced = () => {
       clearTimeout(timer);
       timer = window.setTimeout(
-        () => sessionStorage.setItem(store, String(window.scrollY)),
+        () => {
+          const y = window.scrollY;
+          console.log(`[restoreScroll:${key}] save debounced -> ${y}`);
+          sessionStorage.setItem(store, String(y));
+        },
         150
       );
+    };
+    const saveSync = () => {
+      clearTimeout(timer);
+      const y = window.scrollY;
+      console.log(`[restoreScroll:${key}] save sync -> ${y}`);
+      sessionStorage.setItem(store, String(y));
     };
     // restore on mount (next frame, after the list has rendered)
     const raf = requestAnimationFrame(() => {
       const v = Number(sessionStorage.getItem(store) || 0);
+      console.log(`[restoreScroll:${key}] restore -> ${v}`);
       if (v > 0) window.scrollTo(0, v);
     });
-    window.addEventListener("scroll", save, { passive: true });
-    window.addEventListener("beforeunload", save);
+    window.addEventListener("scroll", saveDebounced, { passive: true });
+    window.addEventListener("beforeunload", saveSync);
     return () => {
       cancelAnimationFrame(raf);
       clearTimeout(timer);
-      window.removeEventListener("scroll", save);
-      window.removeEventListener("beforeunload", save);
-      save();
+      window.removeEventListener("scroll", saveDebounced);
+      window.removeEventListener("beforeunload", saveSync);
+      saveSync();
     };
-  }, [key]);
+  }, [key, ready]);
 }
 
 /** Format a model's context window as a short human string (e.g. 262144 -> "256k"). */
@@ -213,7 +225,8 @@ function RunList({
   const [summary, setSummary] = useState<WalletSummary | null | undefined>(undefined);
   const [sumErr, setSumErr] = useState("");
   const [generating, setGenerating] = useState(false);
-  useRestoreScroll(`runs:${wallet}`);
+  const scrollKey = `runs:${wallet}`;
+  useRestoreScroll(scrollKey, !!runs);
   usePoll(() => {
     getRuns(wallet)
       .then((r) => {
