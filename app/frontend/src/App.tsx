@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   genSummary,
   getRun,
@@ -17,8 +17,49 @@ type View =
   | { page: "runs"; wallet: string }
   | { page: "run"; wallet: string; runId: number };
 
+const POLL_MS = 5000;
+
+/** Run `fn` immediately, then every `ms`; also when the tab regains focus. */
+function usePoll(fn: () => void, ms: number = POLL_MS) {
+  const ref = useRef(fn);
+  ref.current = fn;
+  useEffect(() => {
+    const tick = () => ref.current();
+    tick();
+    const t = window.setInterval(tick, ms);
+    const onVis = () => {
+      if (!document.hidden) tick();
+    };
+    window.addEventListener("focus", onVis);
+    document.addEventListener("visibilitychange", onVis);
+    return () => {
+      window.clearInterval(t);
+      window.removeEventListener("focus", onVis);
+      document.removeEventListener("visibilitychange", onVis);
+    };
+  }, [ms]);
+}
+
+/** Auto-reload the tab when a new frontend build is deployed. */
+function useBuildWatcher() {
+  useEffect(() => {
+    const boot = document.querySelector<HTMLScriptElement>('script[type="module"]')?.src ?? "";
+    const t = window.setInterval(async () => {
+      try {
+        const html = await (await fetch("/index.html", { cache: "no-store" })).text();
+        const asset = html.match(/assets\/index-[A-Za-z0-9_-]+\.js/);
+        if (asset && boot && !boot.includes(asset[0])) window.location.reload();
+      } catch {
+        /* transient — retry next tick */
+      }
+    }, 30000);
+    return () => window.clearInterval(t);
+  }, []);
+}
+
 export default function App() {
   const [view, setView] = useState<View>({ page: "wallets" });
+  useBuildWatcher();
 
   return (
     <div className="container">
@@ -36,6 +77,7 @@ export default function App() {
       {view.page === "wallets" && <WalletList onOpen={(address) => setView({ page: "runs", wallet: address })} />}
       {view.page === "runs" && (
         <RunList
+          key={view.wallet}
           wallet={view.wallet}
           onOpen={(runId) => setView({ page: "run", wallet: view.wallet, runId })}
           onBack={() => setView({ page: "wallets" })}
@@ -43,6 +85,7 @@ export default function App() {
       )}
       {view.page === "run" && (
         <RunPage
+          key={view.runId}
           runId={view.runId}
           onBack={() => setView({ page: "runs", wallet: view.wallet })}
         />
@@ -54,9 +97,16 @@ export default function App() {
 function WalletList({ onOpen }: { onOpen: (a: string) => void }) {
   const [wallets, setWallets] = useState<Wallet[] | null>(null);
   const [err, setErr] = useState("");
-  useEffect(() => {
-    getWallets().then(setWallets).catch((e) => setErr(String(e)));
-  }, []);
+  usePoll(() => {
+    getWallets()
+      .then((w) => {
+        setWallets(w);
+        setErr("");
+      })
+      .catch((e) => {
+        if (!wallets) setErr(String(e));
+      });
+  }, 10000);
   if (err) return <p className="dim">{err}</p>;
   if (!wallets) return <p className="loading">loading…</p>;
   return (
@@ -87,12 +137,24 @@ function RunList({
   const [summary, setSummary] = useState<WalletSummary | null | undefined>(undefined);
   const [sumErr, setSumErr] = useState("");
   const [generating, setGenerating] = useState(false);
-  useEffect(() => {
-    getRuns(wallet).then(setRuns).catch((e) => setErr(String(e)));
+  usePoll(() => {
+    getRuns(wallet)
+      .then((r) => {
+        setRuns(r);
+        setErr("");
+      })
+      .catch((e) => {
+        if (!runs) setErr(String(e));
+      });
     getSummary(wallet)
-      .then(setSummary)
-      .catch((e) => setSumErr(String(e)));
-  }, [wallet]);
+      .then((s) => {
+        setSummary(s);
+        setSumErr("");
+      })
+      .catch((e) => {
+        if (summary === undefined) setSumErr(String(e));
+      });
+  });
   if (err) return <p className="dim">{err}</p>;
   if (!runs) return <p className="loading">loading…</p>;
 
@@ -134,11 +196,11 @@ function RunList({
               {summary.key_params ? (
                 <p className="dim" style={{ fontSize: 12 }}>{summary.key_params}</p>
               ) : null}
-              {summary.disagreements.length ? (
+              {summary.disagreements?.length ? (
                 <div className="dim" style={{ fontSize: 12 }}>
                   ⚠ disagreements:
                   <ul>
-                    {summary.disagreements.map((d, i) => (
+                    {(summary.disagreements ?? []).map((d, i) => (
                       <li key={i}>{d}</li>
                     ))}
                   </ul>
@@ -193,9 +255,16 @@ function RunList({
 function RunPage({ runId, onBack }: { runId: number; onBack: () => void }) {
   const [run, setRun] = useState<RunDetail | null>(null);
   const [err, setErr] = useState("");
-  useEffect(() => {
-    getRun(runId).then(setRun).catch((e) => setErr(String(e)));
-  }, [runId]);
+  usePoll(() => {
+    getRun(runId)
+      .then((r) => {
+        setRun(r);
+        setErr("");
+      })
+      .catch((e) => {
+        if (!run) setErr(String(e));
+      });
+  }, 10000);
 
   async function vote(value: -1 | 1) {
     if (!run || run.my_rating === value) return; // already rated this way
