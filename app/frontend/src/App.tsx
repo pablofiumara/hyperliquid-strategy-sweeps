@@ -57,9 +57,43 @@ function useBuildWatcher() {
   }, []);
 }
 
+// ------------------- URL routing (sync in-app view with browser history) ---
+// One fact, one place: the URL encodes the view, so the browser Back/Forward
+// buttons and bookmarks deep-link correctly (wallets <-> models <-> run).
+const pathFor = (view: View): string => {
+  switch (view.page) {
+    case "wallets":
+      return "/";
+    case "runs":
+      return `/w/${view.wallet}`;
+    case "run":
+      return `/w/${view.wallet}/run/${view.runId}`;
+  }
+};
+
+function viewFromPath(path: string): View {
+  let m = path.match(/^\/w\/([^/]+)\/run\/(\d+)$/);
+  if (m) return { page: "run", wallet: m[1], runId: Number(m[2]) };
+  m = path.match(/^\/w\/([^/]+)$/);
+  if (m) return { page: "runs", wallet: m[1] };
+  return { page: "wallets" };
+}
+
+
 export default function App() {
-  const [view, setView] = useState<View>({ page: "wallets" });
+  const [view, setView] = useState<View>(() => viewFromPath(location.pathname));
   useBuildWatcher();
+
+  const navigate = (v: View) => {
+    const p = pathFor(v);
+    if (location.pathname !== p) history.pushState(null, "", p);
+    setView(v);
+  };
+  useEffect(() => {
+    const onPop = () => setView(viewFromPath(location.pathname));
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
 
   return (
     <div className="container">
@@ -68,26 +102,26 @@ export default function App() {
           href="#"
           onClick={(e) => {
             e.preventDefault();
-            setView({ page: "wallets" });
+            navigate({ page: "wallets" });
           }}
         >
           ⛓ Hyperliquid Strategy Sweep
         </a>
       </h1>
-      {view.page === "wallets" && <WalletList onOpen={(address) => setView({ page: "runs", wallet: address })} />}
+      {view.page === "wallets" && <WalletList onOpen={(address) => navigate({ page: "runs", wallet: address })} />}
       {view.page === "runs" && (
         <RunList
           key={view.wallet}
           wallet={view.wallet}
-          onOpen={(runId) => setView({ page: "run", wallet: view.wallet, runId })}
-          onBack={() => setView({ page: "wallets" })}
+          onOpen={(runId) => navigate({ page: "run", wallet: view.wallet, runId })}
+          onBack={() => navigate({ page: "wallets" })}
         />
       )}
       {view.page === "run" && (
         <RunPage
           key={view.runId}
           runId={view.runId}
-          onBack={() => setView({ page: "runs", wallet: view.wallet })}
+          onBack={() => navigate({ page: "runs", wallet: view.wallet })}
         />
       )}
     </div>
