@@ -19,6 +19,14 @@ type View =
 
 const POLL_MS = 5000;
 
+/** Format a model's context window as a short human string (e.g. 262144 -> "256k"). */
+function fmtCtx(n: number | null | undefined): string {
+  if (!n || n <= 0) return "—";
+  if (n >= 1048576) return `${(n / 1048576).toFixed(n % 1048576 === 0 ? 0 : 1)}M`;
+  if (n >= 1024) return `${Math.round(n / 1024)}k`;
+  return String(n);
+}
+
 /** Run `fn` immediately, then every `ms`; also when the tab regains focus. */
 function usePoll(fn: () => void, ms: number = POLL_MS) {
   const ref = useRef(fn);
@@ -269,6 +277,7 @@ function RunList({
             <div>{r.label}</div>
             <div className="dim" style={{ fontSize: 12 }}>
               {r.model} {r.variant ? `· ${r.variant}` : ""} · {r.duration_s ?? "?"}s
+              {" · ctx " + fmtCtx(r.context_size)}
             </div>
           </div>
           <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
@@ -317,6 +326,7 @@ function RunPage({ runId, onBack }: { runId: number; onBack: () => void }) {
           <div>{run.label}</div>
           <div className="dim" style={{ fontSize: 12 }}>
             {run.model} · {run.status} · probe {run.probe} · {run.duration_s}s
+            {" · ctx " + fmtCtx(run.context_size)}
           </div>
         </div>
         <span

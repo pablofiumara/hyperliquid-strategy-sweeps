@@ -60,7 +60,7 @@ def wallet_runs(address: str):
     return db.query(
         """
         SELECT r.id, r.label, r.tool, r.model, r.variant, r.status,
-               r.duration_s, r.bytes,
+               r.duration_s, r.bytes, r.context_size,
                COALESCE(rt.value, 0)  AS my_rating,
                COALESCE(g.total, 0)   AS global_score,
                (report_path IS NOT NULL AND r.status = 'DONE') AS has_report
@@ -72,7 +72,8 @@ def wallet_runs(address: str):
             WHERE r2.model IS NOT NULL GROUP BY r2.model
         ) g ON g.model = r.model
         WHERE r.wallet = %s
-        ORDER BY global_score DESC, (r.status = 'DONE') DESC, r.label
+        ORDER BY global_score DESC, COALESCE(r.context_size, 0) DESC,
+              (r.status = 'DONE') DESC, r.label
         """,
         (address,),
     )
@@ -129,11 +130,13 @@ def leaderboard():
                COUNT(rt.value) FILTER (WHERE rt.value = 1)  AS positives,
                COUNT(rt.value) FILTER (WHERE rt.value = -1) AS negatives,
                COUNT(DISTINCT r.wallet)              AS wallets,
-               COUNT(*)                              AS runs
+               COUNT(*)                              AS runs,
+               MAX(r.context_size)                   AS context_size
         FROM runs r LEFT JOIN ratings rt ON rt.run_id = r.id
         WHERE r.model IS NOT NULL
         GROUP BY r.model
-        ORDER BY score DESC, positives DESC, r.model
+        ORDER BY score DESC, positives DESC,
+                 COALESCE(MAX(r.context_size), 0) DESC, r.model
         """
     )
 

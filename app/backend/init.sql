@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS runs (
     duration_s  REAL,
     bytes       BIGINT,
     report_path TEXT,
+    context_size INT,
     UNIQUE (wallet, label)
 );
 
@@ -42,3 +43,6 @@ CREATE INDEX IF NOT EXISTS runs_model_idx ON runs(model);
 
 -- Idempotent migration: trade_example was added after the table existed.
 ALTER TABLE wallet_summaries ADD COLUMN IF NOT EXISTS trade_example TEXT;
+
+-- Idempotent migration: context_size was added after the table existed.
+ALTER TABLE runs ADD COLUMN IF NOT EXISTS context_size INT;

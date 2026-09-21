@@ -9,6 +9,7 @@ export type Run = {
   duration_s: number | null;
   my_rating: number;
   global_score: number;
+  context_size: number | null;
   has_report: boolean;
 };
 export type RunDetail = Run & {

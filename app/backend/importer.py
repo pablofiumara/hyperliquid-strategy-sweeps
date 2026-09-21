@@ -12,6 +12,32 @@ import db
 DATA_DIR = pathlib.Path(os.environ.get("DATA_DIR", "/data"))
 WALLET_RX = re.compile(r"^(0x)?[0-9a-fA-F]{40}$")
 
+# model_id -> context window (tokens). One fact, one place: see
+# ../lib/context_sizes.tsv. Unknown models get 0 (shown as "—" in the UI).
+_CONTEXT: dict[str, int] = {}
+# DATA_DIR is the repo root (/data at runtime), so the registry is at
+# <DATA_DIR>/lib/context_sizes.tsv. Fall back to the module's own location so
+# the same code works when run from a source checkout.
+_reg = DATA_DIR / "lib" / "context_sizes.tsv"
+if not _reg.is_file():
+    _reg = pathlib.Path(__file__).resolve().parent.parent.parent / "lib" / "context_sizes.tsv"
+for _line in _reg.read_text(errors="replace").splitlines():
+    _line = _line.split("#", 1)[0].strip()
+    if not _line or "\t" not in _line:
+        continue
+    _mid, _ctx = _line.split("\t", 1)
+    try:
+        _CONTEXT[_mid.strip()] = int(_ctx.strip())
+    except ValueError:
+        pass
+
+
+def context_size(model: str | None) -> int:
+    """Context window for a run's model; 0 if unknown."""
+    if not model:
+        return 0
+    return _CONTEXT.get(model, 0)
+
 
 def import_all() -> dict:
     wallets = runs = 0
@@ -35,19 +61,21 @@ def import_all() -> dict:
             db.execute(
                 """
                 INSERT INTO runs (wallet, label, tool, model, variant, status,
-                                  probe, duration_s, bytes, report_path)
-                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                                  probe, duration_s, bytes, report_path, context_size)
+                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
                 ON CONFLICT (wallet, label) DO UPDATE SET
                     tool=EXCLUDED.tool, model=EXCLUDED.model,
                     variant=EXCLUDED.variant, status=EXCLUDED.status,
                     probe=EXCLUDED.probe, duration_s=EXCLUDED.duration_s,
-                    bytes=EXCLUDED.bytes, report_path=EXCLUDED.report_path
+                    bytes=EXCLUDED.bytes, report_path=EXCLUDED.report_path,
+                    context_size=EXCLUDED.context_size
                 """,
                 (
                     wdir.name, m.get("label", mdir.name), m.get("tool"),
                     m.get("model"), m.get("variant"), m.get("status"),
                     m.get("probe"), m.get("duration_s"), m.get("bytes"),
                     str(report) if report.is_file() else None,
+                    context_size(m.get("model")),
                 ),
             )
             runs += 1
