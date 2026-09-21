@@ -26,38 +26,30 @@ function useRestoreScroll(key: string, ready: boolean = true) {
   useEffect(() => {
     if (!ready) return;
     const store = `scroll:${key}`;
-    let timer: number | undefined;
-    const saveDebounced = () => {
-      clearTimeout(timer);
-      timer = window.setTimeout(
-        () => {
-          const y = window.scrollY;
-          console.log(`[restoreScroll:${key}] save debounced -> ${y}`);
-          sessionStorage.setItem(store, String(y));
-        },
-        150
-      );
+    // Keep the latest scroll position so it's always available on unmount,
+    // even if window.scrollY has already been reset to 0 (e.g. the new page
+    // is shorter and the browser fired a scroll event during navigation).
+    let y = window.scrollY;
+    let ticking = false;
+    const flush = () => { if (y > 0) sessionStorage.setItem(store, String(y)); };
+    const onScroll = () => {
+      y = window.scrollY;
+      if (!ticking) {
+        ticking = true;
+        requestAnimationFrame(() => { ticking = false; flush(); });
+      }
     };
-    const saveSync = () => {
-      clearTimeout(timer);
-      const y = window.scrollY;
-      console.log(`[restoreScroll:${key}] save sync -> ${y}`);
-      sessionStorage.setItem(store, String(y));
-    };
-    // restore on mount (next frame, after the list has rendered)
     const raf = requestAnimationFrame(() => {
       const v = Number(sessionStorage.getItem(store) || 0);
-      console.log(`[restoreScroll:${key}] restore -> ${v}`);
       if (v > 0) window.scrollTo(0, v);
     });
-    window.addEventListener("scroll", saveDebounced, { passive: true });
-    window.addEventListener("beforeunload", saveSync);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("beforeunload", flush);
     return () => {
       cancelAnimationFrame(raf);
-      clearTimeout(timer);
-      window.removeEventListener("scroll", saveDebounced);
-      window.removeEventListener("beforeunload", saveSync);
-      saveSync();
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("beforeunload", flush);
+      flush();
     };
   }, [key, ready]);
 }
