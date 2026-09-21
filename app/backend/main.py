@@ -79,6 +79,22 @@ def wallet_runs(address: str):
     )
 
 
+def _enrich_run(run):
+    """Attach the model's global score across all wallets to a run row."""
+    score = db.query(
+        """
+        SELECT COALESCE(SUM(COALESCE(rt.value, 0)), 0) AS total
+        FROM runs r LEFT JOIN ratings rt ON rt.run_id = r.id
+        WHERE r.model = %s
+        """,
+        (run["model"],),
+        one=True,
+    )
+    run = dict(run)
+    run["global_score"] = score["total"] if score else 0
+    return run
+
+
 @app.get("/api/runs/{run_id}")
 def run_detail(run_id: int):
     run = db.query("SELECT * FROM runs WHERE id = %s", (run_id,), one=True)
@@ -92,7 +108,30 @@ def run_detail(run_id: int):
     rating = db.query(
         "SELECT value FROM ratings WHERE run_id = %s", (run_id,), one=True
     )
-    return {**run, "report": report, "my_rating": rating["value"] if rating else 0}
+    return {**_enrich_run(run), "report": report,
+            "my_rating": rating["value"] if rating else 0}
+
+
+@app.get("/api/wallets/{address}/runs/{label}")
+def run_detail_by_label(address: str, label: str):
+    """Fetch one run by (wallet, label) -- the URL is label-based now."""
+    run = db.query(
+        "SELECT * FROM runs WHERE wallet = %s AND label = %s",
+        (address, label),
+        one=True,
+    )
+    if not run:
+        raise HTTPException(404, "run not found")
+    report = None
+    if run["report_path"]:
+        p = pathlib.Path(run["report_path"])
+        if p.is_file():
+            report = p.read_text(errors="replace")
+    rating = db.query(
+        "SELECT value FROM ratings WHERE run_id = %s", (run["id"],), one=True
+    )
+    return {**_enrich_run(run), "report": report,
+            "my_rating": rating["value"] if rating else 0}
 
 
 @app.post("/api/runs/{run_id}/rating")

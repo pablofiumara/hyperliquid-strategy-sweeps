@@ -52,6 +52,9 @@ export async function genSummary(addr: string) {
 
 export const getRun = (id: number) => api<RunDetail>(`/api/runs/${id}`);
 
+export const getRunByLabel = (wallet: string, label: string) =>
+  api<RunDetail>(`/api/wallets/${encodeURIComponent(wallet)}/runs/${encodeURIComponent(label)}`);
+
 export async function rate(runId: number, value: -1 | 1) {
   const res = await fetch(`/api/runs/${runId}/rating`, {
     method: "POST",

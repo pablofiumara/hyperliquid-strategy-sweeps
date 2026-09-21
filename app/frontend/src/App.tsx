@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import {
   genSummary,
-  getRun,
+  getRunByLabel,
   getRuns,
   getSummary,
   getWallets,
@@ -15,7 +15,7 @@ import {
 type View =
   | { page: "wallets" }
   | { page: "runs"; wallet: string }
-  | { page: "run"; wallet: string; runId: number };
+  | { page: "run"; wallet: string; label: string };
 
 const POLL_MS = 5000;
 
@@ -73,16 +73,16 @@ const pathFor = (view: View): string => {
     case "wallets":
       return "/";
     case "runs":
-      return `/w/${view.wallet}`;
+      return `/wallet/${view.wallet}`;
     case "run":
-      return `/w/${view.wallet}/run/${view.runId}`;
+      return `/wallet/${view.wallet}/${view.label}`;
   }
 };
 
 function viewFromPath(path: string): View {
-  let m = path.match(/^\/w\/([^/]+)\/run\/(\d+)$/);
-  if (m) return { page: "run", wallet: m[1], runId: Number(m[2]) };
-  m = path.match(/^\/w\/([^/]+)$/);
+  let m = path.match(/^\/wallet\/([^/]+)\/([^/]+)$/);
+  if (m) return { page: "run", wallet: m[1], label: decodeURIComponent(m[2]) };
+  m = path.match(/^\/wallet\/([^/]+)$/);
   if (m) return { page: "runs", wallet: m[1] };
   return { page: "wallets" };
 }
@@ -121,14 +121,15 @@ export default function App() {
         <RunList
           key={view.wallet}
           wallet={view.wallet}
-          onOpen={(runId) => navigate({ page: "run", wallet: view.wallet, runId })}
+          onOpen={(label) => navigate({ page: "run", wallet: view.wallet, label })}
           onBack={() => navigate({ page: "wallets" })}
         />
       )}
       {view.page === "run" && (
         <RunPage
-          key={view.runId}
-          runId={view.runId}
+          key={view.label}
+          wallet={view.wallet}
+          label={view.label}
           onBack={() => navigate({ page: "runs", wallet: view.wallet })}
         />
       )}
@@ -171,7 +172,7 @@ function RunList({
   onBack,
 }: {
   wallet: string;
-  onOpen: (id: number) => void;
+  onOpen: (label: string) => void;
   onBack: () => void;
 }) {
   const [runs, setRuns] = useState<Run[] | null>(null);
@@ -272,7 +273,7 @@ function RunList({
         </div>
       </div>
       {runs.map((r) => (
-        <div key={r.id} className="card" onClick={() => onOpen(r.id)}>
+        <div key={r.id} className="card" onClick={() => onOpen(r.label)}>
           <div>
             <div>{r.label}</div>
             <div className="dim" style={{ fontSize: 12 }}>
@@ -293,11 +294,11 @@ function RunList({
   );
 }
 
-function RunPage({ runId, onBack }: { runId: number; onBack: () => void }) {
+function RunPage({ wallet, label, onBack }: { wallet: string; label: string; onBack: () => void }) {
   const [run, setRun] = useState<RunDetail | null>(null);
   const [err, setErr] = useState("");
   usePoll(() => {
-    getRun(runId)
+    getRunByLabel(wallet, label)
       .then((r) => {
         setRun(r);
         setErr("");
@@ -309,8 +310,8 @@ function RunPage({ runId, onBack }: { runId: number; onBack: () => void }) {
 
   async function vote(value: -1 | 1) {
     if (!run || run.my_rating === value) return; // already rated this way
-    const res = await rate(runId, value);
-    const fresh = await getRun(runId);
+    const res = await rate(run.id, value);
+    const fresh = await getRunByLabel(wallet, label);
     setRun({ ...fresh, global_score: res.model_global_score });
   }
 
