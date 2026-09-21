@@ -111,6 +111,16 @@ metadata_free() {  # tool model -> 0 if it passes the metadata gate
 
 log() { printf '[%s] %s\n' "$(date +%H:%M:%S)" "$*" >&2; }
 
+# --------------------------------------------- rating gate (app DB, see §3b)
+# Models with at least one negative rating in the rating app are never sent
+# prompts (probe or run). The blocklist is loaded ONCE in main() into the
+# exported $BLOCKED var (one psql call; `work_one` runs in parallel subshells,
+# so no in-function cache would be shared). Fail-open: if the DB is
+# unreachable the sweep proceeds; lift a block by removing the -1 in the app.
+model_blocked() {  # model -> 0 if it has a -1 rating in the app db
+  [ -n "$1" ] && [ -n "${BLOCKED:-}" ] && printf '%s\n' "$BLOCKED" | grep -qxF "$1"
+}
+
 # ------------------------------------------------------- new-model discovery
 DISCOVERY_FILE="$ROOT/discovery.tsv"   # tool | model | verdict | date | note
 
@@ -135,6 +145,7 @@ discover_new() {
       [ -n "$model" ] || continue
       grep -qP "^$tool\|\Q$model\E\|" "$MODELS_FILE" && continue       # already swept
       [ -n "$(discovery_verdict "$tool" "$model")" ] && continue       # already judged
+      model_blocked "$model" && continue                               # rated negative: no prompts, not even a probe
       local label
       label="new-$(printf '%s' "$model" | tr -c 'A-Za-z0-9._-' '-' | sed 's/-\{2,\}/-/g;s/^-//;s/-$//')"
       label="$(printf '%s' "$label" | cut -c1-60)"
@@ -220,9 +231,29 @@ PY
 work_one() {  # tool model label variant extra
   local tool="$1" model="$2" label="$3" variant="$4" extra="$5"
   local dir="$RUN_ROOT/$label"
-  local work="$dir/work"
   local ptxt="$TMP/probe.$BASHPID"   # probe output: transient, never stored in run dir
                                      # (verdict -> meta.json; paywall text -> output.txt on skip)
+
+  # stage 0 - rating gate: never send prompts to a model with a negative
+  # rating in the rating app (covers probe AND run; see blocked_models).
+  # Checked before ANY side effect (no work dir, no probe). If a previous
+  # sweep already produced a result for this label, leave that dir untouched
+  # (no synthetic meta.json: it would clobber the real record and wipe
+  # report_path on the next import).
+  if model_blocked "$model"; then
+    if [ -f "$dir/meta.json" ]; then
+      log "SKIP $label (negative rating; keeping previous run record)"
+    else
+      mkdir -p "$dir"
+      local gate="ok" probe="skipped" status="SKIPPED_NEGATIVE_RATING"
+      printf 'skipped: model %s has at least one negative rating in the rating app\n' "$model" > "$dir/output.txt"
+      write_meta "$dir" "$WALLET" "$label" "$tool" "$model" "$variant" "$gate" "$probe" "$status" 1 0 0 "$extra"
+      log "SKIP $label (negative rating)"
+    fi
+    return
+  fi
+
+  local work="$dir/work"
   mkdir -p "$work"
   local gate="ok" probe="skipped" status="" code=0 t0 t1 dur bytes=0
 
@@ -326,6 +357,17 @@ DRY=0
 main() {
   log "models: $MODELS_FILE | prompt: $(head -c 60 "$PROMPT_FILE")..."
   load_free_lists
+  # rating gate: one psql call before the job loop; exported so the
+  # `work_one &` subshells (which can't share an in-function cache) see it.
+  # < /dev/null: stdin here is the models list — docker exec must not inherit it.
+  BLOCKED="$(docker compose -f "$ROOT/docker-compose.yml" exec -T db psql -U hl -d hl -Atc \
+    "SELECT DISTINCT r.model FROM runs r JOIN ratings rt ON rt.run_id = r.id WHERE rt.value = -1" < /dev/null 2>/dev/null)" || BLOCKED=""
+  export BLOCKED
+  if [ -n "$BLOCKED" ]; then
+    log "rating gate: $(printf '%s\n' "$BLOCKED" | wc -l) negatively-rated model(s) will be skipped"
+  else
+    log "rating gate: unavailable (app db down or no ratings) - not blocking anything"
+  fi
 
   if [ "$CHECK_NEW" = 1 ] && [ "$DRY_RUN" = 0 ]; then
     discover_new
@@ -335,6 +377,10 @@ main() {
     local n=0
     while IFS='|' read -r tool model label variant extra; do
       [ -z "${label:-}" ] && continue
+      if model_blocked "$model"; then
+        printf '%-28s SKIPPED (negative rating)\n' "$label"
+        continue
+      fi
       if metadata_free "$tool" "$model"; then gate=ok; else gate=NOT_FREE; fi
       build_cmd "$tool" "$model" "$variant" "${extra:-}" "$RUN_ROOT/$label/work" "$PROMPT" run
       printf '%-28s gate=%-7s %s\n' "$label" "$gate" "$(shquote "${CMD[@]}")"

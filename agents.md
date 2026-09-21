@@ -105,6 +105,15 @@ Skipped entirely in `--dry-run`.
 - `--resume` skips models whose run already wrote output (restart-safe);
 - `--force` rerun even if a result exists;
 - `--only X` filters on label substring or tool name.
+- **Rating gate:** models with at least one negative rating (−1) in the rating
+  app's DB are NEVER sent prompts — not the run prompt, not even the tiny
+  free-check probe. The driver reads the blocklist from the app's Postgres
+  once at sweep start (one `docker compose` psql call; fail-open with a
+  warning if the app/db is down). Blocked runs get status
+  `SKIPPED_NEGATIVE_RATING` in
+  meta.json (or keep their previous record if one exists); discovery also
+  refuses to probe blocked ids. Lift a block by removing the −1 in the app,
+  then rerun (with `--force` for that model if a result exists).
 - **Critical bug fixed during sweep #1:** agents MUST be launched with
   stdin=/dev/null (`timeout ... < /dev/null`); otherwise they inherit the
   driver loop's stdin and hang (run-models.sh line ~281).

@@ -60,6 +60,8 @@ make clean        # stop and drop the database volume
 
 Screens: wallets → models (sorted by score) → strategy report → rating.
 Data model: `wallets`, `runs (wallet,label unique)`, `ratings (-1|+1)`.
+A model with ≥1 negative rating is excluded from future sweeps by
+`run-models.sh`'s rating gate (no prompts, not even free-check probes).
 
 ## Notes & caveats
 
