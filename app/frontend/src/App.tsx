@@ -218,18 +218,16 @@ function RunList({
               ) : null}
             </>
           ) : (
-            <p className="dim" style={{ fontSize: 13 }}>
-              No summary yet — generate one with the local free LLM{sumErr ? `: ${sumErr}` : "."}
-            </p>
+            <>
+              <p className="dim" style={{ fontSize: 13 }}>
+                No summary yet — generate one with the local free LLM{sumErr ? `: ${sumErr}` : "."}
+              </p>
+              <button disabled={generating} onClick={onGenerate}>
+                {generating ? "Generating… (~30s)" : "Generate summary"}
+              </button>
+            </>
           )}
         </div>
-        <button
-          style={{ alignSelf: "flex-start" }}
-          disabled={generating}
-          onClick={onGenerate}
-        >
-          {generating ? "Generating… (~30s)" : summary ? "↻ Regenerate" : "Generate summary"}
-        </button>
       </div>
       {runs.map((r) => (
         <div key={r.id} className="card" onClick={() => onOpen(r.id)}>
