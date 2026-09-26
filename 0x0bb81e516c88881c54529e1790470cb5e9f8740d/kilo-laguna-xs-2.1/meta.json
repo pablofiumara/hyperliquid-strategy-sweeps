@@ -1,4 +1,5 @@
 {
+ "wallet": "0x0bb81e516c88881c54529e1790470cb5e9f8740d",
  "label": "kilo-laguna-xs-2.1",
  "tool": "kilo",
  "model": "kilo/poolside/laguna-xs-2.1:free",
@@ -8,7 +9,7 @@
  "status": "TIMEOUT",
  "exit": 124,
  "duration_s": 1500.0,
- "bytes": 80581,
+ "bytes": 54717,
  "extra": "",
  "prompt_file": "prompt.txt"
 }

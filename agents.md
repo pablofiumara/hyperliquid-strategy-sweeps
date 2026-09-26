@@ -102,6 +102,8 @@ against the wallet prompt in the same sweep; rejected ids are recorded in
 Skipped entirely in `--dry-run`.
 
 - `--jobs N` parallel agents; `--timeout S` per-run kill (1500 s was used);
+  Standing rule: `--jobs` = number of free models (all parallel — 30
+  parallel jobs verified working on 2026-09-22);
 - `--resume` skips models whose run already wrote output (restart-safe);
 - `--force` rerun even if a result exists;
 - `--only X` filters on label substring or tool name.
@@ -117,6 +119,12 @@ Skipped entirely in `--dry-run`.
 - **Critical bug fixed during sweep #1:** agents MUST be launched with
   stdin=/dev/null (`timeout ... < /dev/null`); otherwise they inherit the
   driver loop's stdin and hang (run-models.sh line ~281).
+- **Independence rule (2026-09-22, standing):** every run must be a fully
+  independent derivation from on-chain data. Agents are forbidden from
+  reading any repo files (other models' reports, agents.md, README,
+  manifests) — enforced by a clause in each wallet's `prompt.txt` plus an
+  isolated work dir outside the repo for reruns. Reports that read the
+  existing consensus are corroboration, not independent evidence.
 - Wall time: full 30-model sweep ≈ 1.5–2 h at `--jobs 6`.
 
 ## 3b. Adding a new wallet

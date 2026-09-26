@@ -200,7 +200,7 @@ build_cmd() {  # tool model variant extra work prompt mode(run|probe) -> fills C
 
 classify() {  # file exitcode -> verdict
   local f="$1" code="$2"
-  if grep -qiE 'insufficient (credit|fund|balance)|not enough credit|out of credit|no credits|payment required|requires? (a )?(paid|subscription|upgrade|credit)|upgrade (to|your) (plan|account)|not available on (the )?free|no free (access|quota)|402 |billing' "$f"; then
+  if grep -qiE 'insufficient (credit|fund|balance)|not enough credit|out of credit|no credits|payment required|requires? (a )?(paid|subscription|upgrade|credit)|upgrade (to|your) (plan|account)|not available on (the )?free|no free (access|quota)|402 payment required|status code 402|error 402|billing' "$f"; then
     echo NOT_FREE; return; fi
   if grep -qiE 'rate limit|429|too many requests|quota exceeded|temporarily unavailable' "$f"; then
     echo RATE_LIMITED; return; fi
@@ -305,7 +305,7 @@ work_one() {  # tool model label variant extra
   dur=$((t1 - t0))
   bytes=$(wc -c < "$dir/output.txt")
   if [ "$code" = 124 ]; then status="TIMEOUT"
-  elif grep -qiE 'insufficient (credit|fund|balance)|not enough credit|out of credit|payment required|402 ' "$dir/output.txt"; then status="NOT_FREE"
+  elif grep -qiE 'insufficient (credit|fund|balance)|not enough credit|out of credit|payment required|402 payment required|status code 402|error 402' "$dir/output.txt"; then status="NOT_FREE"
   elif [ "$code" != "0" ]; then status="FAILED"
   else status="DONE"; fi
   # NOTE: no separate exit file -- the exit code lives ONLY in meta.json

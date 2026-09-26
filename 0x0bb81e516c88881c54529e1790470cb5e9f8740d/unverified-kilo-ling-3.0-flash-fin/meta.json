@@ -1,14 +1,15 @@
 {
+ "wallet": "0x0bb81e516c88881c54529e1790470cb5e9f8740d",
  "label": "unverified-kilo-ling-3.0-flash-fin",
  "tool": "kilo",
  "model": "kilo/inclusionai/ling-3.0-flash-fin:free",
  "variant": "thinking",
  "free_gate": "ok",
- "probe": "OK",
+ "probe": "skipped",
  "status": "DONE",
  "exit": 0,
- "duration_s": 7.0,
- "bytes": 467,
+ "duration_s": 174.0,
+ "bytes": 82476,
  "extra": "",
  "prompt_file": "prompt.txt"
 }

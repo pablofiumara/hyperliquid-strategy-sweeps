@@ -1,14 +1,15 @@
 {
+ "wallet": "0x0bb81e516c88881c54529e1790470cb5e9f8740d",
  "label": "unverified-kilo-nex-n2.5-pro",
  "tool": "kilo",
  "model": "kilo/nex-agi/nex-n2.5-pro:free",
  "variant": "high",
  "free_gate": "ok",
  "probe": "OK",
- "status": "FAILED",
- "exit": 1,
- "duration_s": 576.0,
- "bytes": 217047,
+ "status": "DONE",
+ "exit": 0,
+ "duration_s": 713.0,
+ "bytes": 60126,
  "extra": "",
  "prompt_file": "prompt.txt"
 }

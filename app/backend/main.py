@@ -35,7 +35,7 @@ app.add_middleware(
 
 
 class Rating(BaseModel):
-    value: int  # +1 interesting, -1 not
+    value: int  # +1 interesting, -1 not, 0 = undo (delete rating)
 
 
 @app.post("/api/import")
@@ -140,18 +140,21 @@ def run_detail_by_label(address: str, label: str):
 
 @app.post("/api/runs/{run_id}/rating")
 def rate(run_id: int, body: Rating):
-    if body.value not in (-1, 1):
-        raise HTTPException(422, "value must be -1 or 1")
+    if body.value not in (-1, 0, 1):
+        raise HTTPException(422, "value must be -1, 0, or 1")
     if not db.query("SELECT id FROM runs WHERE id = %s", (run_id,), one=True):
         raise HTTPException(404, "run not found")
-    db.execute(
-        """
-        INSERT INTO ratings (run_id, value) VALUES (%s, %s)
-        ON CONFLICT (run_id) DO UPDATE
-            SET value = EXCLUDED.value, updated_at = now()
-        """,
-        (run_id, body.value),
-    )
+    if body.value == 0:
+        db.execute("DELETE FROM ratings WHERE run_id = %s", (run_id,))
+    else:
+        db.execute(
+            """
+            INSERT INTO ratings (run_id, value) VALUES (%s, %s)
+            ON CONFLICT (run_id) DO UPDATE
+                SET value = EXCLUDED.value, updated_at = now()
+            """,
+            (run_id, body.value),
+        )
     score = db.query(
         """
         SELECT COALESCE(SUM(COALESCE(rt.value, 0)), 0) AS total

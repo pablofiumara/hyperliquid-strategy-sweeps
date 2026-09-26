@@ -16,16 +16,16 @@ DONE	opencode	opencode/muse-spark-1.2-contributor-free	xhigh	OK	ok	0	228.0	18377
 DONE	opencode	opencode/muse-spark-1.3-contributor-free	xhigh	OK	ok	0	187.0	55508	oc-muse-spark-1.3
 DONE	opencode	opencode/nemotron-3-ultra-free		OK	ok	0	10.0	714	oc-nemotron-3-ultra
 DONE	opencode	opencode/nemotron-3.5-lightning-free		OK	ok	0	419.0	8566	oc-nemotron-3.5-lightning
-DONE	kilo	kilo/inclusionai/ling-3.0-flash-fin:free	thinking	OK	ok	0	7.0	467	unverified-kilo-ling-3.0-flash-fin
+DONE	kilo	kilo/inclusionai/ling-3.0-flash-fin:free	thinking	skipped	ok	0	174.0	82476	unverified-kilo-ling-3.0-flash-fin
 DONE	kilo	kilo/inclusionai/ling-3.0-flash-sante:free	thinking	OK	ok	0	113.0	88268	unverified-kilo-ling-3.0-flash-sante
-DONE	kilo	kilo/nvidia/nemotron-3.5-lightning:free	thinking	skipped	ok	0	770.0	3114	unverified-kilo-nemotron-3.5-lightning
 DONE	kilo	kilo/nex-agi/nex-n2.5-mini:free	high	OK	ok	0	548.0	327425	unverified-kilo-nex-n2.5-mini
+DONE	kilo	kilo/nex-agi/nex-n2.5-pro:free	high	OK	ok	0	713.0	60126	unverified-kilo-nex-n2.5-pro
 SKIPPED_NOT_FREE	kilo	kilo/deepseek/deepseek-v4-flash-0731:free	max	ERROR	ok	1	0.0	960	kilo-deepseek-v4-flash-0731
 SKIPPED_NOT_FREE	opencode	opencode/jev-1.13-free		ERROR	ok	1	0.0	76	oc-jev-1.13
 SKIPPED_NOT_FREE	kilo	kilo/thinkingmachines/inkling-small:free	max	ERROR	ok	124	0.0	56	unverified-kilo-inkling-small
 SKIPPED_NOT_FREE	kilo	kilo/qwen/qwen3.8-27b:free	xhigh	ERROR	ok	124	0.0	42	unverified-kilo-qwen3.8-27b
 TIMEOUT	cline	z-ai/glm-5.3-flash	xhigh	OK	ok	124	1500.0	101733	cline-glm-5.3-flash
 TIMEOUT	cline	poolside/laguna-s-2.1:free	xhigh	OK	ok	124	1500.0	453502	cline-laguna-s-2.1
-TIMEOUT	kilo	kilo/poolside/laguna-xs-2.1:free	thinking	OK	ok	124	1500.0	80581	kilo-laguna-xs-2.1
+TIMEOUT	kilo	kilo/poolside/laguna-xs-2.1:free	thinking	OK	ok	124	1500.0	54717	kilo-laguna-xs-2.1
 FAILED	cline	cline-free/deepseek-v4.1-flash	xhigh	OK	ok	1	489.0	946777	cline-deepseek-v4.1-flash
-FAILED	kilo	kilo/nex-agi/nex-n2.5-pro:free	high	OK	ok	1	576.0	217047	unverified-kilo-nex-n2.5-pro
+FAILED	kilo	kilo/nvidia/nemotron-3.5-lightning:free	thinking	skipped	ok	1	369.0	270	unverified-kilo-nemotron-3.5-lightning

@@ -56,7 +56,7 @@ export const getRun = (id: number) => api<RunDetail>(`/api/runs/${id}`);
 export const getRunByLabel = (wallet: string, label: string) =>
   api<RunDetail>(`/api/wallets/${encodeURIComponent(wallet)}/runs/${encodeURIComponent(label)}`);
 
-export async function rate(runId: number, value: -1 | 1) {
+export async function rate(runId: number, value: -1 | 0 | 1) {
   const res = await fetch(`/api/runs/${runId}/rating`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },

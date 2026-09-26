@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   genSummary,
   getRunByLabel,
@@ -123,6 +123,25 @@ function viewFromPath(path: string): View {
 }
 
 
+/** Card that behaves like a link: left-click navigates in-app (SPA), while
+    middle-click / right-click "open in new tab" works because it's a real
+    <a href>. */
+function CardLink({ href, onNav, children }: { href: string; onNav: () => void; children: ReactNode }) {
+  return (
+    <a
+      className="card"
+      href={href}
+      onClick={(e) => {
+        if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+        e.preventDefault();
+        onNav();
+      }}
+    >
+      {children}
+    </a>
+  );
+}
+
 export default function App() {
   const [view, setView] = useState<View>(() => viewFromPath(location.pathname));
   useBuildWatcher();
@@ -192,12 +211,12 @@ function WalletList({ onOpen }: { onOpen: (a: string) => void }) {
   return (
     <>
       {wallets.map((w) => (
-        <div key={w.address} className="card" onClick={() => onOpen(w.address)}>
+        <CardLink key={w.address} href={pathFor({ page: "runs", wallet: w.address })} onNav={() => onOpen(w.address)}>
           <span className="mono">{w.address}</span>
           <span className="dim">
             {w.runs} runs · {w.done} done
           </span>
-        </div>
+        </CardLink>
       ))}
     </>
   );
@@ -312,7 +331,7 @@ function RunList({
         </div>
       </div>
       {runs.map((r) => (
-        <div key={r.id} className="card" onClick={() => onOpen(r.label)}>
+        <CardLink key={r.id} href={pathFor({ page: "run", wallet, label: r.label })} onNav={() => onOpen(r.label)}>
           <div>
             <div>{r.label}</div>
             <div className="dim" style={{ fontSize: 12 }}>
@@ -327,7 +346,7 @@ function RunList({
             </span>
             <span className={`pill ${r.display_status}`}>{r.display_status}</span>
           </div>
-        </div>
+        </CardLink>
       ))}
     </>
   );
@@ -348,8 +367,10 @@ function RunPage({ wallet, label, onBack }: { wallet: string; label: string; onB
   }, 10000);
 
   async function vote(value: -1 | 1) {
-    if (!run || run.my_rating === value) return;
-    const res = await rate(run.id, value);
+    if (!run) return;
+    // Clicking the active rating again undoes it (resets to 0).
+    const next: -1 | 0 | 1 = run.my_rating === value ? 0 : value;
+    const res = await rate(run.id, next);
     const fresh = await getRunByLabel(wallet, label);
     setRun({ ...fresh, global_score: res.model_global_score });
   }

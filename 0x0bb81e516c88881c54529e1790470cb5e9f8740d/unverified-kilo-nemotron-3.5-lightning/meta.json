@@ -6,10 +6,10 @@
  "variant": "thinking",
  "free_gate": "ok",
  "probe": "skipped",
- "status": "DONE",
- "exit": 0,
- "duration_s": 770.0,
- "bytes": 3114,
+ "status": "FAILED",
+ "exit": 1,
+ "duration_s": 369.0,
+ "bytes": 270,
  "extra": "",
  "prompt_file": "prompt.txt"
 }
