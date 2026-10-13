@@ -1,3 +1,4 @@
+import os
 import pathlib
 from contextlib import asynccontextmanager
 
@@ -8,6 +9,7 @@ from pydantic import BaseModel
 import db
 from importer import DATA_DIR, import_all
 from cleanup import cleanup_all, cleanup_wallet
+from ask import ask_report, is_free_model, list_free_models
 
 
 def _norm_summary(row):
@@ -22,6 +24,7 @@ def _norm_summary(row):
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     try:
+        db.ensure_conversations_table()
         import_all()
     except Exception as e:  # db not ready yet -> frontend still boots
         print(f"startup import skipped: {e}")
@@ -38,9 +41,20 @@ class Rating(BaseModel):
     value: int  # +1 interesting, -1 not, 0 = undo (delete rating)
 
 
+class AskRequest(BaseModel):
+    question: str
+    tool: str | None = None
+    model: str | None = None
+
+
 @app.post("/api/import")
 def do_import():
     return import_all()
+
+
+@app.get("/api/models/free")
+def free_models():
+    return list_free_models()
 
 
 @app.get("/api/wallets")
@@ -63,11 +77,12 @@ def wallet_runs(address: str):
                r.duration_s, r.bytes, r.context_size,
                COALESCE(rt.value, 0)  AS my_rating,
                COALESCE(g.total, 0)   AS global_score,
-               r.has_real_report      AS has_report,
-               CASE
-                   WHEN r.has_real_report AND r.status <> 'DONE' THEN 'DONE'
-                   ELSE r.status
-               END                    AS display_status
+                r.has_real_report      AS has_report,
+                CASE
+                    WHEN r.has_real_report THEN 'DONE'
+                    WHEN r.status = 'DONE' AND NOT r.has_real_report THEN 'FAILED'
+                    ELSE r.status
+                END                    AS display_status
         FROM runs r
         LEFT JOIN ratings rt ON rt.run_id = r.id
         LEFT JOIN (
@@ -96,6 +111,16 @@ def _enrich_run(run):
     )
     run = dict(run)
     run["global_score"] = score["total"] if score else 0
+    # DONE requires a real strategy report; a DONE run without one is
+    # surfaced as FAILED so the UI never shows DONE with "No report".
+    status = run.get("status")
+    has_report = bool(run.get("has_real_report"))
+    if has_report:
+        run["display_status"] = "DONE"
+    elif status == "DONE":
+        run["display_status"] = "FAILED"
+    else:
+        run["display_status"] = status
     return run
 
 
@@ -104,6 +129,7 @@ def run_detail(run_id: int):
     run = db.query("SELECT * FROM runs WHERE id = %s", (run_id,), one=True)
     if not run:
         raise HTTPException(404, "run not found")
+    run["has_report"] = bool(run.get("has_real_report"))
     report = None
     if run["report_path"]:
         p = pathlib.Path(run["report_path"])
@@ -126,6 +152,7 @@ def run_detail_by_label(address: str, label: str):
     )
     if not run:
         raise HTTPException(404, "run not found")
+    run["has_report"] = bool(run.get("has_real_report"))
     report = None
     if run["report_path"]:
         p = pathlib.Path(run["report_path"])
@@ -185,6 +212,55 @@ def leaderboard():
                  COALESCE(MAX(r.context_size), 0) DESC, r.model
         """
     )
+
+
+@app.get("/api/runs/{run_id}/conversations")
+def conversations(run_id: int):
+    if not db.query("SELECT id FROM runs WHERE id = %s", (run_id,), one=True):
+        raise HTTPException(404, "run not found")
+    rows = db.list_conversations(run_id)
+    out = []
+    for r in rows:
+        r = dict(r)
+        if hasattr(r.get("created_at"), "isoformat"):
+            r["created_at"] = r["created_at"].isoformat()
+        out.append(r)
+    return out
+
+
+@app.post("/api/runs/{run_id}/ask")
+def ask_run(run_id: int, body: AskRequest):
+    run = db.query("SELECT * FROM runs WHERE id = %s", (run_id,), one=True)
+    if not run:
+        raise HTTPException(404, "run not found")
+    path = run.get("report_path")
+    if not path or not os.path.isfile(path):
+        raise HTTPException(404, "no report for this run")
+    question = (body.question or "").strip()
+    if not question:
+        raise HTTPException(422, "question is empty")
+    text = open(path, encoding="utf-8", errors="replace").read()
+    free = list_free_models()
+    tool = body.tool
+    model = body.model
+    if (tool or model) and not is_free_model(tool, model):
+        raise HTTPException(422, "selected model is not a free $0 model")
+    if not tool or not model:
+        if not free:
+            raise HTTPException(503, "no free models available")
+        tool = free[0]["tool"]
+        model = free[0]["model"]
+    history = db.list_conversations(run_id)
+    try:
+        result = ask_report(text, question, history, tool, model)
+    except Exception as exc:
+        raise HTTPException(502, f"ask failed: {exc}")
+    db.add_conversation(run_id, question, result["answer"], result["model"], result["citations"])
+    return {
+        "answer": result["answer"],
+        "model": result["model"],
+        "citations": result["citations"],
+    }
 
 
 @app.get("/api/wallets/{address}/summary")

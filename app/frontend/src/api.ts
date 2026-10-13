@@ -19,6 +19,34 @@ export type RunDetail = Run & {
   my_rating: number;
 };
 
+export type Conversation = {
+  id: number;
+  question: string;
+  answer: string;
+  model: string | null;
+  citations: number[] | null;
+  created_at: string;
+};
+
+export async function getConversations(runId: number) {
+  return api<Conversation[]>(`/api/runs/${runId}/conversations`);
+}
+
+export async function askRun(runId: number, question: string, tool?: string | null, model?: string | null) {
+  const res = await fetch(`/api/runs/${runId}/ask`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ question, tool: tool || null, model: model || null }),
+  });
+  if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+  return (await res.json()) as { answer: string; tool?: string; model: string; citations: number[] };
+}
+
+export type FreeModel = { tool: string; model: string; name: string; free: boolean; price: string };
+export async function getFreeModels() {
+  return api<FreeModel[]>("/api/models/free");
+}
+
 async function api<T>(path: string): Promise<T> {
   const res = await fetch(path);
   if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);

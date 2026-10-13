@@ -41,6 +41,41 @@ def execute(sql, args=None):
         pool().putconn(conn)
 
 
+def ensure_conversations_table() -> None:
+    execute(
+        """
+        CREATE TABLE IF NOT EXISTS conversations (
+            id          SERIAL PRIMARY KEY,
+            run_id      INT NOT NULL REFERENCES runs(id) ON DELETE CASCADE,
+            question    TEXT NOT NULL,
+            answer      TEXT NOT NULL,
+            model       TEXT,
+            citations   JSONB,
+            created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+        )
+        """
+    )
+    execute(
+        "CREATE INDEX IF NOT EXISTS conversations_run_idx ON conversations(run_id)"
+    )
+
+
+def list_conversations(run_id: int):
+    return query(
+        "SELECT id, question, answer, model, citations, created_at "
+        "FROM conversations WHERE run_id = %s ORDER BY created_at",
+        (run_id,),
+    )
+
+
+def add_conversation(run_id: int, question: str, answer: str, model: str | None, citations) -> None:
+    import json as _json
+    execute(
+        "INSERT INTO conversations (run_id, question, answer, model, citations) VALUES (%s,%s,%s,%s,%s)",
+        (run_id, question, answer, model, _json.dumps(citations or [])),
+    )
+
+
 def get_summary(wallet: str):
     return query(
         "SELECT * FROM wallet_summaries WHERE wallet = %s", (wallet,), one=True

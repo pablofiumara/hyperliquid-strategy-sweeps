@@ -1,11 +1,16 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
+  askRun,
   genSummary,
+  getConversations,
+  getFreeModels,
   getRunByLabel,
   getRuns,
   getSummary,
   getWallets,
   rate,
+  type Conversation,
+  type FreeModel,
   type Run,
   type RunDetail,
   type Wallet,
@@ -355,6 +360,12 @@ function RunList({
 function RunPage({ wallet, label, onBack }: { wallet: string; label: string; onBack: () => void }) {
   const [run, setRun] = useState<RunDetail | null>(null);
   const [err, setErr] = useState("");
+  const [convos, setConvos] = useState<Conversation[] | null>(null);
+  const [question, setQuestion] = useState("");
+  const [asking, setAsking] = useState(false);
+  const [askErr, setAskErr] = useState("");
+  const [freeModels, setFreeModels] = useState<FreeModel[]>([]);
+  const [selected, setSelected] = useState<string>("");
   usePoll(() => {
     getRunByLabel(wallet, label)
       .then((r) => {
@@ -365,6 +376,50 @@ function RunPage({ wallet, label, onBack }: { wallet: string; label: string; onB
         if (!run) setErr(String(e));
       });
   }, 10000);
+
+  useEffect(() => {
+    if (run?.id) {
+      getConversations(run.id)
+        .then((c) => setConvos(c))
+        .catch(() => setConvos([]));
+    }
+  }, [run?.id]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      for (let i = 0; i < 3 && !cancelled; i++) {
+        try {
+          const m = await getFreeModels();
+          if (cancelled) return;
+          setFreeModels(m);
+          setSelected((prev) => prev || (m.length ? m[0].name : prev));
+          return;
+        } catch {
+          if (i < 2) await new Promise((r) => setTimeout(r, 1000));
+        }
+      }
+          if (!cancelled) setFreeModels([]);
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  async function ask() {
+    if (!run || !question.trim()) return;
+    setAsking(true);
+    setAskErr("");
+    try {
+      const fm = freeModels.find((x) => x.name === selected);
+      await askRun(run.id, question.trim(), fm?.tool, fm?.model);
+      setQuestion("");
+      const c = await getConversations(run.id);
+      setConvos(c);
+    } catch (e) {
+      setAskErr(String(e));
+    } finally {
+      setAsking(false);
+    }
+  }
 
   async function vote(value: -1 | 1) {
     if (!run) return;
@@ -402,6 +457,41 @@ function RunPage({ wallet, label, onBack }: { wallet: string; label: string; onB
       ) : (
         <p className="dim">No strategy report for this run.</p>
       )}
+      {run.has_report ? (
+        <div className="card" style={{ cursor: "default", marginTop: 12 }}>
+          <div style={{ marginBottom: 8, fontWeight: 700 }}>💬 Ask about this report</div>
+          <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+            <select value={selected} onChange={(e) => setSelected(e.target.value)} style={{ minWidth: 260 }}>
+              {freeModels.length ? (
+                freeModels.map((m) => (
+                  <option key={m.name} value={m.name}>
+                    {m.tool}/{m.model} {m.price}
+                  </option>
+                ))
+              ) : (
+                <option value="">No free models</option>
+              )}
+            </select>
+            <input
+              style={{ flex: 1 }}
+              value={question}
+              onChange={(e) => setQuestion(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && ask()}
+              placeholder="Ask a follow-up question…"
+            />
+            <button className="primary" onClick={ask} disabled={asking || !question.trim() || !selected}>
+              {asking ? "Asking…" : "Ask"}
+            </button>
+          </div>
+          {askErr ? <p className="dim">{askErr}</p> : null}
+          {(convos || []).map((c) => (
+            <div key={c.id} style={{ marginBottom: 12 }}>
+              <div style={{ fontWeight: 600 }}>Q: {c.question}</div>
+              <pre className="report" style={{ marginTop: 4 }}>{c.answer}</pre>
+            </div>
+          ))}
+        </div>
+      ) : null}
       <FixedRatingBar run={run} onVote={vote} onBack={onBack} />
     </>
   );

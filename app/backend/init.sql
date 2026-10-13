@@ -52,3 +52,15 @@ ALTER TABLE runs ADD COLUMN IF NOT EXISTS context_size INT;
 -- (exit 124) yet still have produced a complete report; the pill should
 -- show DONE in that case.
 ALTER TABLE runs ADD COLUMN IF NOT EXISTS has_real_report BOOLEAN DEFAULT FALSE;
+
+-- Follow-up Q&A conversations on a stored answer (RAG over its report).
+CREATE TABLE IF NOT EXISTS conversations (
+    id         SERIAL PRIMARY KEY,
+    run_id     INT NOT NULL REFERENCES runs(id) ON DELETE CASCADE,
+    question   TEXT NOT NULL,
+    answer     TEXT NOT NULL,
+    model      TEXT,
+    citations  JSONB,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS conversations_run_idx ON conversations(run_id);
