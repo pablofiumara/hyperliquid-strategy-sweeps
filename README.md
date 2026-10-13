@@ -19,7 +19,8 @@ reference: [agents.md §7](agents.md).
 ## Repo layout
 
 ```text
-run-models.sh          sweep driver (--wallet, --check-new, --resume, --dry-run)
+run-models.sh          sweep driver (--wallet, --probe-jobs, --resume, --dry-run)
+discovery.tsv          append-only history of free-check probe verdicts
 models.tsv             model registry: tool | model | label | variant | extra-args
 lib/parse_free.py      parse kilo/opencode free-model listings
 lib/extract_report.py  build strategy_report.md in every run dir (all wallets)
@@ -36,9 +37,11 @@ Makefile               make start | stop | logs | import | psql | clean
 
 ## How it works
 
-1. **Discover free models** — `./run-models.sh --wallet 0x… --check-new`
-   diffs each tool's live free list against `models.tsv`, probes unknown ids
-   with a tiny request, and only then adds them.
+1. **Verify free models** — every sweep, before anything is prompted: the
+   driver polls each tool's live free list and probes every listed model with a
+   tiny request. Only models that come back `$0`-free reach the real prompt,
+   and newly free ones are added to `models.tsv` automatically. Verdicts are
+   never cached across sweeps (`--no-verify` / `--no-check-free` opt out).
 2. **Run the prompt** — each agent gets `prompt.txt` for the wallet and must
    produce a strategy description. Runs are gated, logged, and resumable
    (`--resume`, `--jobs`, `--timeout`).

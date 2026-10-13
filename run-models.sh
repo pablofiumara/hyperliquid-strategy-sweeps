@@ -2,22 +2,36 @@
 # run-models.sh - run one prompt across many models for ONE wallet.
 # Layout: <wallet-address>/<model-label>/...  (one folder per wallet+model)
 #
-#   ./run-models.sh --wallet 0xABC...                 free-check + real prompt for every model
-#   ./run-models.sh --wallet 0xABC... --check-new     + discover NEW free models first
+#   ./run-models.sh --wallet 0xABC...                 verify all free models, then run
 #   ./run-models.sh --wallet 0xABC... --dry-run       print every command, no API calls
-#   ./run-models.sh --wallet 0xABC... --stage verify  only the tiny free-check probe
+#   ./run-models.sh --wallet 0xABC... --stage verify  only the free-check probes
 #   ./run-models.sh --wallet 0xABC... --jobs 6 --only kilo
+#   ./run-models.sh --wallet 0xABC... --no-verify     skip the up-front probe phase
+#   ./run-models.sh --wallet 0xABC... --probe-jobs 8  concurrency for the probe phase
 #
-# Every model is free-checked at run time (pricing changes):
-#   stage A metadata : cline -> .free[] from api.cline.bot; kilo -> isFree; opencode -> cost==0
-#   stage B probe    : tiny "Reply OK" call, plan agent, paywall => skipped
-#   stage C run      : the real prompt, output captured in <label>/
+# EVERY model is verified $0-free at run time, before ANY prompt is sent
+# (prices and free tiers change without notice, so nothing is trusted from a
+# previous sweep):
+#   stage 0 rating    : model has a -1 rating in the app => never contacted
+#   stage A metadata  : poll each tool's CURRENT free list
+#                       cline -> .free[] from api.cline.bot
+#                       kilo  -> isFree AND every cost field 0
+#                       opencode -> input/output/cache read+write all 0
+#   stage B probe     : one tiny "Reply OK" call per free model, run for the
+#                       whole sweep up front by verify_all(); plan agent, so a
+#                       paywall or auth error shows up as a verdict
+#   stage C run       : the real prompt, output captured in <label>/
 #
-# --check-new: pull each tool's CURRENT free list, diff against models.tsv,
-# probe every unknown id ("100% sure" = listed free AND probe OK), append the
-# verified ones to models.tsv (label auto-generated) and run them with the
-# rest. Rejections are recorded in discovery.tsv and never re-probed.
+# A model only reaches stage C if it is listed free RIGHT NOW and its probe
+# returned OK. Anything else is skipped, so a sweep cannot spend money.
 set -uo pipefail
+
+# Print the usage header: every leading comment line after the shebang. Reading
+# the docs from the same place the docs live keeps --help from going stale when
+# the comment block grows.
+help_header() {
+  awk 'NR>1 && /^#/ {sub(/^# ?/, ""); print; next} NR>1 {exit}' "$1"
+}
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MODELS_FILE="$ROOT/models.tsv"
@@ -25,8 +39,9 @@ PROMPT_FILE="$ROOT/prompt.txt"
 JOBS=4
 TIMEOUT_SECS=1800
 PROBE_TIMEOUT=180
+PROBE_JOBS=4
 CHECK_FREE=1
-STRICT_METADATA=0
+VERIFY=1
 DRY_RUN=0
 STAGE=run
 ONLY=""
@@ -34,7 +49,6 @@ FORCE=0
 RESUME=0
 WALLET=""
 PROMPT_FILE_SET=0
-CHECK_NEW=0
 
 PROBE_PROMPT="Reply with exactly: OK"
 
@@ -42,18 +56,18 @@ while [ $# -gt 0 ]; do
   case "$1" in
     --jobs) JOBS="$2"; shift 2;;
     --timeout) TIMEOUT_SECS="$2"; shift 2;;
+    --probe-jobs) PROBE_JOBS="$2"; shift 2;;
     --models) MODELS_FILE="$2"; shift 2;;
     --prompt-file) PROMPT_FILE="$2"; PROMPT_FILE_SET=1; shift 2;;
     --wallet) WALLET="$2"; shift 2;;
-    --check-new) CHECK_NEW=1; shift;;
     --only) ONLY="$2"; shift 2;;
     --stage) STAGE="$2"; shift 2;;
-    --no-check-free) CHECK_FREE=0; shift;;
-    --strict-metadata) STRICT_METADATA=1; shift;;
+    --no-check-free) CHECK_FREE=0; VERIFY=0; shift;;
+    --no-verify) VERIFY=0; shift;;
     --force) FORCE=1; shift;;
     --resume) RESUME=1; shift;;
     --dry-run) DRY_RUN=1; shift;;
-    -h|--help) sed -n '2,22p' "$0"; exit 0;;
+    -h|--help) help_header "$0"; exit 0;;
     *) echo "unknown option: $1" >&2; exit 2;;
   esac
 done
@@ -121,56 +135,106 @@ model_blocked() {  # model -> 0 if it has a -1 rating in the app db
   [ -n "$1" ] && [ -n "${BLOCKED:-}" ] && printf '%s\n' "$BLOCKED" | grep -qxF "$1"
 }
 
-# ------------------------------------------------------- new-model discovery
-DISCOVERY_FILE="$ROOT/discovery.tsv"   # tool | model | verdict | date | note
+# ------------------------------------------------- pre-sweep free verification
+# Verdict cache: tool \t model \t verdict. Rebuilt from scratch every sweep --
+# free tiers change without notice, so a verdict from yesterday proves nothing
+# about whether we can spend money on the model today.
+DISCOVERY_FILE="$ROOT/discovery.tsv"   # tool | model | verdict | date | note (history)
 
-discovery_verdict() {  # tool model -> recorded verdict, if any
-  awk -F'\t' -v t="$1" -v m="$2" '$1==t && $2==m {print $3; exit}' "$DISCOVERY_FILE" 2>/dev/null
+# probe_verdict tool model -> OK | NOT_FREE | RATE_LIMITED | AUTH_ERROR | ERROR | EMPTY | MISSING
+probe_verdict() {
+  awk -F'\t' -v t="$1" -v m="$2" '$1==t && $2==m {print $3; exit}' \
+    "$TMP/verdicts.tsv" 2>/dev/null
 }
 
-record_discovery() {  # tool model verdict note
-  grep -qP "^$1\t\Q$2\E\t" "$DISCOVERY_FILE" 2>/dev/null && return 0
+record_discovery() {  # tool model verdict note  (append-only history, latest wins)
   printf '%s\t%s\t%s\t%s\t%s\n' "$1" "$2" "$3" "$(date +%F)" "$4" >> "$DISCOVERY_FILE"
 }
 
-discover_new() {
-  # free lists are already in $TMP (load_free_lists ran). "known" = in
-  # models.tsv OR already in discovery.tsv. Only unknown ids get probed;
-  # verdict "free" requires: listed free NOW and probe OK (100% sure rule).
-  local added=0
+# Probe one model and cache its verdict. Runs in a background subshell, so it
+# only ever appends a single line to the shared cache file.
+probe_one() {  # tool model variant extra
+  local tool="$1" model="$2" variant="$3" extra="$4"
+  local pd; pd="$(mktemp -d "$TMP/probe.XXXXXX")"
+  build_cmd "$tool" "$model" "$variant" "$extra" "$pd" "$PROBE_PROMPT" probe
+  timeout "$PROBE_TIMEOUT" "${CMD[@]}" > "$pd/probe.txt" 2>&1 < /dev/null
+  local code=$?
+  local verdict; verdict="$(classify "$pd/probe.txt" "$code")"
+  printf '%s\t%s\t%s\n' "$tool" "$model" "$verdict" >> "$TMP/verdicts.tsv"
+  rm -rf "$pd"
+}
+
+# What gets probed: ONLY ids a tool currently lists as $0-free, minus any the
+# rating gate blocks. This is the money-safety boundary -- the probe is itself
+# a billable call, so a model the provider does not advertise as free is never
+# even contacted, let alone sent the real prompt. Curated rows contribute their
+# variant/extra-args, and are dropped if they are not in a live free list.
+verify_targets() {
+  : > "$TMP/targets.tsv"
+  local tool model variant extra
   for tool in cline kilo opencode; do
-    local list="$TMP/free_$tool.txt"
-    [ -s "$list" ] || continue
+    [ -s "$TMP/free_$tool.txt" ] || continue
     while IFS= read -r model; do
       [ -n "$model" ] || continue
-      grep -qP "^$tool\|\Q$model\E\|" "$MODELS_FILE" && continue       # already swept
-      [ -n "$(discovery_verdict "$tool" "$model")" ] && continue       # already judged
-      model_blocked "$model" && continue                               # rated negative: no prompts, not even a probe
-      local label
-      label="new-$(printf '%s' "$model" | tr -c 'A-Za-z0-9._-' '-' | sed 's/-\{2,\}/-/g;s/^-//;s/-$//')"
-      label="$(printf '%s' "$label" | cut -c1-60)"
-      label="new-$tool-${label#new-}"
-      log "PROBE new $tool model: $model"
-      local pd="$TMP/newprobe.$$"
-      mkdir -p "$pd"
-      build_cmd "$tool" "$model" "" "" "$pd" "$PROBE_PROMPT" probe
-      timeout "$PROBE_TIMEOUT" "${CMD[@]}" > "$pd/probe.txt" 2>&1 < /dev/null
-      local pcode=$?
-      local verdict
-      verdict="$(classify "$pd/probe.txt" "$pcode")"
-      if [ "$verdict" = OK ]; then
-        record_discovery "$tool" "$model" free "probe OK, added to models.tsv"
-        printf '%s|%s|%s||\n' "$tool" "$model" "$label" >> "$MODELS_FILE"
-        log "FREE  $model -> added as label '$label'"
-        added=$((added + 1))
-      else
-        record_discovery "$tool" "$model" "$verdict" "probe verdict"
-        log "not free ($verdict): $model (recorded in discovery.tsv)"
-      fi
-      rm -rf "$pd"
-    done < "$list"
+      model_blocked "$model" && continue
+      printf '%s\t%s\t\t\n' "$tool" "$model" >> "$TMP/targets.tsv"
+    done < "$TMP/free_$tool.txt"
   done
-  log "discovery done: $added new free model(s) added to models.tsv"
+  # hand curated rows their variant/extra so the probe matches the real run
+  while IFS='|' read -r tool model label variant extra; do
+    [ -z "${label:-}" ] || continue
+    [ -z "${model:-}" ] || continue
+    grep -qP "^\Q$tool\E\t\Q$model\E\t" "$TMP/targets.tsv" 2>/dev/null || continue
+    awk -F'\t' -v OFS='\t' -v t="$tool" -v m="$model" -v v="${variant:-}" -v x="${extra:-}" \
+      '($1==t && $2==m) { if ($3=="" && $4=="") { $3=v; $4=x } print; next } { print }' \
+      "$TMP/targets.tsv" > "$TMP/targets.new" && mv "$TMP/targets.new" "$TMP/targets.tsv"
+  done < <(rows)
+}
+
+# Probe EVERY free model before the sweep spends anything on the real prompt.
+# A model whose probe fails here never reaches stage C at all.
+verify_all() {
+  : > "$TMP/verdicts.tsv"
+  verify_targets
+
+  local total; total=$(grep -c . "$TMP/targets.tsv" 2>/dev/null || echo 0)
+  [ "$total" -gt 0 ] || { log "verify: nothing to probe"; return 0; }
+  log "verify: probing $total free model(s) before the sweep (1 tiny call each)"
+
+  local running=0
+  while IFS=$'\t' read -r tool model variant extra; do
+    [ -n "${tool:-}" ] || continue
+    [ -n "${model:-}" ] || continue
+    probe_one "$tool" "$model" "${variant:-}" "${extra:-}" < /dev/null &
+    running=$((running + 1))
+    if [ "$running" -ge "$PROBE_JOBS" ]; then
+      wait -n 2>/dev/null || true
+      running=$((running - 1))
+    fi
+  done < "$TMP/targets.tsv"
+  wait
+
+  local ok; ok=$(awk -F'\t' '$3=="OK"' "$TMP/verdicts.tsv" 2>/dev/null | wc -l)
+  log "verify: $ok/$total confirmed \$0-free; the rest are blocked from the prompt"
+}
+
+# Promote verified models that are not in models.tsv yet, so a newly free
+# model joins the sweep instead of needing a manual edit.
+promote_new() {
+  local added=0 tool model verdict label
+  while IFS=$'\t' read -r tool model verdict; do
+    [ "$verdict" = OK ] || continue
+    grep -qP "^\Q$tool\E\|\Q$model\E\|" "$MODELS_FILE" 2>/dev/null && continue
+    label="new-$(printf '%s' "$model" | tr -c 'A-Za-z0-9._-' '-' | sed 's/-\{2,\}/-/g;s/^-//;s/-$//')"
+    label="$(printf '%s' "$label" | cut -c1-60)"
+    label="new-$tool-${label#new-}"
+    printf '%s|%s|%s||\n' "$tool" "$model" "$label" >> "$MODELS_FILE"
+    record_discovery "$tool" "$model" free "probe OK, added to models.tsv"
+    log "  + new free model '$label' ($model)"
+    added=$((added + 1))
+  done < "$TMP/verdicts.tsv"
+  [ "$added" -gt 0 ] && log "promote: $added new free model(s) added to models.tsv"
+  return 0
 }
 
 # ------------------------------------------------------------ command builder
@@ -231,11 +295,9 @@ PY
 work_one() {  # tool model label variant extra
   local tool="$1" model="$2" label="$3" variant="$4" extra="$5"
   local dir="$RUN_ROOT/$label"
-  local ptxt="$TMP/probe.$BASHPID"   # probe output: transient, never stored in run dir
-                                     # (verdict -> meta.json; paywall text -> output.txt on skip)
 
   # stage 0 - rating gate: never send prompts to a model with a negative
-  # rating in the rating app (covers probe AND run; see blocked_models).
+  # rating in the rating app (covers probe AND run; see model_blocked).
   # Checked before ANY side effect (no work dir, no probe). If a previous
   # sweep already produced a result for this label, leave that dir untouched
   # (no synthetic meta.json: it would clobber the real record and wipe
@@ -253,45 +315,68 @@ work_one() {  # tool model label variant extra
     return
   fi
 
+  # stage A - money gate. A model that is not in a tool's CURRENT free list is
+  # never run: both the probe and the real prompt would be billable calls on
+  # it. Checked before any workdir is created, so a blocked model leaves no
+  # trace and keeps any previous run record intact. Deliberately NOT gated on
+  # --force: rerunning a model is a normal request, spending money on it is not.
+  if [ "$CHECK_FREE" = 1 ] && ! metadata_free "$tool" "$model"; then
+    if [ -f "$dir/meta.json" ]; then
+      log "SKIP $label (not free per metadata; keeping previous run record)"
+    else
+      mkdir -p "$dir"
+      printf 'skipped: not in the current free list for %s (metadata gate)\n' "$tool" > "$dir/output.txt"
+      write_meta "$dir" "$WALLET" "$label" "$tool" "$model" "$variant" "not_free_metadata" "skipped" \
+        "SKIPPED_NOT_FREE" 1 0 0 "$extra"
+      log "SKIP $label (not in the current free list - not spending to find out)"
+    fi
+    return
+  fi
+
   local work="$dir/work"
   mkdir -p "$work"
   local gate="ok" probe="skipped" status="" code=0 t0 t1 dur bytes=0
 
-  # stage A - metadata gate. Advisory by default: the metadata flags have been wrong
-  # in BOTH directions on this account, so the probe (stage B) is the real decider.
-  # --strict-metadata makes a metadata miss fatal without probing.
-  if [ "$FORCE" = 0 ] && ! metadata_free "$tool" "$model"; then
-    gate="not_free_metadata"
-    if [ "$STRICT_METADATA" = 1 ]; then
-      status="SKIPPED_NOT_FREE"; probe="skipped"
-      printf 'skipped: not in free list for %s (metadata gate)\n' "$tool" > "$dir/output.txt"
-      write_meta "$dir" "$WALLET" "$label" "$tool" "$model" "$variant" "$gate" "$probe" "$status" 1 0 0 "$extra"
-      log "SKIP $label (not free per metadata, strict)"
-      return
-    fi
-    log "WARN $label not in free list per metadata - probing anyway"
-  fi
-
-  # stage B - probe with a tiny prompt using the read-only plan agent
-  if [ "$FORCE" = 0 ] && [ "$CHECK_FREE" = 1 ]; then
-    build_cmd "$tool" "$model" "$variant" "$extra" "$work" "$PROBE_PROMPT" probe
-    shquote "${CMD[@]}" > "$dir/probe.command.sh"
-    timeout "$PROBE_TIMEOUT" "${CMD[@]}" > "$ptxt" 2>&1 < /dev/null
-    code=$?
-    probe="$(classify "$ptxt" "$code")"
+  # stage B - verdict from the up-front probe phase (verify_all ran before the
+  # sweep, so no real prompt was ever sent to an unverified model). Re-probing
+  # here would double the API cost for no extra certainty. VERIFY=0 means the
+  # operator opted out: the metadata gate above is then the only gate.
+  if [ "$CHECK_FREE" = 1 ] && [ "$VERIFY" = 1 ]; then
+    probe="$(probe_verdict "$tool" "$model")"
+    [ -n "$probe" ] || probe="MISSING"
     if [ "$probe" != OK ]; then
       status="SKIPPED_NOT_FREE"; gate="ok"
-      cp "$ptxt" "$dir/output.txt"
-      write_meta "$dir" "$WALLET" "$label" "$tool" "$model" "$variant" "$gate" "$probe" "$status" "$code" 0 "$(wc -c < "$ptxt")" "$extra"
+      printf 'skipped: the pre-sweep free-check probe returned %s\n' "$probe" > "$dir/output.txt"
+      write_meta "$dir" "$WALLET" "$label" "$tool" "$model" "$variant" "$gate" "$probe" "$status" 1 0 0 "$extra"
       log "SKIP $label (probe: $probe)"
+      rm -rf "$work"
       return
     fi
   fi
 
+  # --stage verify stops here. Never clobber a real prior run record: a
+  # verification pass must not erase the status/duration/bytes of a report
+  # that already exists, only refresh its probe verdict.
   if [ "$STAGE" = verify ]; then
-    status="VERIFIED_FREE"
-    write_meta "$dir" "$WALLET" "$label" "$tool" "$model" "$variant" "$gate" "$probe" "$status" 0 0 "$(wc -c < "$ptxt" 2>/dev/null || echo 0)" "$extra"
-    log "OK   $label (verified free)"
+    if [ -f "$dir/meta.json" ]; then
+      python3 - "$dir/meta.json" "$probe" <<'PY'
+import json, os, sys
+p, probe = sys.argv[1], sys.argv[2]
+try:
+    m = json.load(open(p))
+except Exception:
+    sys.exit(0)
+m["probe"] = probe
+tmp = p + ".tmp"
+json.dump(m, open(tmp, "w"), indent=1)
+os.replace(tmp, p)
+PY
+      log "OK   $label (verified free; kept existing run record)"
+    else
+      write_meta "$dir" "$WALLET" "$label" "$tool" "$model" "$variant" "$gate" "$probe" "VERIFIED_FREE" 0 0 0 "$extra"
+      log "OK   $label (verified free)"
+    fi
+    rm -rf "$work"
     return
   fi
 
@@ -369,25 +454,44 @@ main() {
     log "rating gate: unavailable (app db down or no ratings) - not blocking anything"
   fi
 
-  if [ "$CHECK_NEW" = 1 ] && [ "$DRY_RUN" = 0 ]; then
-    discover_new
-  fi
-
   if [ "$DRY_RUN" = 1 ]; then
-    local n=0
+    log "dry-run: no probes, no API calls"
+    verify_targets
+    local n=0 queued=0 blocked=0
     while IFS='|' read -r tool model label variant extra; do
       [ -z "${label:-}" ] && continue
       if model_blocked "$model"; then
         printf '%-28s SKIPPED (negative rating)\n' "$label"
+        n=$((n + 1))
         continue
       fi
-      if metadata_free "$tool" "$model"; then gate=ok; else gate=NOT_FREE; fi
+      if metadata_free "$tool" "$model"; then
+        gate=ok
+        if grep -qP "^\Q$tool\E\t\Q$model\E\t" "$TMP/targets.tsv" 2>/dev/null; then
+          queued=$((queued + 1))
+        else
+          gate=NOT_PROBED
+        fi
+      else
+        gate=BLOCKED_NOT_FREE
+        blocked=$((blocked + 1))
+      fi
       build_cmd "$tool" "$model" "$variant" "${extra:-}" "$RUN_ROOT/$label/work" "$PROMPT" run
-      printf '%-28s gate=%-7s %s\n' "$label" "$gate" "$(shquote "${CMD[@]}")"
+      printf '%-28s gate=%-16s %s\n' "$label" "$gate" "$(shquote "${CMD[@]}")"
       n=$((n + 1))
     done < <(rows)
-    log "dry-run: $n models, nothing executed"
+    log "dry-run: $n models total -> $queued will be probed then run, $blocked blocked (not in a current free list), nothing executed"
     return
+  fi
+
+  # Up-front probe of every free model, before any real prompt is sent.
+  # Verdict cache only -- a previous sweep's verdict is never reused, because
+  # free tiers change and a stale OK is exactly how money gets spent.
+  if [ "$VERIFY" = 1 ] && [ "$CHECK_FREE" = 1 ]; then
+    verify_all
+    promote_new
+  else
+    log "verify: skipped (--no-verify / --no-check-free) - models run unverified"
   fi
 
   local running=0

@@ -40,14 +40,30 @@ def context_size(model: str | None) -> int:
 
 
 def _is_real_report(p: pathlib.Path) -> bool:
-    """True when strategy_report.md is an actual answer, not a NO STRATEGY flag."""
+    """True when strategy_report.md is an actual answer, not a flag/preview.
+
+    DONE requires a real description: reject NO STRATEGY flags AND truncated
+    harness previews (cline `submit_and_exit` records only ~100 chars ending
+    in "..." when the agent never wrote work/*.md).
+    """
     if not p.is_file():
         return False
     try:
-        head = p.read_text(errors="replace")[:300]
+        text = p.read_text(errors="replace")
     except OSError:
         return False
-    return not head.startswith("NO STRATEGY") and "NO STRATEGY" not in head
+    head = text[:300]
+    if head.startswith("NO STRATEGY") or "NO STRATEGY" in head:
+        return False
+    body = text.split("\n\n", 1)[-1].strip() if "\n\n" in text else text.strip()
+    # truncated submit_and_exit preview, not a description
+    if body.startswith("⎿ Submission recorded"):
+        return False
+    if body.endswith("...") and len(body) < 1000:
+        return False
+    if len(body) < 1000:
+        return False
+    return True
 
 
 def import_all() -> dict:

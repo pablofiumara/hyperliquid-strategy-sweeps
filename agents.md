@@ -43,8 +43,7 @@ no shorts, no stops, 10x cross setting (low realized). See
 ```text
 run-models.sh          sweep driver — takes --wallet <address> (see §3)
 models.tsv             30 rows: tool | model | label | variant | extra-args (shared)
-discovery.tsv          --check-new verdicts for ids not in models.tsv: never
-                       re-probe anything already judged here
+discovery.tsv          append-only history of every free-check probe verdict
 lib/parse_free.py      parse `kilo models --verbose` / `opencode models --verbose`,
                        print free model ids (cline has no models listing — its
                        free list is fetched from its HTTP API inside run-models.sh)
@@ -82,8 +81,8 @@ recorded elsewhere.
 ```bash
 cd /home/paf/Documents/code/misc/hyperliquid-strategy-sweeps
 W=0x0bb81e516c88881c54529e1790470cb5e9f8740d
-./run-models.sh --wallet $W --jobs 6 --timeout 1500 --resume                    # normal sweep
-./run-models.sh --wallet $W --jobs 6 --timeout 1500 --resume --check-new        # + discover new free models first
+./run-models.sh --wallet $W --jobs 6 --timeout 1500 --resume                    # normal sweep (verifies free models first)
+./run-models.sh --wallet $W --jobs 8 --timeout 1500 --probe-jobs 8 --resume      # more probe concurrency
 ./run-models.sh --wallet $W --jobs 8 --timeout 1500 --resume --only kilo        # one tool
 ./run-models.sh --wallet $W --jobs 8 --timeout 1500 --resume --only muse-spark-1.3 --force  # one model
 ```
@@ -92,18 +91,32 @@ W=0x0bb81e516c88881c54529e1790470cb5e9f8740d
 `<wallet>/manifest.tsv`. The prompt defaults to `<wallet>/prompt.txt`
 (create it first; `--prompt-file` overrides).
 
-**`--check-new` (new-model discovery):** pulls each tool's current free list
-(cline API / `kilo models` / `opencode models`), diffs it against `models.tsv`
-and `discovery.tsv`, and PROBES every unknown id with the tiny plan-agent
-prompt. "100% sure free" = listed free NOW **and** probe returns OK. Verified
-ids are appended to `models.tsv` (auto label `new-<tool>-<model>`) and run
-against the wallet prompt in the same sweep; rejected ids are recorded in
-`discovery.tsv` (tool | model | verdict | date | note) and never re-probed.
-Skipped entirely in `--dry-run`.
+**Pre-sweep free verification (default, every sweep):** before the real
+prompt is sent to anything, the driver polls each tool's CURRENT free list
+(cline API / `kilo models` / `opencode models`) and PROBES every model on it
+with the tiny plan-agent prompt ("Reply with exactly: OK"). Verdict cache is
+rebuilt from scratch each sweep — a verdict from a previous sweep is never
+reused, because free tiers change without notice and a stale OK is exactly how
+money gets spent. Only models with an `OK` verdict reach the real prompt.
+
+"100% sure free" = listed as $0-free NOW **and** probe returns OK. Models the
+provider does not advertise as free are never contacted at all: `parse_free.py`
+requires every priced field to be 0 (input, output, cache read, cache write) for
+kilo and opencode, and cline's `.free[]` list is taken as-is (its payload has no
+prices, so the probe is the only check there). Verified models missing from
+`models.tsv` are appended automatically (auto label `new-<tool>-<model>`) and
+run against the wallet prompt in the same sweep; every verdict is appended to
+`discovery.tsv` (tool | model | verdict | date | note) as history. Skipped
+entirely in `--dry-run`.
 
 - `--jobs N` parallel agents; `--timeout S` per-run kill (1500 s was used);
   Standing rule: `--jobs` = number of free models (all parallel — 30
   parallel jobs verified working on 2026-09-22);
+- `--probe-jobs N` concurrency for the up-front probe phase only (default 4;
+  probes are tiny and short, so this can be higher than `--jobs`);
+- `--no-verify` skips the up-front probe phase and runs models unverified;
+  `--no-check-free` turns off the whole gate (both stages) for a deliberate
+  non-free run. Both exist for debugging — the default is the safe path;
 - `--resume` skips models whose run already wrote output (restart-safe);
 - `--force` rerun even if a result exists;
 - `--only X` filters on label substring or tool name.

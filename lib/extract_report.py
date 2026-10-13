@@ -183,6 +183,40 @@ def migrate(dirs, statuses) -> None:
         elif not moved:
             print(f"KEEP   {d.name}: strategy_report.md already present")
 
+        # DONE requires a real strategy report: a DONE run whose report is a
+        # NO STRATEGY flag -- or a truncated submit_and_exit preview (cline
+        # harness records ~100 chars ending in "..." when the agent never
+        # wrote work/*.md) -- is downgraded to FAILED in meta.json and the
+        # stub is replaced with a NO STRATEGY flag, so future manifests and
+        # the UI never show DONE without an answer.
+        try:
+            import json as _json
+
+            _meta_p = d / "meta.json"
+            _rp_text = rp.read_text(errors="replace") if rp.is_file() else ""
+            _is_flag = _rp_text.startswith("NO STRATEGY") or "NO STRATEGY" in _rp_text[:300]
+            _body = _rp_text.split("\n\n", 1)[-1].strip() if "\n\n" in _rp_text else _rp_text.strip()
+            _is_trunc = _body.startswith("⎿ Submission recorded") or (
+                _body.endswith("...") and len(_body) < 1000
+            ) or (len(_body) < 1000 and "NO STRATEGY" not in _rp_text[:300]
+                  and not STRAT_HINT.search(_body))
+            if (_is_flag or _is_trunc) and _meta_p.is_file():
+                _m = _json.loads(_meta_p.read_text(errors="replace"))
+                if _is_trunc and not _is_flag:
+                    rp.write_text(
+                        f"# Strategy description for this wallet — {d.name}\n\n"
+                        f"NO STRATEGY — run completed but only a truncated "
+                        f"submit_and_exit preview was captured (no work/*.md, "
+                        f"full text not in output.txt); see output.txt.\n"
+                    )
+                    print(f"FLAG   {d.name}: truncated preview -> NO STRATEGY")
+                if _m.get("status") == "DONE":
+                    _m["status"] = "FAILED"
+                    _meta_p.write_text(_json.dumps(_m, indent=1))
+                    print(f"FIX    {d.name}: meta status DONE -> FAILED (no real report)")
+        except Exception as _e:  # never break extraction on a meta patch
+            print(f"WARN   {d.name}: meta downgrade skipped ({_e})")
+
         # cleanup: work/ is agent scratch (raw API dumps, analysis scripts).
         # The report already lives at strategy_report.md (moved above), so
         # everything left in work/ is disposable. If the report was NOT moved
