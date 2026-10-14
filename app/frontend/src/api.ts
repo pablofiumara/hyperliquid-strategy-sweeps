@@ -79,7 +79,16 @@ export async function genSummary(addr: string) {
   return res.json() as Promise<WalletSummary>;
 }
 
-export const getRun = (id: number) => api<RunDetail>(`/api/runs/${id}`);
+export type DurationRank = {
+  tool: string | null;
+  model: string | null;
+  label: string | null;
+  runs: number;
+  wallets: number;
+  total_s: number;
+  avg_s: number;
+};
+export const getDurationRanking = () => api<DurationRank[]>("/api/duration-ranking");
 
 export const getRunByLabel = (wallet: string, label: string) =>
   api<RunDetail>(`/api/wallets/${encodeURIComponent(wallet)}/runs/${encodeURIComponent(label)}`);

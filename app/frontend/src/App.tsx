@@ -4,12 +4,14 @@ import {
   genSummary,
   getConversations,
   getFreeModels,
+  getDurationRanking,
   getRunByLabel,
   getRuns,
   getSummary,
   getWallets,
   rate,
   type Conversation,
+  type DurationRank,
   type FreeModel,
   type Run,
   type RunDetail,
@@ -200,6 +202,8 @@ export default function App() {
 function WalletList({ onOpen }: { onOpen: (a: string) => void }) {
   const [wallets, setWallets] = useState<Wallet[] | null>(null);
   const [err, setErr] = useState("");
+  const [ranking, setRanking] = useState<DurationRank[] | null>(null);
+  const [rankOpen, setRankOpen] = useState(false);
   useRestoreScroll("wallets");
   usePoll(() => {
     getWallets()
@@ -211,10 +215,56 @@ function WalletList({ onOpen }: { onOpen: (a: string) => void }) {
         if (!wallets) setErr(String(e));
       });
   }, 10000);
+  useEffect(() => {
+    getDurationRanking()
+      .then((r) => setRanking(r))
+      .catch(() => setRanking([]));
+  }, []);
   if (err) return <p className="dim">{err}</p>;
   if (!wallets) return <p className="loading">loading…</p>;
   return (
     <>
+      <div className="card" style={{ cursor: "default", display: "block", marginBottom: 16 }}>
+        <div
+          style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, cursor: "pointer" }}
+          onClick={() => setRankOpen(!rankOpen)}
+        >
+          <div style={{ fontWeight: 700, fontSize: 13 }}>
+            Q: Which model takes longer to answer?
+          </div>
+          <span className="dim" style={{ fontSize: 12 }}>{rankOpen ? "▲ hide" : "▼ show"}</span>
+        </div>
+        {rankOpen && (
+          <div style={{ marginTop: 12, borderTop: "1px solid var(--border)", paddingTop: 12 }}>
+            {ranking === null ? (
+              <div className="dim" style={{ fontSize: 13 }}>loading…</div>
+            ) : ranking.length === 0 ? (
+              <div className="dim" style={{ fontSize: 13 }}>
+                A: No timed answers yet — every stored answer's seconds are
+                summed per model once models start answering.
+              </div>
+            ) : (
+              <div style={{ fontSize: 13 }}>
+                <div className="dim" style={{ fontSize: 12, marginBottom: 6 }}>
+                  A: fastest → slowest, summed over every stored answer:
+                </div>
+                {ranking.map((r, i) => (
+                  <div key={`${r.tool}/${r.model}`} style={{ marginTop: 4 }}>
+                    <span className={i === 0 ? "score pos" : i === ranking.length - 1 ? "score neg" : "dim"}>
+                      #{i + 1}
+                    </span>{" "}
+                    {r.label || r.model}
+                    <span className="dim">
+                      {" "}· total {Math.round(Number(r.total_s))}s · {r.runs} run{r.runs === 1 ? "" : "s"} · {r.wallets} wallet{r.wallets === 1 ? "" : "s"} · avg {Math.round(Number(r.avg_s))}s
+                    </span>
+                    <div className="dim mono" style={{ fontSize: 11 }}>{r.model}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
       {wallets.map((w) => (
         <CardLink key={w.address} href={pathFor({ page: "runs", wallet: w.address })} onNav={() => onOpen(w.address)}>
           <span className="mono">{w.address}</span>

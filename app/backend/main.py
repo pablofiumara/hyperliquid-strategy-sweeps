@@ -194,6 +194,26 @@ def rate(run_id: int, body: Rating):
     return {"ok": True, "model_global_score": score["total"]}
 
 
+@app.get("/api/duration-ranking")
+def duration_ranking():
+    return db.query(
+        """
+        SELECT r.tool,
+               r.model,
+               MIN(r.label)            AS label,
+               COUNT(*)                AS runs,
+               COUNT(DISTINCT r.wallet) AS wallets,
+               COALESCE(SUM(r.duration_s), 0) AS total_s,
+               COALESCE(AVG(r.duration_s), 0) AS avg_s
+        FROM runs r
+        WHERE r.duration_s IS NOT NULL AND r.duration_s > 0
+          AND r.has_real_report = TRUE
+        GROUP BY r.tool, r.model
+        ORDER BY total_s ASC, r.model ASC
+        """
+    )
+
+
 @app.get("/api/leaderboard")
 def leaderboard():
     return db.query(
