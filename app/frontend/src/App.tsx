@@ -291,6 +291,7 @@ function RunList({
   const [summary, setSummary] = useState<WalletSummary | null | undefined>(undefined);
   const [sumErr, setSumErr] = useState("");
   const [generating, setGenerating] = useState(false);
+  const generatingRef = useRef(false);
   const scrollKey = `runs:${wallet}`;
   useRestoreScroll(scrollKey, !!runs);
   usePoll(() => {
@@ -315,6 +316,8 @@ function RunList({
   if (!runs) return <p className="loading">loading…</p>;
 
   async function onGenerate() {
+    if (generatingRef.current) return;
+    generatingRef.current = true;
     setGenerating(true);
     setSumErr("");
     try {
@@ -323,6 +326,7 @@ function RunList({
     } catch (e) {
       setSumErr(String(e));
     } finally {
+      generatingRef.current = false;
       setGenerating(false);
     }
   }
@@ -413,6 +417,7 @@ function RunPage({ wallet, label, onBack }: { wallet: string; label: string; onB
   const [convos, setConvos] = useState<Conversation[] | null>(null);
   const [question, setQuestion] = useState("");
   const [asking, setAsking] = useState(false);
+  const askingRef = useRef(false);
   const [askErr, setAskErr] = useState("");
   const [freeModels, setFreeModels] = useState<FreeModel[]>([]);
   const [selected, setSelected] = useState<string>("");
@@ -455,7 +460,8 @@ function RunPage({ wallet, label, onBack }: { wallet: string; label: string; onB
   }, []);
 
   async function ask() {
-    if (!run || !question.trim()) return;
+    if (!run || !question.trim() || askingRef.current) return;
+    askingRef.current = true;
     setAsking(true);
     setAskErr("");
     try {
@@ -467,6 +473,7 @@ function RunPage({ wallet, label, onBack }: { wallet: string; label: string; onB
     } catch (e) {
       setAskErr(String(e));
     } finally {
+      askingRef.current = false;
       setAsking(false);
     }
   }

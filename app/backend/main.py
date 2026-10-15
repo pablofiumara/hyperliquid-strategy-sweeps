@@ -2,7 +2,7 @@ import os
 import pathlib
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -249,7 +249,7 @@ def conversations(run_id: int):
 
 
 @app.post("/api/runs/{run_id}/ask")
-def ask_run(run_id: int, body: AskRequest):
+def ask_run(run_id: int, body: AskRequest, request: Request):
     run = db.query("SELECT * FROM runs WHERE id = %s", (run_id,), one=True)
     if not run:
         raise HTTPException(404, "run not found")
@@ -275,7 +275,10 @@ def ask_run(run_id: int, body: AskRequest):
         result = ask_report(text, question, history, tool, model)
     except Exception as exc:
         raise HTTPException(502, f"ask failed: {exc}")
-    db.add_conversation(run_id, question, result["answer"], result["model"], result["citations"])
+    # Only asks from the app UI are stored; scripts/tests may call the
+    # endpoint but must never leave visible conversations behind.
+    if request.headers.get("x-client") == "ui":
+        db.add_conversation(run_id, question, result["answer"], result["model"], result["citations"])
     return {
         "answer": result["answer"],
         "model": result["model"],

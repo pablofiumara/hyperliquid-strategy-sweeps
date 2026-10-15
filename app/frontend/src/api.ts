@@ -35,7 +35,7 @@ export async function getConversations(runId: number) {
 export async function askRun(runId: number, question: string, tool?: string | null, model?: string | null) {
   const res = await fetch(`/api/runs/${runId}/ask`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", "X-Client": "ui" },
     body: JSON.stringify({ question, tool: tool || null, model: model || null }),
   });
   if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
