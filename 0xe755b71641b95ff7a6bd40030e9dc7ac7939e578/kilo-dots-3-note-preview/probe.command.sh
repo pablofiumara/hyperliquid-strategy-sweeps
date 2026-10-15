@@ -1,0 +1,1 @@
+kilo run -m kilo/dots-studio/dots-3-note-preview:free --auto --dir /home/paf/Documents/code/misc/hyperliquid-strategy-sweeps/0xe755b71641b95ff7a6bd40030e9dc7ac7939e578/kilo-dots-3-note-preview/work --variant thinking --agent plan Reply\ with\ exactly:\ OK

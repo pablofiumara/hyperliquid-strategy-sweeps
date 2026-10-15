@@ -1,0 +1,21 @@
+[12:56:05.856] ERROR (#17201): failed {
+  ref: "err_1c000fcc",
+  error: {
+    providerID: "kilo",
+    modelID: "inclusionai/ling-3.0-flash-vl:free",
+    suggestions: [ "inclusionai/ling-3.0-flash-fin:free", "inclusionai/ling-3.0-flash-sante:free",
+      "inclusionai/ling-3.0-flash-vl"
+    ],
+    modelsEmpty: false,
+    _tag: "ProviderModelNotFoundError",
+  },
+  cause: "ProviderModelNotFoundError: \n    at <anonymous> (/$bunfs/root/src/index.js:7358:81130)\n    at SessionHttpApi.prompt (/$bunfs/root/src/index.js:7037:24213)\n    at SessionHttpApi.prompt (definition) (/$bunfs/root/src/index.js:7108:16566)",
+}
+[91m[1mError: [0m{
+  "name": "UnknownError",
+  "data": {
+    "message": "Unexpected server error. Check server logs for details.",
+    "ref": "err_1c000fcc"
+  }
+}
+[91m[1mError: [0mModel not found: kilo/inclusionai/ling-3.0-flash-vl:free. Did you mean: inclusionai/ling-3.0-flash-fin:free, inclusionai/ling-3.0-flash-sante:free, inclusionai/ling-3.0-flash-vl?

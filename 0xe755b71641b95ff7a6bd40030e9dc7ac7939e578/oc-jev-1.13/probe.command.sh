@@ -1,0 +1,1 @@
+opencode run -m opencode/jev-1.13-free --auto --dir /home/paf/Documents/code/misc/hyperliquid-strategy-sweeps/0xe755b71641b95ff7a6bd40030e9dc7ac7939e578/oc-jev-1.13/work --agent plan Reply\ with\ exactly:\ OK

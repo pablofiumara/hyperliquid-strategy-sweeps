@@ -1,0 +1,15 @@
+{
+ "wallet": "0xe755b71641b95ff7a6bd40030e9dc7ac7939e578",
+ "label": "cline-muse-spark-1.3-contributor",
+ "tool": "cline",
+ "model": "cline-free/muse-spark-1.3-contributor",
+ "variant": "xhigh",
+ "free_gate": "ok",
+ "probe": "skipped",
+ "status": "FAILED",
+ "exit": 0,
+ "duration_s": 674.0,
+ "bytes": 8427,
+ "extra": "",
+ "prompt_file": "prompt.txt"
+}

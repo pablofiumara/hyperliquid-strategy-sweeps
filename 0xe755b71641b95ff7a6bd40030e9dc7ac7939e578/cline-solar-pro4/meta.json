@@ -1,0 +1,15 @@
+{
+ "wallet": "0xe755b71641b95ff7a6bd40030e9dc7ac7939e578",
+ "label": "cline-solar-pro4",
+ "tool": "cline",
+ "model": "cline-free/solar-pro4",
+ "variant": "xhigh",
+ "free_gate": "ok",
+ "probe": "ERROR",
+ "status": "SKIPPED_NOT_FREE",
+ "exit": 1,
+ "duration_s": 0.0,
+ "bytes": 189,
+ "extra": "",
+ "prompt_file": "prompt.txt"
+}

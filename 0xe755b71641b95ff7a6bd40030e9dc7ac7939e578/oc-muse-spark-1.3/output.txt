@@ -1,0 +1,901 @@
+[0m
+> build · muse-spark-1.3-contributor-free
+[0m
+[0m# [0mTodos
+[ ] Fetch current positions and account state via clearinghouseState
+[ ] Aggregate recent fills per coin/side/direction
+[ ] Analyze timing, holding periods, funding, longer history
+[ ] Synthesize strategy conclusion
+[0m
+[0m# [0mTodos
+[•] Fetch current positions and account state via clearinghouseState
+[ ] Aggregate recent fills per coin/side/direction
+[ ] Analyze timing, holding periods, funding, longer history
+[ ] Synthesize strategy conclusion
+[0m
+a[0m$ [0mls /tmp/opencode 2>&1; python3 --version 2>&1; curl -s --max-time 15 -X POST https://api.hyperliquid.xyz/info -H "Content-Type: application/json" -d '{"type":"clearinghouseState","user":"0xe755b71641b95ff7a6bd40030e9dc7ac7939e578"}' | python3 -c "import sys,json; d=json.load(sys.stdin); print('keys:', list(d.keys())); print('marginSummary:', d.get('marginSummary')); print('n_positions:', len(d.get('assetPositions',[]))); [print(p['position']['coin'], p['position']['szi'], 'entry:', p['position'].get('entryPx'), 'posVal:', p['position'].get('positionValue'), 'lev:', p['position'].get('leverage'), 'liq:', p['position'].get('liquidationPx'), 'marginUsed:', p.get('marginUsed')) for p in d.get('assetPositions',[])]"
+hl
+Python 3.12.3
+keys: ['marginSummary', 'crossMarginSummary', 'crossMaintenanceMarginUsed', 'withdrawable', 'assetPositions', 'time']
+marginSummary: {'accountValue': '2181.55747', 'totalNtlPos': '1353.53114', 'totalRawUsd': '828.02633', 'totalMarginUsed': '1353.53114'}
+n_positions: 7
+INJ 29.0 entry: 8.35997 posVal: 228.0589 lev: {'type': 'cross', 'value': 1} liq: None marginUsed: None
+UNI 13.0 entry: 10.42477 posVal: 126.4237 lev: {'type': 'cross', 'value': 1} liq: None marginUsed: None
+ZRO 14.9 entry: 1.65943 posVal: 24.3466 lev: {'type': 'cross', 'value': 1} liq: None marginUsed: None
+NEAR 77.8 entry: 5.02415 posVal: 376.2797 lev: {'type': 'cross', 'value': 1} liq: None marginUsed: None
+ONDO 145.0 entry: 0.557134 posVal: 79.22655 lev: {'type': 'cross', 'value': 1} liq: None marginUsed: None
+HYPE 3.51 entry: 94.9445 posVal: 324.56619 lev: {'type': 'cross', 'value': 1} liq: None marginUsed: None
+XMR 0.351 entry: 603.975 posVal: 194.6295 lev: {'type': 'cross', 'value': 1} liq: None marginUsed: None
+[0m
+a[0m$ [0mcurl -s --max-time 20 -X POST https://api.hyperliquid.xyz/info -H "Content-Type: application/json" -d '{"type":"userFills","user":"0xe755b71641b95ff7a6bd40030e9dc7ac7939e578"}' | python3 -c "
+import sys,json,collections,datetime
+fills=json.load(sys.stdin)
+print('n_fills_recent:', len(fills))
+if not fills: sys.exit()
+# time range
+ts=[f['time'] for f in fills]
+print('oldest:', datetime.datetime.utcfromtimestamp(min(ts)/1000).isoformat(), 'newest:', datetime.datetime.utcfromtimestamp(max(ts)/1000).isoformat())
+# aggregate per coin
+from collections import Counter, defaultdict
+cnt=Counter(); buyvol=defaultdict(float); sellvol=defaultdict(float); buyn=defaultdict(int); selln=defaultdict(int)
+for f in fills:
+  c=f['coin']; s=f['side']; sz=float(f['sz']); px=float(f['px'])
+  cnt[c]+=1
+  if s=='A':
+    sellvol[c]+=sz*px; selln[c]+=1
+  else:
+    buyvol[c]+=sz*px; buyn[c]+=1
+print(f\"{'coin':<8} {'n':>4} {'buyn':>4} {'selln':>5} {'buyNot$':>10} {'sellNot$':>10} net\$> \")
+for c,n in cnt.most_common():
+  print(f\"{c:<8} {n:>4} {buyn[c]:>4} {selln[c]:>5} {buyvol[c]:>10.1f} {sellvol[c]:>10.1f} {buyvol[c]-sellvol[c]:>8.1f}\")
+# side overall
+print('A(side=sell?) count:', sum(1 for f in fills if f['side']=='A'), 'B(buy?) count:', sum(1 for f in fills if f['side']=='B'))
+# direction field?
+from collections import Counter as C
+print('dir counter:', C(f.get('dir','?')+':'+f.get('side','?') for f in fills))
+print('closedPnl sum:', sum(float(f.get('closedPnl',0)) for f in fills))
+print('fee sum:', sum(float(f.get('fee',0)) for f in fills))
+# sample time per day
+import datetime as dt
+day=Counter(dt.datetime.utcfromtimestamp(f['time']/1000).strftime('%Y-%m-%d') for f in fills)
+print('fills per day (last window):')
+for d in sorted(day)[-20:]:
+  print(d, day[d])
+"
+
+Traceback (most recent call last):
+  File "<string>", line 3, in <module>
+  File "/usr/lib/python3.12/json/__init__.py", line 293, in load
+    return loads(fp.read(),
+           ^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/json/__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/json/decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/json/decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+[0m
+a[0m$ [0mcurl -s --max-time 20 -X POST https://api.hyperliquid.xyz/info -H "Content-Type: application/json" -d '{"type":"userFills","user":"0xe755b71641b95ff7a6bd40030e9dc7ac7939e578"}' | wc -c; curl -s --max-time 20 -X POST https://api.hyperliquid.xyz/info -H "Content-Type: application/json" -d '{"type":"userFills","user":"0xe755b71641b95ff7a6bd40030e9dc7ac7939e578"}' | head -c 1000
+12
+rate limited
+[0m
+a[0m$ [0msleep 3; for i in 1 2 3 4 5; do echo "try $i"; curl -s --max-time 20 -X POST https://api.hyperliquid.xyz/info -H "Content-Type: application/json" -d '{"type":"userFills","user":"0xe755b71641b95ff7a6bd40030e9dc7ac7939e578"}' | head -c 200; echo; sleep 5; done
+try 1
+[{"coin":"ZRO","px":"1.6501","sz":"8.8","side":"B","time":1790436417134,"startPosition":"6.1","dir":"Open Long","closedPnl":"0.0","hash":"0xbd2d49998ddb4f73bea70445419ee002035d007f28de6e4560f5f4ec4cdf
+try 2
+[{"coin":"ZRO","px":"1.6501","sz":"8.8","side":"B","time":1790436417134,"startPosition":"6.1","dir":"Open Long","closedPnl":"0.0","hash":"0xbd2d49998ddb4f73bea70445419ee002035d007f28de6e4560f5f4ec4cdf
+try 3
+null
+try 4
+rate limited
+try 5
+[{"coin":"ZRO","px":"1.6501","sz":"8.8","side":"B","time":1790436417134,"startPosition":"6.1","dir":"Open Long","closedPnl":"0.0","hash":"0xbd2d49998ddb4f73bea70445419ee002035d007f28de6e4560f5f4ec4cdf
+[0m
+a[0m$ [0mpython3 -c "
+import json, urllib.request, time, sys
+addr='0xe755b71641b95ff7a6bd40030e9dc7ac7939e578'
+def post(payload, retries=8):
+  data=json.dumps(payload).encode()
+  for i in range(retries):
+    try:
+      req=urllib.request.Request('https://api.hyperliquid.xyz/info', data=data, headers={'Content-Type':'application/json'})
+      with urllib.request.urlopen(req, timeout=20) as r:
+        txt=r.read().decode()
+        if 'rate limited' in txt.lower() or txt.strip()=='null':
+          print(f'attempt {i}: rate-limited/null, sleep', flush=True)
+          time.sleep(4+i*2)
+          continue
+        return txt
+    except Exception as e:
+      print(f'attempt {i} err {e}', flush=True)
+      time.sleep(4+i*2)
+  return None
+txt=post({'type':'userFills','user':addr})
+print('len', len(txt) if txt else None)
+open('/tmp/opencode/fills_recent.json','w').write(txt or '')
+print(txt[:500] if txt else 'FAIL')
+"
+len 711847
+[{"coin":"ZRO","px":"1.6501","sz":"8.8","side":"B","time":1790436417134,"startPosition":"6.1","dir":"Open Long","closedPnl":"0.0","hash":"0xbd2d49998ddb4f73bea70445419ee002035d007f28de6e4560f5f4ec4cdf295e","oid":557327812029,"crossed":false,"fee":"0.002091","tid":740353982975812,"cloid":"0x010201a0de46d8600001b145f6e20aee","feeToken":"USDC","twapId":null},{"coin":"ZRO","px":"1.6729","sz":"6.1","side":"B","time":1790435642932,"startPosition":"0.0","dir":"Open Long","closedPnl":"0.0","hash":"0x13c
+[0m
+a[0m$ [0mpython3 -c "
+import json, collections, datetime
+fills=json.load(open('/tmp/opencode/fills_recent.json'))
+print('n=',len(fills))
+ts=[f['time'] for f in fills]
+print('oldest', datetime.datetime.utcfromtimestamp(min(ts)/1000).isoformat(), 'newest', datetime.datetime.utcfromtimestamp(max(ts)/1000).isoformat())
+from collections import Counter, defaultdict
+cnt=Counter(f['coin'] for f in fills)
+print('coins:', len(cnt))
+for c,n in cnt.most_common(30):
+  print(c,n)
+print('dir dist:', Counter(f['dir'] for f in fills))
+print('side dist:', Counter(f['side'] for f in fills))
+print('closedPnl sum', sum(float(f.get('closedPnl',0)) for f in fills))
+print('fee sum', sum(float(f.get('fee',0)) for f in fills))
+# crossed?
+print('crossed true:', sum(1 for f in fills if f.get('crossed')), 'false:', sum(1 for f in fills if not f.get('crossed')))
+# twap?
+print('twap non-null:', sum(1 for f in fills if f.get('twapId')))
+# per coin buy/sell notional
+buy=defaultdict(float); sell=defaultdict(float); bn=defaultdict(int); sn=defaultdict(int)
+for f in fills:
+  v=float(f['sz'])*float(f['px'])
+  if f['side']=='B':
+    buy[f['coin']]+=v; bn[f['coin']]+=1
+  else:
+    sell[f['coin']]+=v; sn[f['coin']]+=1
+print(f\"{'coin':<8} {'n':>4} {'B':>4} {'A':>4} {'buy\$':>10} {'sell\$':>10} {'net\$':>9}\")
+for c,n in cnt.most_common(30):
+  print(f\"{c:<8} {n:>4} {bn[c]:>4} {sn[c]:>4} {buy[c]:>10.0f} {sell[c]:>10.0f} {buy[c]-sell[c]:>9.0f}\")
+"
+
+<string>:6: DeprecationWarning: datetime.datetime.utcfromtimestamp() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.fromtimestamp(timestamp, datetime.UTC).
+n= 2000
+oldest 2026-06-02T06:58:03.334000 newest 2026-09-26T15:26:57.134000
+coins: 11
+XMR 505
+HYPE 373
+NEAR 295
+ZEC 185
+INJ 159
+ZRO 158
+ONDO 154
+JUP 78
+UNI 64
+XLM 23
+ETH 6
+dir dist: Counter({'Open Long': 1483, 'Close Long': 517})
+side dist: Counter({'B': 1483, 'A': 517})
+closedPnl sum 868.716469
+fee sum 24.397252
+crossed true: 525 false: 1475
+twap non-null: 0
+coin        n    B    A       buy$      sell$      net$
+XMR       505  403  102      13899      13792       107
+HYPE      373  259  114      17803      17881       -78
+NEAR      295  219   76      10926      10751       175
+ZEC       185  145   40       4205       4226       -22
+INJ       159  114   45       3929       3742       187
+ZRO       158  104   54       2448       2460       -12
+ONDO      154  113   41       1902       1861        41
+JUP        78   56   22       1365       1384       -20
+UNI        64   48   16       1118       1004       114
+XLM        23   17    6        595        606       -10
+ETH         6    5    1         67         68        -0
+[0m
+a[0m$ [0mpython3 -c "
+import json, collections, datetime
+fills=json.load(open('/tmp/opencode/fills_recent.json'))
+fills=sorted(fills, key=lambda x:x['time'])
+# avg notional per fill
+import statistics
+notion=[float(f['sz'])*float(f['px']) for f in fills]
+print('avg notional per fill:', sum(notion)/len(notion), 'median:', sorted(notion)[len(notion)//2], 'min:', min(notion), 'max:', max(notion))
+# per coin avg
+from collections import defaultdict, Counter
+for c in sorted(set(f['coin'] for f in fills)):
+  v=[float(f['sz'])*float(f['px']) for f in fills if f['coin']==c]
+  print(c, 'avg', round(sum(v)/len(v),1), 'n', len(v))
+# closedPnl per coin (only Close Long have pnl)
+import collections
+pnl=defaultdict(float); nclose=defaultdict(int); wins=defaultdict(int)
+for f in fills:
+  if f['dir']=='Close Long':
+    pnl[f['coin']]+=float(f['closedPnl']); nclose[f['coin']]+=1
+    if float(f['closedPnl'])>0: wins[f['coin']]+=1
+print('pnl per coin (close longs only, this window):')
+for c in sorted(pnl, key=lambda x: -pnl[x]):
+  print(c, round(pnl[c],1), 'closes', nclose[c], 'winrate', round(wins[c]/nclose[c],2))
+print('total close pnl', round(sum(pnl.values()),1))
+# crossed vs dir
+print(Counter((f['dir'], f['crossed']) for f in fills))
+# feeToken
+print(Counter(f['feeToken'] for f in fills))
+# startPosition analysis: opens starting from 0 vs adding?
+opens=[f for f in fills if f['dir']=='Open Long']
+print('opens with startPosition==0:', sum(1 for f in opens if float(f['startPosition'])==0), '/', len(opens))
+# distribution of sz relative to startPosition?
+# fills per day overall
+import datetime as dt
+day=Counter(dt.datetime.fromtimestamp(f['time']/1000, dt.timezone.utc).strftime('%Y-%m-%d') for f in fills)
+print('active days:', len(day), 'avg fills/day:', round(len(fills)/len(day),1))
+print('max fills in a day:', max(day.values()), sorted(day.items())[-5:])
+# days with zero? window length
+d0=min(f['time'] for f in fills); d1=max(f['time'] for f in fills)
+print('window days:', (d1-d0)/86400000)
+# hour distribution UTC
+hr=Counter(dt.datetime.fromtimestamp(f['time']/1000, dt.timezone.utc).hour for f in fills)
+print('hour UTC dist:', sorted(hr.items()))
+"
+
+avg notional per fill: 58.01652747999999 median: 36.1504 min: 0.14735 max: 710.14856
+ETH avg 22.6 n 6
+HYPE avg 95.7 n 373
+INJ avg 48.2 n 159
+JUP avg 35.2 n 78
+NEAR avg 73.5 n 295
+ONDO avg 24.4 n 154
+UNI avg 33.2 n 64
+XLM avg 52.2 n 23
+XMR avg 54.8 n 505
+ZEC avg 45.6 n 185
+ZRO avg 31.1 n 158
+pnl per coin (close longs only, this window):
+HYPE 340.8 closes 114 winrate 0.98
+NEAR 216.3 closes 76 winrate 1.0
+XMR 105.4 closes 102 winrate 1.0
+INJ 55.7 closes 45 winrate 1.0
+ONDO 39.8 closes 41 winrate 1.0
+ZRO 36.9 closes 54 winrate 1.0
+UNI 21.9 closes 16 winrate 1.0
+ZEC 21.8 closes 40 winrate 0.97
+JUP 19.5 closes 22 winrate 1.0
+XLM 10.3 closes 6 winrate 1.0
+ETH 0.4 closes 1 winrate 1.0
+total close pnl 868.7
+Counter({('Open Long', False): 1052, ('Open Long', True): 431, ('Close Long', False): 423, ('Close Long', True): 94})
+Counter({'USDC': 2000})
+opens with startPosition==0: 415 / 1483
+active days: 78 avg fills/day: 25.6
+max fills in a day: 156 [('2026-09-22', 106), ('2026-09-23', 144), ('2026-09-24', 110), ('2026-09-25', 79), ('2026-09-26', 9)]
+window days: 116.35340046296297
+hour UTC dist: [(0, 51), (1, 72), (2, 52), (3, 72), (4, 67), (5, 53), (6, 58), (7, 67), (8, 68), (9, 78), (10, 60), (11, 104), (12, 111), (13, 117), (14, 113), (15, 129), (16, 152), (17, 100), (18, 104), (19, 93), (20, 93), (21, 34), (22, 92), (23, 60)]
+[0m
+a[0m$ [0mpython3 -c "
+import json, collections
+fills=json.load(open('/tmp/opencode/fills_recent.json'))
+closes=[f for f in fills if f['dir']=='Close Long']
+pnls=[float(f['closedPnl']) for f in closes]
+print('n closes', len(closes))
+print('neg closes:', sum(1 for p in pnls if p<0), 'zero:', sum(1 for p in pnls if p==0), 'pos:', sum(1 for p in pnls if p>0))
+print('min pnl', min(pnls), 'max', max(pnls))
+import statistics
+print('mean', sum(pnls)/len(pnls), 'median', sorted(pnls)[len(pnls)//2])
+# worst 10
+print('worst 10:', sorted(pnls)[:10])
+# best 10
+print('best 10:', sorted(pnls)[-10:])
+# pnl as % of notional?
+ratios=[float(f['closedPnl'])/(float(f['sz'])*float(f['px'])) for f in closes]
+print('pnl/notional min', min(ratios), 'max', max(ratios), 'mean', sum(ratios)/len(ratios))
+# check closes with crossed=True vs False pnl
+for crossed in [True, False]:
+  v=[float(f['closedPnl']) for f in closes if f['crossed']==crossed]
+  print(crossed, len(v), round(sum(v),1), 'avg', round(sum(v)/len(v),3) if v else None)
+# cloid prefix
+from collections import Counter
+print(Counter((f.get('cloid') or '')[:10] for f in fills).most_common(10))
+# oid reuse? n unique oids
+print('unique oids:', len(set(f['oid'] for f in fills)), 'vs fills', len(fills))
+# hash count
+print('unique hash:', len(set(f['hash'] for f in fills)))
+"
+
+n closes 517
+neg closes: 3 zero: 0 pos: 514
+min pnl -8.195382 max 23.681301
+mean 1.6803026479690522 median 0.989376
+worst 10: [-8.195382, -2.208, -1.25354, 0.002848, 0.003361, 0.0055, 0.007509, 0.007981, 0.008419, 0.009267]
+best 10: [9.3434, 10.148796, 11.515868, 12.168171, 12.723977, 12.72432, 13.682019, 13.990235, 18.66788, 23.681301]
+pnl/notional min -0.057692814548809014 max 0.07658006733151242 mean 0.014929715832562978
+True 94 228.1 avg 2.426
+False 423 640.6 avg 1.515
+[('0x010201a0', 980), ('0x010301a0', 404), ('0x010101a0', 375), ('', 241)]
+unique oids: 1841 vs fills 2000
+unique hash: 1864
+[0m
+a[0m$ [0mpython3 -c "
+import json, collections
+fills=json.load(open('/tmp/opencode/fills_recent.json'))
+# coin vs cloid prefix
+from collections import Counter, defaultdict
+for coin in sorted(set(f['coin'] for f in fills)):
+  print(coin, Counter((f.get('cloid') or 'none')[:10] for f in fills if f['coin']==coin))
+# time gaps between fills: median interval
+fills_sorted=sorted(fills, key=lambda x:x['time'])
+diffs=[(fills_sorted[i+1]['time']-fills_sorted[i]['time'])/1000 for i in range(len(fills_sorted)-1)]
+diffs_sorted=sorted(diffs)
+print('median gap sec:', diffs_sorted[len(diffs_sorted)//2], 'mean gap sec:', sum(diffs)/len(diffs))
+print('gaps >1h:', sum(1 for d in diffs if d>3600), 'gaps >6h:', sum(1 for d in diffs if d>21600))
+# inventory trajectory per coin: cumulative sz (B +, A -)
+from collections import defaultdict
+import datetime as dt
+for coin in ['XMR','HYPE','NEAR','ZEC']:
+  cf=sorted([f for f in fills if f['coin']==coin], key=lambda x:x['time'])
+  inv=0; maxinv=0; mininv=0
+  for f in cf:
+    inv += float(f['sz']) if f['side']=='B' else -float(f['sz'])
+    maxinv=max(maxinv,inv); mininv=min(mininv,inv)
+  print(coin, 'startInv_window:', inv, 'maxInv:', round(maxinv,3), 'minInv:', round(mininv,3), 'n:', len(cf))
+  # startPosition of first fill in window vs computed? first startPosition
+  print('  first startPos:', cf[0]['startPosition'], 'last startPos+delta?:', cf[-1]['startPosition'], cf[-1]['dir'], cf[-1]['side'], cf[-1]['sz'])
+"
+
+ETH Counter({'0x010201a0': 4, 'none': 1, '0x010101a0': 1})
+HYPE Counter({'none': 227, '0x010201a0': 103, '0x010101a0': 28, '0x010301a0': 15})
+INJ Counter({'0x010201a0': 78, '0x010301a0': 45, '0x010101a0': 36})
+JUP Counter({'0x010201a0': 38, '0x010301a0': 21, '0x010101a0': 18, 'none': 1})
+NEAR Counter({'0x010201a0': 147, '0x010301a0': 74, '0x010101a0': 72, 'none': 2})
+ONDO Counter({'0x010201a0': 76, '0x010101a0': 37, '0x010301a0': 37, 'none': 4})
+UNI Counter({'0x010201a0': 32, '0x010101a0': 16, '0x010301a0': 16})
+XLM Counter({'0x010201a0': 12, '0x010101a0': 5, 'none': 3, '0x010301a0': 3})
+XMR Counter({'0x010201a0': 335, '0x010301a0': 100, '0x010101a0': 68, 'none': 2})
+ZEC Counter({'0x010201a0': 102, '0x010101a0': 43, '0x010301a0': 39, 'none': 1})
+ZRO Counter({'0x010301a0': 54, '0x010201a0': 53, '0x010101a0': 51})
+median gap sec: 264.07 mean gap sec: 5028.981390695348
+gaps >1h: 294 gaps >6h: 76
+XMR startInv_window: 0.35099999999999903 maxInv: 0.856 minInv: -0.0 n: 505
+  first startPos: 0.0 last startPos+delta?: 0.278 Open Long B 0.073
+HYPE startInv_window: 2.55 maxInv: 11.75 minInv: -0.96 n: 373
+  first startPos: 0.96 last startPos+delta?: 2.64 Open Long B 0.87
+NEAR startInv_window: 77.8 maxInv: 97.9 minInv: -0.0 n: 295
+  first startPos: 0.0 last startPos+delta?: 59.4 Open Long B 18.4
+ZEC startInv_window: 1.3877787807814457e-16 maxInv: 0.32 minInv: 0 n: 185
+  first startPos: 0.02 last startPos+delta?: 0.2 Close Long A 0.2
+[0m
+a[0m$ [0mpython3 -c "
+import json
+fills=json.load(open('/tmp/opencode/fills_recent.json'))
+from collections import defaultdict
+# avg open px vs close px per coin
+for coin in sorted(set(f['coin'] for f in fills)):
+  opens=[f for f in fills if f['coin']==coin and f['dir']=='Open Long']
+  closes=[f for f in fills if f['coin']==coin and f['dir']=='Close Long']
+  # weighted avg px
+  def wavg(fl):
+    n=sum(float(f['sz'])*float(f['px']) for f in fl); d=sum(float(f['sz']) for f in fl)
+    return n/d if d else 0
+  print(coin, 'open_n', len(opens), 'wavg_open', round(wavg(opens),4), 'close_n', len(closes), 'wavg_close', round(wavg(closes),4), 'spread%', round((wavg(closes)-wavg(opens))/wavg(opens)*100,2) if wavg(opens) else None)
+# position cycles: times inventory returns to ~0 per coin
+for coin in sorted(set(f['coin'] for f in fills)):
+  cf=sorted([f for f in fills if f['coin']==coin], key=lambda x:x['time'])
+  # reconstruct inventory starting from first startPosition
+  inv=float(cf[0]['startPosition'])
+  cycles=0
+  for f in cf:
+    inv += float(f['sz']) if f['side']=='B' else -float(f['sz'])
+    if abs(inv)<1e-9:
+      cycles+=1
+  print(coin, 'startInv', cf[0]['startPosition'], 'endInv', round(inv,4), 'flat_returns', cycles)
+"
+
+ETH open_n 5 wavg_open 2480.4761 close_n 1 wavg_close 2495.1 spread% 0.59
+HYPE open_n 259 wavg_open 73.4344 close_n 114 wavg_close 74.5413 spread% 1.51
+INJ open_n 114 wavg_open 7.8009 close_n 45 wavg_close 7.884 spread% 1.07
+JUP open_n 56 wavg_open 0.2573 close_n 22 wavg_close 0.261 spread% 1.43
+NEAR open_n 219 wavg_open 3.9357 close_n 76 wavg_close 3.9844 spread% 1.24
+ONDO open_n 113 wavg_open 0.4339 close_n 41 wavg_close 0.439 spread% 1.19
+UNI open_n 48 wavg_open 9.48 close_n 16 wavg_close 9.5715 spread% 0.96
+XLM open_n 17 wavg_open 0.1903 close_n 6 wavg_close 0.1936 spread% 1.73
+XMR open_n 403 wavg_open 500.171 close_n 102 wavg_close 502.6841 spread% 0.5
+ZEC open_n 145 wavg_open 924.1046 close_n 40 wavg_close 928.8918 spread% 0.52
+ZRO open_n 104 wavg_open 1.4698 close_n 54 wavg_close 1.4904 spread% 1.4
+ETH startInv 0.0 endInv 0.0 flat_returns 1
+HYPE startInv 0.96 endInv 3.51 flat_returns 80
+INJ startInv 0.0 endInv 29.0 flat_returns 34
+JUP startInv 0.0 endInv 0.0 flat_returns 18
+NEAR startInv 0.0 endInv 77.8 flat_returns 66
+ONDO startInv 0.0 endInv 145.0 flat_returns 36
+UNI startInv 0.0 endInv 13.0 flat_returns 15
+XLM startInv 0.0 endInv 0.0 flat_returns 5
+XMR startInv 0.0 endInv 0.351 flat_returns 66
+ZEC startInv 0.02 endInv 0.02 flat_returns 0
+ZRO startInv 0.0 endInv 14.9 flat_returns 49
+[0m
+[0m# [0mTodos
+[✓] Fetch current positions and account state via clearinghouseState
+[✓] Aggregate recent fills per coin/side/direction
+[•] Analyze timing, holding periods, funding, longer history
+[ ] Synthesize strategy conclusion
+[0m
+a[0m$ [0mpython3 -c "
+import json, urllib.request, time, datetime
+addr='0xe755b71641b95ff7a6bd40030e9dc7ac7939e578'
+def post(payload):
+  data=json.dumps(payload).encode()
+  for i in range(10):
+    try:
+      req=urllib.request.Request('https://api.hyperliquid.xyz/info', data=data, headers={'Content-Type':'application/json'})
+      with urllib.request.urlopen(req, timeout=20) as r:
+        txt=r.read().decode()
+        if 'rate limited' in txt.lower():
+          print(f'rate limited, sleep {3+i*2}', flush=True); time.sleep(3+i*2); continue
+        if txt.strip()=='null':
+          print('null, sleep', flush=True); time.sleep(4); continue
+        return txt
+    except Exception as e:
+      print(f'err {e} sleep', flush=True); time.sleep(4+i*2)
+  return None
+# portfolio (account history)
+time.sleep(2)
+txt=post({'type':'portfolio','user':addr})
+print('portfolio len', len(txt) if txt else None)
+if txt: open('/tmp/opencode/portfolio.json','w').write(txt); print(txt[:800])
+"
+
+portfolio len 20145
+[["day",{"accountValueHistory":[[1790350800075,"2195.707048"],[1790359200046,"2196.779048"],[1790366400094,"2206.844136"],[1790374800104,"2198.490096"],[1790383200061,"2194.457918"],[1790391600063,"2190.338098"],[1790400000009,"2187.035874"],[1790407200036,"2196.139193"],[1790414400054,"2185.616602"],[1790422800026,"2194.319221"],[1790430000053,"2178.623687"],[1790438294538,"2193.847818"]],"pnlHistory":[[1790350800075,"0.0"],[1790359200046,"1.072"],[1790366400094,"11.137088"],[1790374800104,"2.783048"],[1790383200061,"-1.24913"],[1790391600063,"-5.36895"],[1790400000009,"-8.671174"],[1790407200036,"0.432145"],[1790414400054,"-10.090446"],[1790422800026,"-1.387827"],[1790430000053,"-17.083361"],[1790438294538,"-1.85923"]],"vlm":"831.65"}],["week",{"accountValueHistory":[[1789825200002,"1967
+[0m
+a[0m$ [0mpython3 -c "
+import json
+p=json.load(open('/tmp/opencode/portfolio.json'))
+for period, d in p:
+  avh=d.get('accountValueHistory',[]); pnl=d.get('pnlHistory',[])
+  print(period, 'points:', len(avh), 'vol:', d.get('vlm'))
+  if avh:
+    print(' ', 'first', avh[0], 'last', avh[-1])
+  if pnl:
+    print(' ', 'pnl first', pnl[0], 'last', pnl[-1], 'min', min(float(x[1]) for x in pnl), 'max', max(float(x[1]) for x in pnl))
+"
+
+day points: 12 vol: 831.65
+  first [1790350800075, '2195.707048'] last [1790438294538, '2193.847818']
+  pnl first [1790350800075, '0.0'] last [1790438294538, '-1.85923'] min -17.083361 max 11.137088
+week points: 63 vol: 31669.64
+  first [1789825200002, '1967.321513'] last [1790438294538, '2193.847818']
+  pnl first [1789825200002, '0.0'] last [1790438294538, '226.526305'] min -45.824351 max 241.494599
+month points: 45 vol: 88065.36
+  first [1787782800045, '1544.414134'] last [1790438294538, '2193.847818']
+  pnl first [1787782800045, '0.0'] last [1790438294538, '519.833684'] min 0.0 max 521.692914
+allTime points: 43 vol: 141512.49
+  first [1769638800120, '0.0'] last [1790438294538, '2193.847818']
+  pnl first [1769638800120, '0.0'] last [1790438294538, '1013.417818'] min 0.0 max 1013.417818
+perpDay points: 12 vol: 831.65
+  first [1790350800075, '2195.601181'] last [1790438294538, '2182.338984']
+  pnl first [1790350800075, '0.0'] last [1790438294538, '-1.942197'] min -17.140821 max 11.133095
+perpWeek points: 63 vol: 31669.64
+  first [1789825200002, '1846.941886'] last [1790438294538, '2182.338984']
+  pnl first [1789825200002, '0.0'] last [1790438294538, '224.997098'] min -46.069365 max 240.106597
+perpMonth points: 49 vol: 88065.36
+  first [1787782800045, '1527.237085'] last [1790438294538, '2182.338984']
+  pnl first [1787782800045, '0.0'] last [1790438294538, '514.121899'] min 0.0 max 529.231398
+perpAllTime points: 51 vol: 131827.3
+  first [1769638800120, '0.0'] last [1790438294538, '2182.338984']
+  pnl first [1769638800120, '0.0'] last [1790438294538, '893.208984'] min 0.0 max 896.217843
+[0m
+a[0m$ [0mpython3 -c "
+import datetime
+print(datetime.datetime.fromtimestamp(1769638800120/1000, datetime.timezone.utc).isoformat())
+print(datetime.datetime.fromtimestamp(1787782800045/1000, datetime.timezone.utc).isoformat())
+print(datetime.datetime.fromtimestamp(1767225600000/1000, datetime.timezone.utc).isoformat())
+import json
+fills=json.load(open('/tmp/opencode/fills_recent.json'))
+print('recent oldest:', datetime.datetime.fromtimestamp(min(f['time'] for f in fills)/1000, datetime.timezone.utc).isoformat())
+"
+sleep 4
+python3 -c "
+import json, urllib.request, time
+addr='0xe755b71641b95ff7a6bd40030e9dc7ac7939e578'
+def post(payload):
+  import json as j, urllib.request as u
+  data=j.dumps(payload).encode()
+  for i in range(10):
+    try:
+      req=u.Request('https://api.hyperliquid.xyz/info', data=data, headers={'Content-Type':'application/json'})
+      import urllib.request
+      with urllib.request.urlopen(req, timeout=20) as r:
+        txt=r.read().decode()
+        if 'rate limited' in txt.lower():
+          print(f'rl sleep', flush=True); time.sleep(4+i*2); continue
+        if txt.strip()=='null':
+          print('null sleep', flush=True); time.sleep(5); continue
+        return txt
+    except Exception as e:
+      print(f'err {e}', flush=True); time.sleep(5+i*2)
+  return None
+# page back: oldest recent = 2026-06-02, fetch 90-day chunks backward
+# recent oldest time
+import json as j
+fills=j.load(open('/tmp/opencode/fills_recent.json'))
+oldest=min(f['time'] for f in fills)
+print('oldest recent', oldest)
+# chunk: Apr-Jun, Jan-Apr etc. userFillsByTime needs startTime,endTime
+end=oldest
+for k in range(4):
+  start=end-90*86400*1000
+  print(f'fetch chunk {k} {start} to {end}', flush=True)
+  time.sleep(3)
+  txt=post({'type':'userFillsByTime','user':addr,'startTime':start,'endTime':end})
+  print(' got len', len(txt) if txt else None, flush=True)
+  if txt:
+    open(f'/tmp/opencode/fills_chunk{k}.json','w').write(txt)
+    d=j.loads(txt)
+    print('  n fills', len(d), flush=True)
+    if d:
+      print('  range', min(x['time'] for x in d), max(x['time'] for x in d), flush=True)
+      from collections import Counter
+      print('  coins', Counter(x['coin'] for x in d), flush=True)
+      print('  dirs', Counter(x['dir'] for x in d), flush=True)
+    else:
+      print('  empty', flush=True)
+  end=start
+"
+
+2026-01-28T22:20:00.120000+00:00
+2026-08-26T22:20:00.045000+00:00
+2026-01-01T00:00:00+00:00
+recent oldest: 2026-06-02T06:58:03.334000+00:00
+oldest recent 1780383483334
+fetch chunk 0 1772607483334 to 1780383483334
+ got len 75971
+  n fills 235
+  range 1772638191651 1780383483334
+  coins Counter({'HYPE': 196, '@107': 39})
+  dirs Counter({'Open Long': 114, 'Close Long': 78, 'Buy': 24, 'Sell': 15, 'Open Short': 2, 'Close Short': 2})
+fetch chunk 1 1764831483334 to 1772607483334
+err HTTP Error 429: Too Many Requests
+err HTTP Error 429: Too Many Requests
+err HTTP Error 429: Too Many Requests
+err HTTP Error 429: Too Many Requests
+ got len 42085
+  n fills 116
+  range 1769151377046 1772527771385
+  coins Counter({'@107': 116})
+  dirs Counter({'Buy': 80, 'Sell': 36})
+fetch chunk 2 1757055483334 to 1764831483334
+ got len 2
+  n fills 0
+  empty
+fetch chunk 3 1749279483334 to 1757055483334
+ got len 2
+  n fills 0
+  empty
+[0m
+a[0m$ [0mpython3 -c "
+import json
+from collections import Counter
+allfills=json.load(open('/tmp/opencode/fills_recent.json'))
+for k in [0,1]:
+  try:
+    d=json.load(open(f'/tmp/opencode/fills_chunk{k}.json'))
+    print(f'chunk{k} n={len(d)}')
+    allfills=allfills+d
+  except Exception as e:
+    print(e)
+print('total', len(allfills))
+print('dirs all:', Counter(f['dir'] for f in allfills))
+print('coins all:', Counter(f['coin'] for f in allfills))
+# shorts detail
+shorts=[f for f in allfills if 'Short' in f['dir']]
+print('n shorts', len(shorts))
+for f in shorts:
+  print(f)
+# @107 detail
+at=[f for f in allfills if f['coin']=='@107']
+print('@107 n', len(at), 'dirs', Counter(f['dir'] for f in at))
+print('@107 sample:', at[0] if at else None)
+print('@107 pnl sum:', sum(float(f.get('closedPnl',0)) for f in at))
+print('@107 time range:', min(f['time'] for f in at) if at else None, max(f['time'] for f in at) if at else None)
+# HYPE early vs recent
+"
+
+chunk0 n=235
+chunk1 n=116
+total 2351
+dirs all: Counter({'Open Long': 1597, 'Close Long': 595, 'Buy': 104, 'Sell': 51, 'Open Short': 2, 'Close Short': 2})
+coins all: Counter({'HYPE': 569, 'XMR': 505, 'NEAR': 295, 'ZEC': 185, 'INJ': 159, 'ZRO': 158, '@107': 155, 'ONDO': 154, 'JUP': 78, 'UNI': 64, 'XLM': 23, 'ETH': 6})
+n shorts 4
+{'coin': 'HYPE', 'px': '48.348', 'sz': '0.61', 'side': 'A', 'time': 1779199523638, 'startPosition': '0.0', 'dir': 'Open Short', 'closedPnl': '0.0', 'hash': '0x17614d26f059a0c818db043bc222f3020626000c8b5cbf9abb29f879af5d7ab2', 'oid': 433020003872, 'crossed': True, 'fee': '0.01274', 'tid': 769291387261123, 'feeToken': 'USDC', 'twapId': None}
+{'coin': 'HYPE', 'px': '47.728', 'sz': '0.61', 'side': 'B', 'time': 1779201248650, 'startPosition': '-0.61', 'dir': 'Close Short', 'closedPnl': '0.3782', 'hash': '0x8a1e759a8e58f2f58b98043bc283340101008d80295c11c72de720ed4d5ccce0', 'oid': 433020003873, 'crossed': True, 'fee': '0.012577', 'tid': 237959170825528, 'feeToken': 'USDC', 'twapId': None}
+{'coin': 'HYPE', 'px': '68.271', 'sz': '1.46', 'side': 'A', 'time': 1780166474981, 'startPosition': '0.0', 'dir': 'Open Short', 'closedPnl': '0.0', 'hash': '0x7b168b3c3e296db57c90043c984b8b0201130021d92c8c871edf368efd2d47a0', 'oid': 449276978716, 'crossed': True, 'fee': '0.043059', 'tid': 64056823158043, 'feeToken': 'USDC', 'twapId': None}
+{'coin': 'HYPE', 'px': '67.456', 'sz': '1.46', 'side': 'B', 'time': 1780172658455, 'startPosition': '-1.46', 'dir': 'Close Short', 'closedPnl': '1.1899', 'hash': '0x2287af64f289d6ab2401043c99ab8e01fa00c74a8d8cf57dc6505ab7b18db095', 'oid': 449276978717, 'crossed': True, 'fee': '0.042545', 'tid': 758632462986892, 'feeToken': 'USDC', 'twapId': None}
+@107 n 155 dirs Counter({'Buy': 104, 'Sell': 51})
+@107 sample: {'coin': '@107', 'px': '33.215', 'sz': '4.84', 'side': 'A', 'time': 1772638191651, 'startPosition': '5.09353197', 'dir': 'Sell', 'closedPnl': '3.36152931', 'hash': '0x916b2713edab596e92e404366dd76e021e1c00f988ae78403533d266acaf3359', 'oid': 336350291902, 'crossed': False, 'fee': '0.06173207', 'tid': 310236549986969, 'cloid': '0x12c8058ec39cf363632fdb706e0c1d56', 'feeToken': 'USDC', 'twapId': None}
+@107 pnl sum: 112.10390286
+@107 time range: 1769151377046 1779570142627
+[0m
+a[0m$ [0msleep 3; python3 -c "
+import json, urllib.request, time
+def post(payload):
+  data=json.dumps(payload).encode()
+  for i in range(8):
+    try:
+      req=urllib.request.Request('https://api.hyperliquid.xyz/info', data=data, headers={'Content-Type':'application/json'})
+      with urllib.request.urlopen(req, timeout=20) as r:
+        txt=r.read().decode()
+        if 'rate limited' in txt.lower() or txt.strip()=='null':
+          print(f'rl/null retry {i}', flush=True); time.sleep(4+i*2); continue
+        return txt
+    except Exception as e:
+      print(f'err {e} retry {i}', flush=True); time.sleep(4+i*2)
+  return None
+txt=post({'type':'spotMeta'})
+print('spotMeta len', len(txt) if txt else None)
+if txt:
+  open('/tmp/opencode/spotMeta.json','w').write(txt)
+  import json as j
+  m=j.loads(txt)
+  print('tokens sample:', m.get('tokens',[])[:3] if isinstance(m,dict) else type(m))
+  # find index 107
+  if isinstance(m,dict):
+    for t in m.get('tokens',[]):
+      if str(t.get('index'))=='107' or t.get('index')==107:
+        print('token107:', t)
+    for u in m.get('universe',[])[:5]:
+      print('univ sample:', u)
+    # find universe with index 107?
+    for u in m.get('universe',[]):
+      if u.get('index')==107 or str(u.get('name')).endswith('107'):
+        print('univ107:', u)
+"
+
+err HTTP Error 429: Too Many Requests retry 0
+err HTTP Error 429: Too Many Requests retry 1
+err HTTP Error 429: Too Many Requests retry 2
+err HTTP Error 429: Too Many Requests retry 3
+spotMeta len 136556
+tokens sample: [{'name': 'USDC', 'szDecimals': 8, 'weiDecimals': 8, 'index': 0, 'tokenId': '0x6d1e7cde53ba9467b783cb7c530ce054', 'isCanonical': True, 'evmContract': {'address': '0x6b9e773128f453f5c2c60935ee2de2cbc5390a24', 'evm_extra_wei_decimals': -2}, 'fullName': None, 'deployerTradingFeeShare': '0.0'}, {'name': 'PURR', 'szDecimals': 0, 'weiDecimals': 5, 'index': 1, 'tokenId': '0xc1fb593aeffbeb02f85e0308e9956a90', 'isCanonical': True, 'evmContract': {'address': '0x9b498c3c8a0b8cd8ba1d9851d40d186f1872b44e', 'evm_extra_wei_decimals': 13}, 'fullName': None, 'deployerTradingFeeShare': '0.0'}, {'name': 'HFUN', 'szDecimals': 2, 'weiDecimals': 8, 'index': 2, 'tokenId': '0xbaf265ef389da684513d98d68edf4eae', 'isCanonical': False, 'evmContract': {'address': '0xa320d9f65ec992eff38622c63627856382db726c', 'evm_extra_wei_decimals': 10}, 'fullName': None, 'deployerTradingFeeShare': '0.0'}]
+token107: {'name': 'RANK', 'szDecimals': 2, 'weiDecimals': 8, 'index': 107, 'tokenId': '0xd0a824284314e8ceb8cf3c3b31ddf0bd', 'isCanonical': False, 'evmContract': None, 'fullName': '!rank', 'deployerTradingFeeShare': '0.0'}
+univ sample: {'tokens': [1, 0], 'name': 'PURR/USDC', 'index': 0, 'isCanonical': True}
+univ sample: {'tokens': [2, 0], 'name': '@1', 'index': 1, 'isCanonical': False}
+univ sample: {'tokens': [3, 0], 'name': '@2', 'index': 2, 'isCanonical': False}
+univ sample: {'tokens': [4, 0], 'name': '@3', 'index': 3, 'isCanonical': False}
+univ sample: {'tokens': [5, 0], 'name': '@4', 'index': 4, 'isCanonical': False}
+univ107: {'tokens': [150, 0], 'name': '@107', 'index': 107, 'isCanonical': False}
+[0m
+a[0m$ [0mpython3 -c "
+import json
+m=json.load(open('/tmp/opencode/spotMeta.json'))
+toks={t['index']:t for t in m['tokens']}
+print('token150:', toks.get(150))
+print('token107:', toks.get(107))
+# universe 107
+for u in m['universe']:
+  if u['index']==107:
+    print(u)
+    for ti in u['tokens']:
+      print(' ->', toks.get(ti))
+"
+
+token150: {'name': 'HYPE', 'szDecimals': 2, 'weiDecimals': 8, 'index': 150, 'tokenId': '0x0d01dc56dcaaca66ad901c959b4011ec', 'isCanonical': False, 'evmContract': None, 'fullName': 'Hyperliquid', 'deployerTradingFeeShare': '0.0'}
+token107: {'name': 'RANK', 'szDecimals': 2, 'weiDecimals': 8, 'index': 107, 'tokenId': '0xd0a824284314e8ceb8cf3c3b31ddf0bd', 'isCanonical': False, 'evmContract': None, 'fullName': '!rank', 'deployerTradingFeeShare': '0.0'}
+{'tokens': [150, 0], 'name': '@107', 'index': 107, 'isCanonical': False}
+ -> {'name': 'HYPE', 'szDecimals': 2, 'weiDecimals': 8, 'index': 150, 'tokenId': '0x0d01dc56dcaaca66ad901c959b4011ec', 'isCanonical': False, 'evmContract': None, 'fullName': 'Hyperliquid', 'deployerTradingFeeShare': '0.0'}
+ -> {'name': 'USDC', 'szDecimals': 8, 'weiDecimals': 8, 'index': 0, 'tokenId': '0x6d1e7cde53ba9467b783cb7c530ce054', 'isCanonical': True, 'evmContract': {'address': '0x6b9e773128f453f5c2c60935ee2de2cbc5390a24', 'evm_extra_wei_decimals': -2}, 'fullName': None, 'deployerTradingFeeShare': '0.0'}
+[0m
+a[0m$ [0msleep 3; python3 -c "
+import json, urllib.request, time, datetime
+def post(payload):
+  data=json.dumps(payload).encode()
+  for i in range(8):
+    try:
+      req=urllib.request.Request('https://api.hyperliquid.xyz/info', data=data, headers={'Content-Type':'application/json'})
+      with urllib.request.urlopen(req, timeout=20) as r:
+        txt=r.read().decode()
+        if 'rate limited' in txt.lower() or txt.strip()=='null':
+          print(f'rl/null retry {i}', flush=True); time.sleep(5+i*2); continue
+        return txt
+    except Exception as e:
+      print(f'err {e} retry {i}', flush=True); time.sleep(5+i*2)
+  return None
+addr='0xe755b71641b95ff7a6bd40030e9dc7ac7939e578'
+# funding since inception
+txt=post({'type':'userFunding','user':addr,'startTime':1767225600000,'endTime':1790438400000})
+print('funding len', len(txt) if txt else None)
+if txt:
+  open('/tmp/opencode/funding.json','w').write(txt)
+  import json as j
+  d=j.loads(txt)
+  print('n funding events', len(d))
+  if d:
+    from collections import defaultdict
+    tot=defaultdict(float)
+    for e in d:
+      tot[e['coin']]+=float(e['usdc'])
+    print('funding net per coin:', dict(tot), 'total:', round(sum(tot.values()),2))
+"
+
+Traceback (most recent call last):
+  File "<string>", line 29, in <module>
+KeyError: 'coin'
+funding len 108007
+n funding events 500
+[0m
+a[0m$ [0mpython3 -c "
+import json
+from collections import defaultdict, Counter
+d=json.load(open('/tmp/opencode/funding.json'))
+print('n', len(d))
+print('keys sample:', list(d[0].keys()) if d else None)
+# aggregate without printing raw
+tot=0; by=defaultdict(float)
+for e in d:
+  c=e.get('coin') or e.get('delta',{}).get('coin') or '?'
+  v=float(e.get('usdc',0) or e.get('delta',{}).get('usdc',0) or 0)
+  tot+=v; by[c]+=v
+print('total funding usdc:', round(tot,2))
+print('per coin:', {k: round(v,2) for k,v in sorted(by.items())})
+print('time range:', min(e['time'] for e in d), max(e['time'] for e in d))
+# count funding payments vs time
+print('avg per event:', round(tot/len(d),4))
+"
+
+n 500
+keys sample: ['time', 'hash', 'delta']
+total funding usdc: -20.91
+per coin: {'ETH': -0.03, 'HYPE': -12.8, 'INJ': -0.1, 'JUP': -0.12, 'NEAR': -0.88, 'ONDO': -0.27, 'UNI': -0.11, 'XLM': -0.27, 'XMR': -6.09, 'ZEC': -0.25}
+time range: 1773360000000 1789923600004
+avg per event: -0.0418
+[0m
+a[0m$ [0mpython3 -c "
+import json, datetime
+fills=json.load(open('/tmp/opencode/fills_recent.json'))
+# hold cycles: for each coin, segment by flat (inventory==0 using startPosition chain)
+from collections import defaultdict
+for coin in ['NEAR','XMR','HYPE','INJ','ZRO']:
+  cf=sorted([f for f in fills if f['coin']==coin], key=lambda x:x['time'])
+  inv=float(cf[0]['startPosition'])
+  cur_start=cf[0]['time']; holds=[]
+  for f in cf:
+    inv += float(f['sz']) if f['side']=='B' else -float(f['sz'])
+    if abs(inv)<1e-9:
+      holds.append((cur_start, f['time']))
+      # next start after this? find next fill time later
+      # set cur_start to next fill (approx)
+  # need proper segmentation: track last flat time
+  inv=float(cf[0]['startPosition']); last_flat=cf[0]['time'] if float(cf[0]['startPosition'])==0 else None
+  durs=[]
+  for f in cf:
+    inv += float(f['sz']) if f['side']=='B' else -float(f['sz'])
+    if abs(inv)<1e-9:
+      if last_flat is not None:
+        durs.append((f['time']-last_flat)/3600000)
+      last_flat=f['time']
+    elif last_flat is None and abs(inv)>1e-9:
+      pass
+  # if starting non-zero, first cycle incomplete; skip
+  import statistics
+  if durs:
+    durs_sorted=sorted(durs)
+    print(coin, 'completed round-trips:', len(durs), 'median hrs:', round(durs_sorted[len(durs_sorted)//2],1), 'mean hrs:', round(sum(durs)/len(durs),1), 'max hrs:', round(max(durs),1), 'min hrs:', round(min(durs),2))
+  else:
+    print(coin, 'no completed durs')
+# size vs account: current positions notionals already have; check max position per coin in window via inventory*price approx
+"
+sleep 2; python3 -c "
+import json, urllib.request, time
+def post(p):
+  import json as j, urllib.request as u
+  d=j.dumps(p).encode()
+  for i in range(6):
+    try:
+      r=u.Request('https://api.hyperliquid.xyz/info', data=d, headers={'Content-Type':'application/json'})
+      import urllib.request
+      with urllib.request.urlopen(r, timeout=15) as rr:
+        t=rr.read().decode()
+        if 'rate limited' in t.lower() or t.strip()=='null':
+          print('rl', flush=True); time.sleep(5); continue
+        return t
+    except Exception as e:
+      print(e, flush=True); time.sleep(5)
+  return None
+import time as tm; tm.sleep(3)
+t=post({'type':'spotClearinghouseState','user':'0xe755b71641b95ff7a6bd40030e9dc7ac7939e578'})
+print('spot len', len(t) if t else None)
+if t:
+  open('/tmp/opencode/spotState.json','w').write(t)
+  import json as j
+  s=j.loads(t)
+  print('spot keys:', list(s.keys()))
+  bals=s.get('balances',[])
+  print('n balances', len(bals))
+  for b in bals:
+    print(b.get('coin'), b.get('total'), b.get('hold'), b.get('entryNtl'))
+"
+
+NEAR completed round-trips: 66 median hrs: 1.6 mean hrs: 6.2 max hrs: 129.7 min hrs: 0.11
+XMR completed round-trips: 66 median hrs: 3.0 mean hrs: 9.8 max hrs: 298.5 min hrs: 0.09
+HYPE completed round-trips: 79 median hrs: 10.0 mean hrs: 34.1 max hrs: 847.0 min hrs: 0.24
+INJ completed round-trips: 34 median hrs: 1.2 mean hrs: 4.2 max hrs: 54.9 min hrs: 0.14
+ZRO completed round-trips: 49 median hrs: 1.0 mean hrs: 2.6 max hrs: 34.9 min hrs: 0.05
+spot len 461
+spot keys: ['balances', 'tokenToAvailableAfterMaintenance']
+n balances 5
+USDC 2193.32965622 2181.91506 0.0
+HYPE 0.00116452 0.0 0.06753235
+USDE 0.0 0.0 0.0
+USDT0 0.0 0.0 0.0
+USDH 0.0 0.0 0.0
+[0m
+a[0m$ [0mpython3 -c "
+import json
+from collections import Counter
+fills=json.load(open('/tmp/opencode/fills_recent.json'))
+ch0=json.load(open('/tmp/opencode/fills_chunk0.json'))
+ch1=json.load(open('/tmp/opencode/fills_chunk1.json'))
+allf=fills+ch0+ch1
+print('total fills all history:', len(allf))
+print('dirs:', Counter(f['dir'] for f in allf))
+# total closed pnl all
+print('total closedPnl all:', round(sum(float(f.get('closedPnl',0)) for f in allf),1))
+print('total fees all:', round(sum(float(f.get('fee',0)) for f in allf),2))
+# maker share all
+print('maker(false) share:', sum(1 for f in allf if not f.get('crossed'))/len(allf))
+# sizing: notional distribution recent
+import statistics
+ns=sorted(float(f['sz'])*float(f['px']) for f in fills)
+print('recent notional p10:', round(ns[int(len(ns)*0.1)],1), 'p50:', round(ns[len(ns)//2],1), 'p90:', round(ns[int(len(ns)*0.9)],1), 'max:', round(max(ns),1))
+# time: fills per week recent
+import datetime as dt
+from collections import Counter as C
+wk=C(dt.datetime.fromtimestamp(f['time']/1000, dt.timezone.utc).strftime('%Y-W%V') for f in allf)
+print('active weeks:', len(wk), 'last 5 weeks:', sorted(wk.items())[-5:])
+"
+
+total fills all history: 2351
+dirs: Counter({'Open Long': 1597, 'Close Long': 595, 'Buy': 104, 'Sell': 51, 'Open Short': 2, 'Close Short': 2})
+total closedPnl all: 1135.4
+total fees all: 31.27
+maker(false) share: 0.7294768183751595
+recent notional p10: 15.6 p50: 36.2 p90: 112.6 max: 710.1
+active weeks: 33 last 5 weeks: [('2026-W35', 216), ('2026-W36', 565), ('2026-W37', 128), ('2026-W38', 350), ('2026-W39', 526)]
+[0m
+[0m# [0mTodos
+[✓] Fetch current positions and account state via clearinghouseState
+[✓] Aggregate recent fills per coin/side/direction
+[✓] Analyze timing, holding periods, funding, longer history
+[•] Synthesize strategy conclusion
+[0m
+[0m# [0mTodos
+[✓] Fetch current positions and account state via clearinghouseState
+[✓] Aggregate recent fills per coin/side/direction
+[✓] Analyze timing, holding periods, funding, longer history
+[✓] Synthesize strategy conclusion
+[0m
+Derived fully independently from Hyperliquid `info` API (`clearinghouseState`, `userFills`, `userFillsByTime`, `portfolio`, `userFunding`, `spotClearinghouseState`, `spotMeta`). No workspace files read. Only aggregates below.
+
+## 1. Account snapshot
+
+* Perp `accountValue ~$2,181`, total long notional `~$1,353`, margin used same (all 1x cross).
+* Current 7 positions, all long, all 1x cross, no liquidation px:
+  `INJ 29, UNI 13, ZRO 14.9, NEAR 77.8, ONDO 145, HYPE 3.51, XMR 0.351`
+* Spot: `~$2,193 USDC` + dust HYPE, no other spot inventory.
+* `portfolio`: first funded `2026-01-28`, `$0 -> ~$2,193` now. `allTime vol ~$141k` (`perp ~$132k`), `allTime pnl ~+$1,013` (`perp ~+$893`). `month pnl ~+$520`, `week ~+$226`. Month/allTime pnl never negative — steady grind.
+
+## 2. Full fill history: 2,351 fills, Jan-Sep 2026
+
+* `Open Long 1,597 / Close Long 595 / Spot Buy 104 / Spot Sell 51 / Open Short 2 / Close Short 2`
+* I.e. `99.8%` long/spot-buy, `0.17%` short (2 tiny HYPE round-trips: `0.61 @ ~48 held ~30m +$0.38`, `1.46 @ ~68 held ~1.7h +$1.19`, both taker). No short strategy.
+* `@107` = HYPE/USDC spot (universe 107 -> token 150 HYPE). All 155 `@107` fills are Jan-Apr HYPE spot, `pnl ~+$112`.
+* Recent 2,000-fill window `2026-06-02 to 2026-09-26`, 11 perp coins, zero shorts:
+  `XMR 505, HYPE 373, NEAR 295, ZEC 185, INJ 159, ZRO 158, ONDO 154, JUP 78, UNI 64, XLM 23, ETH 6`
+* Per-coin buy vs sell notional almost balanced (net `-$78 to +$187`), i.e. rotating, not buy-and-hold one coin.
+
+## 3. Signature: long-only 1x grid / DCA scalp bot
+
+* `73% maker` (`crossed=false`), `0 TWAP`, 3 repeating `cloid` prefixes — passive limit ladder.
+* Tiny size: `avg ~$58/fill, median ~$36, p10 ~$15.6, p90 ~$112.6, max ~$710`.
+* Only `415/1,483` opens start from flat; `72%` add to existing position = scaling / averaging down.
+* Closes are tiny take-profits: `mean +$1.68/close, median +$0.99`, `mean +1.5%` of notional. Weighted close px `0.5-1.7%` above weighted open px per coin (e.g. HYPE `+1.5%`, XMR `+0.5%`, ZEC `+0.5%`).
+* Win rate `514/517 = 99.4%` profitable closes; only 3 losses (`-$8.2, -$2.2, -$1.25`). Per-coin `97-100%`. Never realizes losers — holds/averages instead.
+* Round-trips frequent: `5-80` flats/coin in window. Median hold `ZRO 1.0h, INJ 1.2h, NEAR 1.6h, XMR 3.0h, HYPE 10h`; mean longer due to bag-holds to `35d` max. Min minutes.
+* Total `closedPnl ~+$1,135`, fees `~$31`, funding paid `~-$20.9` (long bias cost, mostly HYPE+XMR). Funding arbitrage ruled out.
+* Activity bot-like: `78/116` days active, `~26 fills/day`, bursts `100-156/day`, all 24h UTC, slight 11-18 UTC peak. Median inter-fill `~4.4 min`.
+
+Evolution: `Jan-Mar HYPE spot accumulation -> Mar-Jun HYPE perps -> Jun-Sep diversified 11-coin long grid`. Current book is same: diversified 1x longs.
+
+**Strategy:** automated long-only, ~1x, multi-coin (privacy + alt-L1 heavy: XMR/HYPE/NEAR/ZEC/INJ) buy-the-dip grid. Lays passive micro-orders, scales into dips, sells `~1%` bounces, almost never takes a loss, uses 1x so drawdowns can be held for hours-weeks.

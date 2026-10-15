@@ -1,0 +1,1 @@
+kilo run -m kilo/nvidia/nemotron-3-ultra-550b-a55b:free --auto --dir /home/paf/Documents/code/misc/hyperliquid-strategy-sweeps/0xe755b71641b95ff7a6bd40030e9dc7ac7939e578/kilo-nemotron-3-ultra/work --variant high --agent plan Reply\ with\ exactly:\ OK

@@ -1,0 +1,15 @@
+{
+ "wallet": "0xe755b71641b95ff7a6bd40030e9dc7ac7939e578",
+ "label": "kilo-nemotron-3-ultra",
+ "tool": "kilo",
+ "model": "kilo/nvidia/nemotron-3-ultra-550b-a55b:free",
+ "variant": "high",
+ "free_gate": "ok",
+ "probe": "OK",
+ "status": "DONE",
+ "exit": 0,
+ "duration_s": 979.0,
+ "bytes": 143058,
+ "extra": "",
+ "prompt_file": "prompt.txt"
+}

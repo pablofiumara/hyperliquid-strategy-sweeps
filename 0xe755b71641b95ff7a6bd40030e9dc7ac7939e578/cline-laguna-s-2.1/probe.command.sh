@@ -1,0 +1,1 @@
+cline -P cline -m poolside/laguna-s-2.1:free --auto-approve true -y -c /home/paf/Documents/code/misc/hyperliquid-strategy-sweeps/0xe755b71641b95ff7a6bd40030e9dc7ac7939e578/cline-laguna-s-2.1/work --thinking xhigh -p Reply\ with\ exactly:\ OK

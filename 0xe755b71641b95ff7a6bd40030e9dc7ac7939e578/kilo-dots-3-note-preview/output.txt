@@ -1,0 +1,2628 @@
+[0m
+> code · dots-studio/dots-3-note-preview:free
+[0m
+I'll derive the trading strategy from on-chain data using the Hyperliquid API. Let me start by fetching the trader's activity data.
+[0m$ [0mcat > /tmp/fetch_activity.py << 'EOF'
+import requests, json, time
+
+URL = "https://api.hyperliquid.xyz/info"
+ADDR = "0xe755b71641b95ff7a6bd40030e9dc7ac7939e578"
+
+# Fetch user activity (fills)
+def fetch_activity(user, max_pages=100):
+    all_rows = []
+    page = 0
+    while page < max_pages:
+        payload = {"type": "userActivity", "user": user, "page": page}
+        r = requests.post(URL, json=payload, timeout=30)
+        data = r.json()
+        if isinstance(data, list):
+            rows = data
+        elif isinstance(data, dict):
+            rows = data.get("userActivity", data.get("rows", []))
+        else:
+            rows = []
+        if not rows:
+            break
+        all_rows.extend(rows)
+        if len(rows) < 1000:
+            break
+        page += 1
+        time.sleep(0.2)
+    return all_rows
+
+rows = fetch_activity(ADDR)
+print("Total activity rows:", len(rows))
+# Save to file for processing
+with open("/tmp/activity.json", "w") as f:
+    json.dump(rows, f)
+# Show first row structure
+if rows:
+    print("First row keys:", list(rows[0].keys()))
+    print("First row:", json.dumps(rows[0], indent=2)[:1000])
+EOF
+python3 /tmp/fetch_activity.py
+Traceback (most recent call last):
+  File "/usr/lib/python3/dist-packages/requests/models.py", line 971, in json
+    return complexjson.loads(self.text, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/json/__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/json/decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/json/decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/tmp/fetch_activity.py", line 29, in <module>
+    rows = fetch_activity(ADDR)
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/fetch_activity.py", line 13, in fetch_activity
+    data = r.json()
+           ^^^^^^^^
+  File "/usr/lib/python3/dist-packages/requests/models.py", line 975, in json
+    raise RequestsJSONDecodeError(e.msg, e.doc, e.pos)
+requests.exceptions.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+[0m
+[0m$ [0mcat > /tmp/test_api.py << 'EOF'
+import requests, json
+
+URL = "https://api.hyperliquid.xyz/info"
+ADDR = "0xe755b71641b95ff7a6bd40030e9dc7ac7939e578"
+
+payload = {"type": "userActivity", "user": ADDR, "page": 0}
+r = requests.post(URL, json=payload, timeout=30)
+print("Status:", r.status_code)
+print("Headers:", dict(r.headers))
+print("Body[:500]:", r.text[:500])
+EOF
+python3 /tmp/test_api.py
+Status: 422
+Headers: {'Content-Type': 'text/plain; charset=utf-8', 'Content-Length': '56', 'Connection': 'keep-alive', 'Server': 'nginx/1.22.1', 'Date': 'Sat, 26 Sep 2026 15:56:28 GMT', 'access-control-expose-headers': '*', 'access-control-allow-origin': '*', 'vary': 'origin, access-control-request-method, access-control-request-headers', 'X-Cache': 'Error from cloudfront', 'Via': '1.1 8296299208fa7b0e009f94a18c50e204.cloudfront.net (CloudFront)', 'X-Amz-Cf-Pop': 'EZE50-P7', 'X-Amz-Cf-Id': 'fYhzGjizlkduNtH1JrtDzrHQTwMoR4tVPwPK0bYzHbmpeJrLlVnBmA=='}
+Body[:500]: Failed to deserialize the JSON body into the target type
+[0m
+The request failed. Let me debug the response.
+[0m$ [0mcat > /tmp/test_types.py << 'EOF'
+import requests, json
+
+URL = "https://api.hyperliquid.xyz/info"
+ADDR = "0xe755b71641b95ff7a6bd40030e9dc7ac7939e578"
+
+for t in ["userFills", "userFillsWithFees", "userTwapHistory", "userFundingHistory", "userActivity"]:
+    payload = {"type": t, "user": ADDR}
+    try:
+        r = requests.post(URL, json=payload, timeout=30)
+        print(t, r.status_code, r.text[:200])
+    except Exception as e:
+        print(t, "ERR", e)
+    print("---")
+EOF
+python3 /tmp/test_types.py
+userFills 429 rate limited
+---
+userFillsWithFees 429 rate limited
+---
+userTwapHistory 422 Failed to deserialize the JSON body into the target type
+---
+userFundingHistory 422 Failed to deserialize the JSON body into the target type
+---
+userActivity 429 rate limited
+---
+[0m
+Rate limited. Let me wait and retry with proper types and delays.
+[0m$ [0mcat > /tmp/test_types2.py << 'EOF'
+import requests, json, time
+
+URL = "https://api.hyperliquid.xyz/info"
+ADDR = "0xe755b71641b95ff7a6bd40030e9dc7ac7939e578"
+
+for t in ["userFills", "userFillsWithFees"]:
+    time.sleep(5)
+    payload = {"type": t, "user": ADDR}
+    try:
+        r = requests.post(URL, json=payload, timeout=30)
+        print(t, r.status_code, r.text[:300])
+    except Exception as e:
+        print(t, "ERR", e)
+    print("---")
+EOF
+python3 /tmp/test_types2.py
+userFills 429 rate limited
+---
+userFillsWithFees 422 Failed to deserialize the JSON body into the target type
+---
+[0m
+Let me wait longer and check the correct API format.
+[0m$ [0mcat > /tmp/test3.py << 'EOF'
+import requests, json, time
+
+URL = "https://api.hyperliquid.xyz/info"
+ADDR = "0xe755b71641b95ff7a6bd40030e9dc7ac7939e578"
+
+# Try userFills with proper format
+time.sleep(10)
+payload = {"type": "userFills", "user": ADDR}
+r = requests.post(URL, json=payload, timeout=30)
+print("userFills:", r.status_code, r.text[:300])
+EOF
+python3 /tmp/test3.py
+userFills: 200 [{"coin":"ZRO","px":"1.6501","sz":"8.8","side":"B","time":1790436417134,"startPosition":"6.1","dir":"Open Long","closedPnl":"0.0","hash":"0xbd2d49998ddb4f73bea70445419ee002035d007f28de6e4560f5f4ec4cdf295e","oid":557327812029,"crossed":false,"fee":"0.002091","tid":740353982975812,"cloid":"0x010201a0d
+[0m
+The API works. Let me fetch all fills and analyze them.
+[0m$ [0mcat > /tmp/fetch_fills.py << 'EOF'
+import requests, json, time
+
+URL = "https://api.hyperliquid.xyz/info"
+ADDR = "0xe755b71641b95ff7a6bd40030e9dc7ac7939e578"
+
+time.sleep(3)
+payload = {"type": "userFills", "user": ADDR}
+r = requests.post(URL, json=payload, timeout=60)
+data = r.json()
+print("Type:", type(data), "Len:", len(data) if isinstance(data, list) else "n/a")
+with open("/tmp/fills.json", "w") as f:
+    json.dump(data, f)
+if data:
+    print("First:", json.dumps(data[0], indent=2))
+    print("Last:", json.dumps(data[-1], indent=2))
+EOF
+python3 /tmp/fetch_fills.py
+Type: <class 'NoneType'> Len: n/a
+[0m
+[0m$ [0mcat > /tmp/fetch_fills2.py << 'EOF'
+import requests, json, time
+
+URL = "https://api.hyperliquid.xyz/info"
+ADDR = "0xe755b71641b95ff7a6bd40030e9dc7ac7939e578"
+
+time.sleep(5)
+payload = {"type": "userFills", "user": ADDR}
+r = requests.post(URL, json=payload, timeout=60)
+print("Status:", r.status_code)
+print("Body[:300]:", r.text[:300])
+data = r.json()
+if data:
+    print("Len:", len(data))
+    with open("/tmp/fills.json", "w") as f:
+        json.dump(data, f)
+    print("First:", json.dumps(data[0], indent=2))
+    print("Last:", json.dumps(data[-1], indent=2))
+else:
+    print("Empty/None response")
+EOF
+python3 /tmp/fetch_fills2.py
+Status: 200
+Body[:300]: [{"coin":"ZRO","px":"1.6501","sz":"8.8","side":"B","time":1790436417134,"startPosition":"6.1","dir":"Open Long","closedPnl":"0.0","hash":"0xbd2d49998ddb4f73bea70445419ee002035d007f28de6e4560f5f4ec4cdf295e","oid":557327812029,"crossed":false,"fee":"0.002091","tid":740353982975812,"cloid":"0x010201a0d
+Len: 2000
+First: {
+  "coin": "ZRO",
+  "px": "1.6501",
+  "sz": "8.8",
+  "side": "B",
+  "time": 1790436417134,
+  "startPosition": "6.1",
+  "dir": "Open Long",
+  "closedPnl": "0.0",
+  "hash": "0xbd2d49998ddb4f73bea70445419ee002035d007f28de6e4560f5f4ec4cdf295e",
+  "oid": 557327812029,
+  "crossed": false,
+  "fee": "0.002091",
+  "tid": 740353982975812,
+  "cloid": "0x010201a0de46d8600001b145f6e20aee",
+  "feeToken": "USDC",
+  "twapId": null
+}
+Last: {
+  "coin": "HYPE",
+  "px": "72.007",
+  "sz": "0.55",
+  "side": "B",
+  "time": 1780383483334,
+  "startPosition": "0.96",
+  "dir": "Open Long",
+  "closedPnl": "0.0",
+  "hash": "0xb2dcfe31ee11bbecb456043cc870b30201a200178914dabe56a5a984ad1595d7",
+  "oid": 452658607075,
+  "crossed": false,
+  "fee": "0.005702",
+  "tid": 987095948486970,
+  "feeToken": "USDC",
+  "twapId": null
+}
+[0m
+[0m$ [0mcat > /tmp/analyze1.py << 'EOF'
+import json
+from datetime import datetime, timezone
+
+with open("/tmp/fills.json") as f:
+    data = json.load(f)
+
+times = [d["time"] for d in data]
+print("Count:", len(data))
+print("Newest:", datetime.fromtimestamp(times[0]/1000, tz=timezone.utc))
+print("Oldest:", datetime.fromtimestamp(times[-1]/1000, tz=timezone.utc))
+
+# Coins
+from collections import Counter
+coins = Counter(d["coin"] for d in data)
+print("\nCoins:", dict(coins))
+
+# Sides
+sides = Counter(d["side"] for d in data)
+print("Sides:", dict(sides))
+
+# Dirs
+dirs = Counter(d["dir"] for d in data)
+print("Dirs:", dict(dirs))
+EOF
+python3 /tmp/analyze1.py
+Count: 2000
+Newest: 2026-09-26 15:26:57.134000+00:00
+Oldest: 2026-06-02 06:58:03.334000+00:00
+
+Coins: {'ZRO': 158, 'NEAR': 295, 'ONDO': 154, 'INJ': 159, 'HYPE': 373, 'UNI': 64, 'XMR': 505, 'XLM': 23, 'ETH': 6, 'JUP': 78, 'ZEC': 185}
+Sides: {'B': 1483, 'A': 517}
+Dirs: {'Open Long': 1483, 'Close Long': 517}
+[0m
+The API returns up to 2000 fills (newest first). Let me check the time range and try to page further back.
+Only long positions, all coins. Let me page further back for more history.
+[0m$ [0mcat > /tmp/page_test.py << 'EOF'
+import requests, json, time
+
+URL = "https://api.hyperliquid.xyz/info"
+ADDR = "0xe755b71641b95ff7a6bd40030e9dc7ac7939e578"
+
+# Try with startTime parameter to get older fills
+time.sleep(3)
+# Get oldest time from current data
+with open("/tmp/fills.json") as f:
+    data = json.load(f)
+oldest = min(d["time"] for d in data)
+print("Oldest time:", oldest)
+
+# Try startTime filter
+time.sleep(3)
+payload = {"type": "userFills", "user": ADDR, "startTime": oldest - 1000}
+r = requests.post(URL, json=payload, timeout=60)
+print("With startTime:", r.status_code, type(r.json()))
+d2 = r.json()
+if d2:
+    print("Len:", len(d2))
+    print("First:", json.dumps(d2[0])[:200])
+    print("Last:", json.dumps(d2[-1])[:200])
+    with open("/tmp/fills2.json", "w") as f:
+        json.dump(d2, f)
+EOF
+python3 /tmp/page_test.py
+Traceback (most recent call last):
+  File "/tmp/page_test.py", line 11, in <module>
+    oldest = min(d["time"] for d in data)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: 'NoneType' object is not iterable
+[0m
+[0m$ [0mcat > /tmp/refetch.py << 'EOF'
+import requests, json, time
+
+URL = "https://api.hyperliquid.xyz/info"
+ADDR = "0xe755b71641b95ff7a6bd40030e9dc7ac7939e578"
+
+time.sleep(5)
+payload = {"type": "userFills", "user": ADDR}
+r = requests.post(URL, json=payload, timeout=60)
+data = r.json()
+with open("/tmp/fills.json", "w") as f:
+    json.dump(data, f)
+print("Fetched:", len(data))
+EOF
+python3 /tmp/refetch.py
+Traceback (most recent call last):
+  File "/tmp/refetch.py", line 12, in <module>
+    print("Fetched:", len(data))
+                      ^^^^^^^^^
+TypeError: object of type 'NoneType' has no len()
+[0m
+[0m$ [0mcat > /tmp/refetch2.py << 'EOF'
+import requests, json, time
+
+URL = "https://api.hyperliquid.xyz/info"
+ADDR = "0xe755b71641b95ff7a6bd40030e9dc7ac7939e578"
+
+def fetch(payload, retries=5):
+    for i in range(retries):
+        r = requests.post(URL, json=payload, timeout=60)
+        if r.status_code == 200:
+            data = r.json()
+            if data is not None:
+                return data
+        print(f"  retry {i}: status={r.status_code} len={len(r.text)}")
+        time.sleep(3)
+    return None
+
+# First get fresh data
+data = fetch({"type": "userFills", "user": ADDR})
+if data is None:
+    print("Failed")
+    exit(1)
+with open("/tmp/fills.json", "w") as f:
+    json.dump(data, f)
+print("Fetched:", len(data))
+
+oldest = min(d["time"] for d in data)
+print("Oldest:", oldest)
+
+# Try startTime
+time.sleep(3)
+d2 = fetch({"type": "userFills", "user": ADDR, "startTime": oldest - 1000})
+if d2:
+    print("With startTime len:", len(d2))
+    print("First:", json.dumps(d2[0])[:200])
+    print("Last:", json.dumps(d2[-1])[:200])
+    with open("/tmp/fills2.json", "w") as f:
+        json.dump(d2, f)
+EOF
+python3 /tmp/refetch2.py
+Fetched: 2000
+Oldest: 1780383483334
+With startTime len: 2000
+First: {"coin": "ZRO", "px": "1.6501", "sz": "8.8", "side": "B", "time": 1790436417134, "startPosition": "6.1", "dir": "Open Long", "closedPnl": "0.0", "hash": "0xbd2d49998ddb4f73bea70445419ee002035d007f28de
+Last: {"coin": "HYPE", "px": "72.007", "sz": "0.55", "side": "B", "time": 1780383483334, "startPosition": "0.96", "dir": "Open Long", "closedPnl": "0.0", "hash": "0xb2dcfe31ee11bbecb456043cc870b30201a200178
+[0m
+[0m$ [0mcat > /tmp/check2.py << 'EOF'
+import json
+with open("/tmp/fills.json") as f:
+    d1 = json.load(f)
+with open("/tmp/fills2.json") as f:
+    d2 = json.load(f)
+print("d1 len:", len(d1), "d2 len:", len(d2))
+print("Same?", d1 == d2)
+# Check oldest of d2
+if d2:
+    print("d2 oldest:", min(x["time"] for x in d2))
+    print("d2 newest:", max(x["time"] for x in d2))
+EOF
+python3 /tmp/check2.py
+d1 len: 2000 d2 len: 2000
+Same? True
+d2 oldest: 1780383483334
+d2 newest: 1790436417134
+[0m
+[0m$ [0mcat > /tmp/try_older.py << 'EOF'
+import requests, json, time
+
+URL = "https://api.hyperliquid.xyz/info"
+ADDR = "0xe755b71641b95ff7a6bd40030e9dc7ac7939e578"
+
+def fetch(payload, retries=5):
+    for i in range(retries):
+        r = requests.post(URL, json=payload, timeout=60)
+        if r.status_code == 200:
+            data = r.json()
+            if data is not None:
+                return data
+        print(f"  retry {i}: status={r.status_code}")
+        time.sleep(3)
+    return None
+
+# Try much earlier startTime
+for start in [1700000000000, 1750000000000, 1770000000000, 1780000000000]:
+    time.sleep(3)
+    d = fetch({"type": "userFills", "user": ADDR, "startTime": start})
+    if d:
+        times = [x["time"] for x in d]
+        print(f"startTime={start}: len={len(d)} oldest={min(times)} newest={max(times)}")
+    else:
+        print(f"startTime={start}: None")
+EOF
+python3 /tmp/try_older.py
+retry 0: status=429
+startTime=1700000000000: len=2000 oldest=1780383483334 newest=1790436417134
+startTime=1750000000000: len=2000 oldest=1780383483334 newest=1790436417134
+startTime=1770000000000: len=2000 oldest=1780383483334 newest=1790436417134
+  retry 0: status=429
+  retry 1: status=429
+  retry 2: status=429
+  retry 3: status=429
+  retry 4: status=429
+startTime=1780000000000: None
+[0m
+[0m$ [0mcat > /tmp/try_older2.py << 'EOF'
+import requests, json, time
+
+URL = "https://api.hyperliquid.xyz/info"
+ADDR = "0xe755b71641b95ff7a6bd40030e9dc7ac7939e578"
+
+def fetch(payload, retries=8):
+    for i in range(retries):
+        r = requests.post(URL, json=payload, timeout=60)
+        if r.status_code == 200:
+            data = r.json()
+            if data is not None:
+                return data
+        print(f"  retry {i}: status={r.status_code}")
+        time.sleep(5)
+    return None
+
+# Try startTime just before oldest
+d = fetch({"type": "userFills", "user": ADDR, "startTime": 1780383483333})
+if d:
+    times = [x["time"] for x in d]
+    print(f"len={len(d)} oldest={min(times)} newest={max(times)}")
+    print("First:", json.dumps(d[0])[:200])
+    print("Last:", json.dumps(d[-1])[:200])
+else:
+    print("None")
+EOF
+python3 /tmp/try_older2.py
+len=2000 oldest=1780383483334 newest=1790436417134
+First: {"coin": "ZRO", "px": "1.6501", "sz": "8.8", "side": "B", "time": 1790436417134, "startPosition": "6.1", "dir": "Open Long", "closedPnl": "0.0", "hash": "0xbd2d49998ddb4f73bea70445419ee002035d007f28de
+Last: {"coin": "HYPE", "px": "72.007", "sz": "0.55", "side": "B", "time": 1780383483334, "startPosition": "0.96", "dir": "Open Long", "closedPnl": "0.0", "hash": "0xb2dcfe31ee11bbecb456043cc870b30201a200178
+[0m
+[0m$ [0mcat > /tmp/analyze_full.py << 'EOF'
+import json
+from datetime import datetime, timezone
+from collections import Counter, defaultdict
+
+with open("/tmp/fills.json") as f:
+    data = json.load(f)
+
+def dt(t):
+    return datetime.fromtimestamp(t/1000, tz=timezone.utc)
+
+print("="*60)
+print("BASIC STATS")
+print("="*60)
+print("Total fills:", len(data))
+times = [d["time"] for d in data]
+print("Date range:", dt(min(times)), "to", dt(max(times)))
+print("Days span:", (max(times)-min(times))/1000/86400, "days")
+
+print("\n" + "="*60)
+print("COINS")
+print("="*60)
+coins = Counter(d["coin"] for d in data)
+for c, n in coins.most_common():
+    coin_data = [d for d in data if d["coin"]==c]
+    sides = Counter(d["side"] for d in coin_data)
+    dirs = Counter(d["dir"] for d in coin_data)
+    total_sz = sum(float(d["sz"]) for d in coin_data)
+    total_pnl = sum(float(d["closedPnl"]) for d in coin_data)
+    total_fee = sum(float(d["fee"]) for d in coin_data)
+    t0 = min(d["time"] for d in coin_data)
+    t1 = max(d["time"] for d in coin_data)
+    print(f"{c:6s} n={n:4d} B={sides.get('B',0):4d} A={sides.get('A',0):4d} "
+          f"sz={total_sz:10.2f} pnl={total_pnl:10.2f} fee={total_fee:.4f} "
+          f"span={dt(t0).strftime('%m-%d')} to {dt(t1).strftime('%m-%d')}")
+
+print("\n" + "="*60)
+print("DAILY ACTIVITY")
+print("="*60)
+daily = defaultdict(list)
+for d in data:
+    day = dt(d["time"]).strftime("%Y-%m-%d")
+    daily[day].append(d)
+print(f"Active days: {len(daily)}")
+for day in sorted(daily.keys()):
+    rows = daily[day]
+    b = sum(1 for r in rows if r["side"]=="B")
+    a = sum(1 for r in rows if r["side"]=="A")
+    pnl = sum(float(r["closedPnl"]) for r in rows)
+    print(f"{day} n={len(rows):3d} B={b:3d} A={a:3d} pnl={pnl:8.2f}")
+
+print("\n" + "="*60)
+print("POSITION SIZING")
+print("="*60)
+szs = [float(d["sz"]) for d in data]
+print(f"Min sz: {min(szs):.4f}  Max sz: {max(szs):.4f}  Mean sz: {sum(szs)/len(szs):.4f}")
+# Distribution
+import statistics
+print(f"Median sz: {statistics.median(szs):.4f}")
+# Size buckets
+buckets = Counter()
+for s in szs:
+    if s < 1: buckets["<1"] += 1
+    elif s < 5: buckets["1-5"] += 1
+    elif s < 20: buckets["5-20"] += 1
+    elif s < 100: buckets["20-100"] += 1
+    else: buckets[">100"] += 1
+print("Size buckets:", dict(buckets))
+
+print("\n" + "="*60)
+print("PRICES")
+print("="*60)
+prices = [float(d["px"]) for d in data]
+print(f"Price range: {min(prices):.4f} to {max(prices):.4f}")
+EOF
+python3 /tmp/analyze_full.py
+============================================================
+BASIC STATS
+============================================================
+Total fills: 2000
+Date range: 2026-06-02 06:58:03.334000+00:00 to 2026-09-26 15:26:57.134000+00:00
+Days span: 116.35340046296297 days
+
+============================================================
+COINS
+============================================================
+XMR    n= 505 B= 403 A= 102 sz=     55.23 pnl=    105.40 fee=4.9835 span=08-25 to 09-21
+HYPE   n= 373 B= 259 A= 114 sz=    482.31 pnl=    340.80 fee=9.3308 span=06-02 to 09-24
+NEAR   n= 295 B= 219 A=  76 sz=   5474.40 pnl=    216.29 fee=4.1136 span=09-08 to 09-26
+ZEC    n= 185 B= 145 A=  40 sz=      9.10 pnl=     21.78 fee=1.6016 span=08-31 to 09-04
+INJ    n= 159 B= 114 A=  45 sz=    978.20 pnl=     55.66 fee=1.4307 span=09-18 to 09-25
+ZRO    n= 158 B= 104 A=  54 sz=   3316.50 pnl=     36.91 fee=0.9819 span=09-21 to 09-26
+ONDO   n= 154 B= 113 A=  41 sz=   8625.00 pnl=     39.80 fee=0.6948 span=09-09 to 09-25
+JUP    n=  78 B=  56 A=  22 sz=  10610.00 pnl=     19.52 fee=0.5659 span=09-06 to 09-08
+UNI    n=  64 B=  48 A=  16 sz=    222.80 pnl=     21.88 fee=0.4076 span=09-18 to 09-23
+XLM    n=  23 B=  17 A=   6 sz=   6258.00 pnl=     10.28 fee=0.2434 span=09-08 to 09-18
+ETH    n=   6 B=   5 A=   1 sz=      0.05 pnl=      0.40 fee=0.0433 span=09-06 to 09-08
+
+============================================================
+DAILY ACTIVITY
+============================================================
+Active days: 78
+2026-06-02 n= 11 B=  9 A=  2 pnl=    5.74
+2026-06-03 n= 12 B=  5 A=  7 pnl=    9.10
+2026-06-04 n= 11 B= 10 A=  1 pnl=    0.45
+2026-06-06 n=  1 B=  1 A=  0 pnl=    0.00
+2026-06-08 n=  5 B=  2 A=  3 pnl=   22.78
+2026-06-09 n=  1 B=  1 A=  0 pnl=    0.00
+2026-06-10 n=  1 B=  1 A=  0 pnl=    0.00
+2026-06-12 n=  5 B=  3 A=  2 pnl=    8.98
+2026-06-13 n=  1 B=  1 A=  0 pnl=    0.00
+2026-06-14 n=  8 B=  4 A=  4 pnl=    7.56
+2026-06-15 n= 13 B=  7 A=  6 pnl=    5.09
+2026-06-16 n= 11 B=  6 A=  5 pnl=    5.18
+2026-06-17 n= 11 B=  7 A=  4 pnl=    7.95
+2026-06-18 n=  4 B=  3 A=  1 pnl=    4.05
+2026-06-19 n=  1 B=  1 A=  0 pnl=    0.00
+2026-06-20 n=  6 B=  3 A=  3 pnl=   11.47
+2026-06-21 n=  2 B=  2 A=  0 pnl=    0.00
+2026-06-22 n=  7 B=  4 A=  3 pnl=    5.06
+2026-06-23 n=  1 B=  1 A=  0 pnl=    0.00
+2026-06-24 n=  1 B=  1 A=  0 pnl=    0.00
+2026-06-25 n=  1 B=  0 A=  1 pnl=    7.09
+2026-06-26 n=  5 B=  3 A=  2 pnl=    6.01
+2026-06-27 n=  5 B=  4 A=  1 pnl=    2.21
+2026-06-29 n=  8 B=  4 A=  4 pnl=    6.44
+2026-06-30 n=  1 B=  1 A=  0 pnl=    0.00
+2026-07-01 n=  1 B=  1 A=  0 pnl=    0.00
+2026-07-02 n=  3 B=  1 A=  2 pnl=    6.96
+2026-07-03 n=  7 B=  5 A=  2 pnl=    1.30
+2026-07-04 n=  2 B=  1 A=  1 pnl=    0.83
+2026-07-05 n=  5 B=  3 A=  2 pnl=    3.72
+2026-07-06 n=  4 B=  3 A=  1 pnl=    3.75
+2026-07-07 n=  6 B=  4 A=  2 pnl=    4.09
+2026-07-08 n=  1 B=  1 A=  0 pnl=    0.00
+2026-07-13 n=  1 B=  1 A=  0 pnl=    0.00
+2026-07-14 n=  1 B=  1 A=  0 pnl=    0.00
+2026-07-15 n= 16 B=  3 A= 13 pnl=   13.35
+2026-07-16 n=  2 B=  2 A=  0 pnl=    0.00
+2026-07-17 n=  2 B=  1 A=  1 pnl=   -8.20
+2026-07-18 n=  1 B=  1 A=  0 pnl=    0.00
+2026-07-28 n=  1 B=  1 A=  0 pnl=    0.00
+2026-08-19 n=  1 B=  0 A=  1 pnl=   23.68
+2026-08-20 n=  4 B=  2 A=  2 pnl=    4.39
+2026-08-21 n=  9 B=  5 A=  4 pnl=    7.44
+2026-08-22 n= 10 B=  5 A=  5 pnl=   16.44
+2026-08-23 n=  5 B=  2 A=  3 pnl=    6.03
+2026-08-24 n= 15 B= 14 A=  1 pnl=    0.55
+2026-08-25 n= 56 B= 45 A= 11 pnl=   32.68
+2026-08-26 n= 25 B= 21 A=  4 pnl=   14.33
+2026-08-27 n= 30 B= 23 A=  7 pnl=   18.53
+2026-08-28 n= 27 B= 22 A=  5 pnl=    6.21
+2026-08-29 n= 21 B= 17 A=  4 pnl=    4.37
+2026-08-30 n= 42 B= 33 A=  9 pnl=    8.94
+2026-08-31 n= 90 B= 75 A= 15 pnl=   20.39
+2026-09-01 n= 49 B= 43 A=  6 pnl=    7.64
+2026-09-02 n= 78 B= 63 A= 15 pnl=   14.25
+2026-09-03 n=156 B=123 A= 33 pnl=   35.99
+2026-09-04 n= 80 B= 65 A= 15 pnl=    6.31
+2026-09-05 n= 37 B= 27 A= 10 pnl=   10.95
+2026-09-06 n= 75 B= 55 A= 20 pnl=   16.19
+2026-09-07 n= 30 B= 26 A=  4 pnl=    7.50
+2026-09-08 n= 23 B= 21 A=  2 pnl=    2.89
+2026-09-09 n= 50 B= 41 A=  9 pnl=   30.08
+2026-09-10 n=  6 B=  6 A=  0 pnl=    0.00
+2026-09-11 n= 18 B= 13 A=  5 pnl=    8.03
+2026-09-13 n=  1 B=  1 A=  0 pnl=    0.00
+2026-09-14 n= 13 B=  9 A=  4 pnl=    6.17
+2026-09-15 n=  7 B=  6 A=  1 pnl=    2.07
+2026-09-16 n=  2 B=  2 A=  0 pnl=    0.00
+2026-09-17 n= 52 B= 36 A= 16 pnl=   44.51
+2026-09-18 n=112 B= 82 A= 30 pnl=   62.96
+2026-09-19 n=125 B= 90 A= 35 pnl=   38.53
+2026-09-20 n= 39 B= 27 A= 12 pnl=   22.41
+2026-09-21 n= 78 B= 50 A= 28 pnl=   37.99
+2026-09-22 n=106 B= 76 A= 30 pnl=   46.76
+2026-09-23 n=144 B=107 A= 37 pnl=   62.75
+2026-09-24 n=110 B= 78 A= 32 pnl=   55.90
+2026-09-25 n= 79 B= 52 A= 27 pnl=   42.47
+2026-09-26 n=  9 B=  7 A=  2 pnl=    1.39
+
+============================================================
+POSITION SIZING
+============================================================
+Min sz: 0.0009  Max sz: 1059.0000  Mean sz: 18.0158
+Median sz: 1.5250
+Size buckets: {'5-20': 405, '20-100': 285, '1-5': 317, '>100': 71, '<1': 922}
+
+============================================================
+PRICES
+============================================================
+Price range: 0.1726 to 2497.7000
+[0m
+The API caps at 2000 most recent fills (spanning ~3.5 months). Let me analyze this dataset thoroughly.
+[0m$ [0mcat > /tmp/analyze2.py << 'EOF'
+import json
+from datetime import datetime, timezone
+from collections import Counter, defaultdict
+
+with open("/tmp/fills.json") as f:
+    data = json.load(f)
+
+def dt(t):
+    return datetime.fromtimestamp(t/1000, tz=timezone.utc)
+
+# Check for negative closedPnl
+neg = [d for d in data if float(d["closedPnl"]) < 0]
+pos = [d for d in data if float(d["closedPnl"]) > 0]
+zero = [d for d in data if float(d["closedPnl"]) == 0]
+print("Negative PnL trades:", len(neg))
+print("Positive PnL trades:", len(pos))
+print("Zero PnL trades:", len(zero))
+if neg:
+    pnls = [float(d["closedPnl"]) for d in neg]
+    print("Neg PnL sum:", sum(pnls), "min:", min(pnls), "max:", max(pnls))
+    print("Sample neg:", json.dumps(neg[0], indent=2))
+
+# B:A ratio per coin
+print("\n" + "="*60)
+print("B:A RATIO PER COIN")
+print("="*60)
+for c in sorted(set(d["coin"] for d in data)):
+    cd = [d for d in data if d["coin"]==c]
+    b = sum(1 for d in cd if d["side"]=="B")
+    a = sum(1 for d in cd if d["side"]=="A")
+    print(f"{c:6s} B={b:4d} A={a:4d} ratio={b/max(a,1):.2f}")
+
+# Check if buys and sells are interleaved (DCA) or batched
+print("\n" + "="*60)
+print("TRADE SEQUENCE PATTERN (first 60 fills)")
+print("="*60)
+for d in data[:60]:
+    print(f"{dt(d['time']).strftime('%m-%d %H:%M')} {d['coin']:6s} {d['side']} {float(d['sz']):9.2f} @ {float(d['px']):9.2f} {d['dir']} pnl={float(d['closedPnl']):.2f}")
+EOF
+python3 /tmp/analyze2.py
+Negative PnL trades: 3
+Positive PnL trades: 514
+Zero PnL trades: 1483
+Neg PnL sum: -11.656922000000002 min: -8.195382 max: -1.25354
+Sample neg: {
+  "coin": "HYPE",
+  "px": "85.195",
+  "sz": "4.66",
+  "side": "A",
+  "time": 1788543634572,
+  "startPosition": "4.66",
+  "dir": "Close Long",
+  "closedPnl": "-1.25354",
+  "hash": "0x2976dd1cdf4e24512af00443ae895802073400027a414323cd3f886f9e41fe3b",
+  "oid": 536305024333,
+  "crossed": true,
+  "fee": "0.171507",
+  "tid": 383671960446533,
+  "feeToken": "USDC",
+  "twapId": null
+}
+
+============================================================
+B:A RATIO PER COIN
+============================================================
+ETH    B=   5 A=   1 ratio=5.00
+HYPE   B= 259 A= 114 ratio=2.27
+INJ    B= 114 A=  45 ratio=2.53
+JUP    B=  56 A=  22 ratio=2.55
+NEAR   B= 219 A=  76 ratio=2.88
+ONDO   B= 113 A=  41 ratio=2.76
+UNI    B=  48 A=  16 ratio=3.00
+XLM    B=  17 A=   6 ratio=2.83
+XMR    B= 403 A= 102 ratio=3.95
+ZEC    B= 145 A=  40 ratio=3.62
+ZRO    B= 104 A=  54 ratio=1.93
+
+============================================================
+TRADE SEQUENCE PATTERN (first 60 fills)
+============================================================
+09-26 15:26 ZRO    B      8.80 @      1.65 Open Long pnl=0.00
+09-26 15:14 ZRO    B      6.10 @      1.67 Open Long pnl=0.00
+09-26 14:51 ZRO    A     28.40 @      1.64 Close Long pnl=1.13
+09-26 13:33 NEAR   B     18.40 @      4.77 Open Long pnl=0.00
+09-26 08:58 ZRO    B     13.10 @      1.58 Open Long pnl=0.00
+09-26 08:07 ZRO    B      9.00 @      1.61 Open Long pnl=0.00
+09-26 07:22 ZRO    B      6.30 @      1.63 Open Long pnl=0.00
+09-26 07:11 ZRO    A      6.50 @      1.61 Close Long pnl=0.26
+09-26 02:55 ZRO    B      6.50 @      1.58 Open Long pnl=0.00
+09-25 22:45 ZRO    A     34.70 @      1.64 Close Long pnl=0.84
+09-25 21:34 ZRO    B     19.40 @      1.61 Open Long pnl=0.00
+09-25 20:39 ZRO    B     15.30 @      1.63 Open Long pnl=0.00
+09-25 20:30 ZRO    A     15.60 @      1.63 Close Long pnl=0.38
+09-25 20:16 ZRO    B     15.60 @      1.61 Open Long pnl=0.00
+09-25 20:11 ZRO    A     35.10 @      1.61 Close Long pnl=0.83
+09-25 19:23 ZRO    B     19.60 @      1.57 Open Long pnl=0.00
+09-25 19:01 ZRO    B     15.50 @      1.60 Open Long pnl=0.00
+09-25 18:46 ZRO    A     15.70 @      1.60 Close Long pnl=0.37
+09-25 18:42 ZRO    B     15.70 @      1.58 Open Long pnl=0.00
+09-25 18:33 ZRO    A     18.60 @      1.58 Close Long pnl=0.43
+09-25 18:33 ZRO    A     16.90 @      1.58 Close Long pnl=0.39
+09-25 17:25 NEAR   B     16.60 @      4.99 Open Long pnl=0.00
+09-25 16:18 ZRO    B     19.80 @      1.55 Open Long pnl=0.00
+09-25 16:01 ZRO    B     15.70 @      1.57 Open Long pnl=0.00
+09-25 15:56 ZRO    A      3.80 @      1.58 Close Long pnl=0.09
+09-25 15:55 ZRO    A     31.70 @      1.58 Close Long pnl=0.74
+09-25 15:49 ZRO    B     19.80 @      1.54 Open Long pnl=0.00
+09-25 15:29 ZRO    B     15.70 @      1.57 Open Long pnl=0.00
+09-25 15:23 ZRO    A     15.90 @      1.57 Close Long pnl=0.37
+09-25 15:06 ZRO    B     15.90 @      1.55 Open Long pnl=0.00
+09-25 15:00 ZRO    A     15.90 @      1.57 Close Long pnl=0.37
+09-25 14:18 ZRO    B     15.90 @      1.54 Open Long pnl=0.00
+09-25 14:09 ZRO    A     35.30 @      1.57 Close Long pnl=0.82
+09-25 14:05 ZRO    B     19.70 @      1.54 Open Long pnl=0.00
+09-25 14:03 NEAR   B     15.20 @      5.11 Open Long pnl=0.00
+09-25 13:58 ZRO    B     15.60 @      1.57 Open Long pnl=0.00
+09-25 13:57 NEAR   B     14.20 @      5.16 Open Long pnl=0.00
+09-25 13:57 NEAR   B     13.40 @      5.17 Open Long pnl=0.00
+09-25 13:54 ZRO    A    133.40 @      1.57 Close Long pnl=3.11
+09-25 13:52 NEAR   A     43.10 @      5.19 Close Long pnl=4.39
+09-25 13:31 NEAR   B     15.30 @      5.05 Open Long pnl=0.00
+09-25 13:09 NEAR   B     14.30 @      5.10 Open Long pnl=0.00
+09-25 13:09 NEAR   B     13.50 @      5.11 Open Long pnl=0.00
+09-25 13:03 NEAR   A     43.30 @      5.13 Close Long pnl=4.36
+09-25 12:46 NEAR   B     15.40 @      5.00 Open Long pnl=0.00
+09-25 12:42 NEAR   B     14.40 @      5.05 Open Long pnl=0.00
+09-25 12:42 NEAR   B     13.50 @      5.05 Open Long pnl=0.00
+09-25 12:38 NEAR   A     13.10 @      5.11 Close Long pnl=1.31
+09-25 12:38 NEAR   A     18.00 @      5.11 Close Long pnl=1.80
+09-25 12:38 NEAR   A     12.00 @      5.11 Close Long pnl=1.20
+09-25 12:16 NEAR   B     15.30 @      4.98 Open Long pnl=0.00
+09-25 11:42 ONDO   B     48.00 @      0.55 Open Long pnl=0.00
+09-25 11:15 NEAR   B     12.30 @      5.02 Open Long pnl=0.00
+09-25 11:15 NEAR   B      2.00 @      5.02 Open Long pnl=0.00
+09-25 11:14 NEAR   B     13.50 @      5.03 Open Long pnl=0.00
+09-25 11:03 NEAR   A     43.60 @      5.01 Close Long pnl=4.28
+09-25 09:51 NEAR   B     15.50 @      4.88 Open Long pnl=0.00
+09-25 09:51 NEAR   B     14.50 @      4.93 Open Long pnl=0.00
+09-25 09:51 NEAR   B     13.60 @      4.94 Open Long pnl=0.00
+09-25 09:46 NEAR   A     28.00 @      5.02 Close Long pnl=2.76
+[0m
+[0m$ [0mcat > /tmp/analyze3.py << 'EOF'
+import json
+from datetime import datetime, timezone
+from collections import Counter, defaultdict
+
+with open("/tmp/fills.json") as f:
+    data = json.load(f)
+
+def dt(t):
+    return datetime.fromtimestamp(t/1000, tz=timezone.utc)
+
+# Check cloid pattern - indicates automation
+cloids = [d.get("cloid","") for d in data if d.get("cloid")]
+print("Sample cloids:", cloids[:5])
+# Parse cloid bytes
+import struct
+for c in cloids[:3]:
+    try:
+        b = bytes.fromhex(c.replace("0x",""))
+        if len(b) >= 8:
+            ts = struct.unpack(">Q", b[:8])[0]
+            print(f"  cloid={c} len={len(b)} first8_as_uint64={ts} as_dt={datetime.utcfromtimestamp(ts)}")
+    except: pass
+
+# Check crossed (maker/taker)
+crossed = Counter(d["crossed"] for d in data)
+print("\nCrossed (taker=True):", dict(crossed))
+
+# Fee analysis per coin
+print("\n" + "="*60)
+print("FEE ANALYSIS (USDC)")
+print("="*60)
+for c in sorted(set(d["coin"] for d in data)):
+    cd = [d for d in data if d["coin"]==c]
+    fees = sum(float(d["fee"]) for d in cd)
+    sz = sum(float(d["sz"]) for d in cd)
+    print(f"{c:6s} fee={fees:.4f} total_sz={sz:.2f} fee/sz={fees/sz*10000:.2f} bps")
+
+# Leverage - check if any indication. Look at position sizes vs notional
+print("\n" + "="*60)
+print("NOTIONAL SIZES (sz*px)")
+print("="*60)
+notionals = [float(d["sz"])*float(d["px"]) for d in data]
+print(f"Mean notional: {sum(notionals)/len(notionals):.2f}")
+print(f"Median notional: {sorted(notionals)[len(notionals)//2]:.2f}")
+buckets = Counter()
+for n in notionals:
+    if n < 10: buckets["<10"] += 1
+    elif n < 50: buckets["10-50"] += 1
+    elif n < 200: buckets["50-200"] += 1
+    elif n < 1000: buckets["200-1000"] += 1
+    else: buckets[">1000"] += 1
+print("Notional buckets:", dict(buckets))
+
+# Per-coin notional
+print("\nPer-coin mean notional:")
+for c in sorted(set(d["coin"] for d in data)):
+    cd = [d for d in data if d["coin"]==c]
+    ns = [float(d["sz"])*float(d["px"]) for d in cd]
+    print(f"  {c:6s} mean={sum(ns)/len(ns):.2f} median={sorted(ns)[len(ns)//2]:.2f}")
+EOF
+python3 /tmp/analyze3.py
+/tmp/analyze3.py:21: DeprecationWarning: datetime.datetime.utcfromtimestamp() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.fromtimestamp(timestamp, datetime.UTC).
+  print(f"  cloid={c} len={len(b)} first8_as_uint64={ts} as_dt={datetime.utcfromtimestamp(ts)}")
+Sample cloids: ['0x010201a0de46d8600001b145f6e20aee', '0x010101a0de46d8600000b145f6e20aee', '0x010301a0dc96b760002bb145f6e20aee', '0x010201a0d8d9fd800004a9fb8458da31', '0x010201a0dc96b7600002b145f6e20aee']
+
+Crossed (taker=True): {False: 1369, True: 495}
+
+============================================================
+FEE ANALYSIS (USDC)
+============================================================
+ETH    fee=0.0433 total_sz=0.05 fee/sz=7968.38 bps
+HYPE   fee=8.6191 total_sz=446.68 fee/sz=192.96 bps
+INJ    fee=1.3973 total_sz=952.90 fee/sz=14.66 bps
+JUP    fee=0.5612 total_sz=10487.00 fee/sz=0.54 bps
+NEAR   fee=3.9246 total_sz=5226.30 fee/sz=7.51 bps
+ONDO   fee=0.6868 total_sz=8522.00 fee/sz=0.81 bps
+UNI    fee=0.4010 total_sz=217.70 fee/sz=18.42 bps
+XLM    fee=0.2214 total_sz=5463.00 fee/sz=0.41 bps
+XMR    fee=4.4132 total_sz=47.82 fee/sz=922.92 bps
+ZEC    fee=1.4758 total_sz=8.30 fee/sz=1778.03 bps
+ZRO    fee=0.9449 total_sz=3174.90 fee/sz=2.98 bps
+
+============================================================
+NOTIONAL SIZES (sz*px)
+============================================================
+Mean notional: 57.46
+Median notional: 36.43
+Notional buckets: {'10-50': 1243, '50-200': 510, '<10': 34, '200-1000': 77}
+
+Per-coin mean notional:
+  ETH    mean=22.56 median=17.37
+  HYPE   mean=97.08 median=67.74
+  INJ    mean=48.14 median=35.03
+  JUP    mean=35.28 median=22.54
+  NEAR   mean=73.62 median=59.79
+  ONDO   mean=24.40 median=17.05
+  UNI    mean=33.47 median=24.47
+  XLM    mean=47.65 median=36.99
+  XMR    mean=53.14 median=36.00
+  ZEC    mean=45.20 median=30.55
+  ZRO    mean=31.35 median=25.16
+[0m
+This is clearly a high-frequency grid/DCA strategy. Let me dig deeper into the mechanics.
+[0m$ [0mcat > /tmp/analyze4.py << 'EOF'
+import json
+from datetime import datetime, timezone
+from collections import Counter, defaultdict
+
+with open("/tmp/fills.json") as f:
+    data = json.load(f)
+
+def dt(t):
+    return datetime.fromtimestamp(t/1000, tz=timezone.utc)
+
+# Decode cloid structure
+print("="*60)
+print("CLOID DECODING")
+print("="*60)
+import struct
+for d in data[:10]:
+    c = d.get("cloid","")
+    if not c: continue
+    b = bytes.fromhex(c.replace("0x",""))
+    # Try: bytes 4-11 as ms timestamp
+    ts_ms = struct.unpack(">Q", b[4:12])[0] if len(b)>=12 else None
+    # Try bytes 4-7 as sec timestamp
+    ts_s = struct.unpack(">I", b[4:8])[0] if len(b)>=8 else None
+    trade_time = dt(d["time"])
+    print(f"trade={trade_time.strftime('%m-%d %H:%M:%S')} coin={d['coin']} cloid={c}")
+    print(f"   b[0:4]={b[:4].hex()} b[4:8]={b[4:8].hex()} b[8:12]={b[8:12].hex() if len(b)>=12 else ''}")
+    if ts_ms:
+        print(f"   b[4:12] as ms ts: {ts_ms} -> {datetime.utcfromtimestamp(ts_ms/1000)}")
+    if ts_s:
+        print(f"   b[4:8] as s ts: {ts_s} -> {datetime.utcfromtimestamp(ts_s)}")
+
+# Per coin: buy price vs sell price
+print("\n" + "="*60)
+print("BUY vs SELL PRICE PER COIN")
+print("="*60)
+for c in sorted(set(d["coin"] for d in data)):
+    cd = [d for d in data if d["coin"]==c]
+    buys = [float(d["px"]) for d in cd if d["side"]=="B"]
+    sells = [float(d["px"]) for d in cd if d["side"]=="A"]
+    if buys and sells:
+        print(f"{c:6s} buy_px: min={min(buys):.4f} max={max(buys):.4f} mean={sum(buys)/len(buys):.4f}")
+        print(f"       sell_px: min={min(sells):.4f} max={max(sells):.4f} mean={sum(sells)/len(sells):.4f}")
+        print(f"       overlap: buys in [sell_min, sell_max]? {min(buys) >= min(sells) and max(buys) <= max(sells)}")
+EOF
+python3 /tmp/analyze4.py
+/tmp/analyze4.py:28: DeprecationWarning: datetime.datetime.utcfromtimestamp() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.fromtimestamp(timestamp, datetime.UTC).
+  print(f"   b[4:12] as ms ts: {ts_ms} -> {datetime.utcfromtimestamp(ts_ms/1000)}")
+============================================================
+CLOID DECODING
+============================================================
+trade=09-26 15:26:57 coin=ZRO cloid=0x010201a0de46d8600001b145f6e20aee
+   b[0:4]=010201a0 b[4:8]=de46d860 b[8:12]=0001b145
+Traceback (most recent call last):
+  File "/tmp/analyze4.py", line 28, in <module>
+    print(f"   b[4:12] as ms ts: {ts_ms} -> {datetime.utcfromtimestamp(ts_ms/1000)}")
+                                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: year 507551844 is out of range
+[0m
+[0m$ [0mcat > /tmp/analyze5.py << 'EOF'
+import json
+from datetime import datetime, timezone
+from collections import Counter, defaultdict
+
+with open("/tmp/fills.json") as f:
+    data = json.load(f)
+
+def dt(t):
+    return datetime.fromtimestamp(t/1000, tz=timezone.utc)
+
+# Track position per coin over time
+print("="*60)
+print("POSITION TRACKING PER COIN (chronological)")
+print("="*60)
+for c in sorted(set(d["coin"] for d in data)):
+    cd = sorted([d for d in data if d["coin"]==c], key=lambda x: x["time"])
+    pos = 0.0
+    max_pos = 0
+    min_pos = 0
+    entries = 0
+    for d in cd:
+        sz = float(d["sz"])
+        if d["side"]=="B":
+            pos += sz
+        else:
+            pos -= sz
+        max_pos = max(max_pos, pos)
+        min_pos = min(min_pos, pos)
+    print(f"{c:6s} final_pos={pos:8.2f} max_pos={max_pos:8.2f} min_pos={min_pos:8.2f} n={len(cd)}")
+
+# Check: are buys always at lower price than subsequent sells (grid)?
+print("\n" + "="*60)
+print("GRID CHECK: consecutive buy/sell price relationship")
+print("="*60)
+for c in ["ZRO","NEAR","HYPE"]:
+    cd = sorted([d for d in data if d["coin"]==c], key=lambda x: x["time"])
+    # For each sell, check if there was a buy at lower price before it
+    buys = [(d["time"], float(d["px"]), float(d["sz"])) for d in cd if d["side"]=="B"]
+    sells = [(d["time"], float(d["px"]), float(d["sz"])) for d in cd if d["side"]=="A"]
+    print(f"\n{c}: {len(buys)} buys, {len(sells)} sells")
+    # Buy price range
+    bpx = [b[1] for b in buys]
+    spx = [s[1] for s in sells]
+    print(f"  Buy px: {min(bpx):.4f} to {max(bpx):.4f}")
+    print(f"  Sell px: {min(spx):.4f} to {max(spx):.4f}")
+    # Count sells that are above ALL prior buys
+    profit_trades = 0
+    for i, s in enumerate(sells):
+        prior_buys = [b for b in buys if b[0] < s[0]]
+        if prior_buys and s[1] > max(b[1] for b in prior_buys):
+            profit_trades += 1
+    print(f"  Sells above all prior buys: {profit_trades}/{len(sells)}")
+
+# Hour of day distribution
+print("\n" + "="*60)
+print("HOUR OF DAY (UTC)")
+print("="*60)
+hours = Counter(dt(d["time"]).hour for d in data)
+for h in range(24):
+    print(f"  {h:02d}:00 {'#'*hours[h]} {hours[h]}")
+EOF
+python3 /tmp/analyze5.py
+============================================================
+POSITION TRACKING PER COIN (chronological)
+============================================================
+ETH    final_pos=    0.00 max_pos=    0.03 min_pos=    0.00 n=6
+HYPE   final_pos=   31.24 max_pos=   36.09 min_pos=   -0.96 n=341
+INJ    final_pos=   51.30 max_pos=   51.30 min_pos=   -1.50 n=155
+JUP    final_pos= -123.00 max_pos= 1049.00 min_pos= -123.00 n=77
+NEAR   final_pos=  178.10 max_pos=  178.10 min_pos=   -0.00 n=280
+ONDO   final_pos=  248.00 max_pos=  330.00 min_pos=    0.00 n=152
+UNI    final_pos=    7.90 max_pos=   11.20 min_pos=   -5.10 n=62
+XLM    final_pos=  795.00 max_pos= 1823.00 min_pos=    0.00 n=22
+XMR    final_pos=    4.39 max_pos=    4.90 min_pos=   -0.50 n=449
+ZEC    final_pos=    0.08 max_pos=    0.37 min_pos=   -0.16 n=170
+ZRO    final_pos=  121.10 max_pos=  187.40 min_pos=    0.00 n=150
+
+============================================================
+GRID CHECK: consecutive buy/sell price relationship
+============================================================
+
+ZRO: 103 buys, 47 sells
+  Buy px: 1.1532 to 1.6729
+  Sell px: 1.1705 to 1.6421
+  Sells above all prior buys: 26/47
+
+NEAR: 211 buys, 69 sells
+  Buy px: 2.3456 to 5.1691
+  Sell px: 2.4444 to 5.1897
+  Sells above all prior buys: 55/69
+
+HYPE: 248 buys, 93 sells
+  Buy px: 54.4720 to 97.3000
+  Sell px: 60.7060 to 96.0050
+  Sells above all prior buys: 30/93
+
+============================================================
+HOUR OF DAY (UTC)
+============================================================
+  00:00 ################################################ 48
+  01:00 ###################################################################### 70
+  02:00 ############################################## 46
+  03:00 ################################################################## 66
+  04:00 ############################################################# 61
+  05:00 ############################################## 46
+  06:00 ############################################# 45
+  07:00 ################################################################## 66
+  08:00 ################################################################ 64
+  09:00 ######################################################################## 72
+  10:00 ########################################################### 59
+  11:00 ############################################################################################# 93
+  12:00 ########################################################################################################## 106
+  13:00 ############################################################################################################ 108
+  14:00 ############################################################################################################ 108
+  15:00 ############################################################################################################################ 124
+  16:00 ########################################################################################################################################### 139
+  17:00 ################################################################################################# 97
+  18:00 ############################################################################################## 94
+  19:00 ####################################################################################### 87
+  20:00 ########################################################################################### 91
+  21:00 ################################## 34
+  22:00 ################################################################################# 81
+  23:00 ########################################################### 59
+[0m
+[0m$ [0mcat > /tmp/analyze6.py << 'EOF'
+import json
+from datetime import datetime, timezone
+from collections import Counter, defaultdict
+
+with open("/tmp/fills.json") as f:
+    data = json.load(f)
+
+def dt(t):
+    return datetime.fromtimestamp(t/1000, tz=timezone.utc)
+
+# JUP deep dive
+print("="*60)
+print("JUP FILLS (chronological)")
+print("="*60)
+jup = sorted([d for d in data if d["coin"]=="JUP"], key=lambda x: x["time"])
+for d in jup:
+    print(f"{dt(d['time']).strftime('%m-%d %H:%M:%S')} {d['side']} sz={float(d['sz']):7.1f} px={float(d['px']):7.2f} startPos={d['startPosition']} dir={d['dir']} crossed={d['crossed']} pnl={d['closedPnl']}")
+
+# Check startPosition field accuracy
+print("\n" + "="*60)
+print("STARTPOSITION vs COMPUTED POSITION")
+print("="*60)
+for c in ["JUP","NEAR","ONDO","XLM"]:
+    cd = sorted([d for d in data if d["coin"]==c], key=lambda x: x["time"])
+    pos = 0.0
+    mismatches = 0
+    for d in cd:
+        sz = float(d["sz"])
+        side = 1 if d["side"]=="B" else -1
+        expected_start = pos
+        actual_start = float(d["startPosition"])
+        if abs(expected_start - actual_start) > 0.01:
+            mismatches += 1
+        pos += side * sz
+    print(f"{c}: mismatches={mismatches}/{len(cd)} final_computed={pos:.2f}")
+
+# Check if positions are tracked via startPosition correctly
+# Look at the last fills for each coin to see open positions
+print("\n" + "="*60)
+print("LAST 5 FILLS PER COIN")
+print("="*60)
+for c in sorted(set(d["coin"] for d in data)):
+    cd = sorted([d for d in data if d["coin"]==c], key=lambda x: x["time"])
+    print(f"\n{c}:")
+    for d in cd[-5:]:
+        print(f"  {dt(d['time']).strftime('%m-%d %H:%M')} {d['side']} sz={float(d['sz']):.2f} px={float(d['px']):.2f} startPos={d['startPosition']} dir={d['dir']}")
+EOF
+python3 /tmp/analyze6.py
+============================================================
+JUP FILLS (chronological)
+============================================================
+09-06 06:55:02 B sz=   65.0 px=   0.24 startPos=0.0 dir=Open Long crossed=True pnl=0.0
+09-06 08:50:12 A sz=   65.0 px=   0.24 startPos=65.0 dir=Close Long crossed=False pnl=0.2652
+09-06 08:55:06 B sz=   76.0 px=   0.25 startPos=0.0 dir=Open Long crossed=True pnl=0.0
+09-06 09:13:42 A sz=   76.0 px=   0.25 startPos=76.0 dir=Close Long crossed=False pnl=0.29792
+09-06 09:15:03 B sz=   76.0 px=   0.25 startPos=0.0 dir=Open Long crossed=True pnl=0.0
+09-06 09:17:34 A sz=   76.0 px=   0.25 startPos=76.0 dir=Close Long crossed=False pnl=0.3002
+09-06 09:20:02 B sz=   74.0 px=   0.25 startPos=0.0 dir=Open Long crossed=True pnl=0.0
+09-06 10:17:25 A sz=   74.0 px=   0.26 startPos=74.0 dir=Close Long crossed=False pnl=0.29896
+09-06 10:20:03 B sz=   73.0 px=   0.26 startPos=0.0 dir=Open Long crossed=True pnl=0.0
+09-06 10:47:55 A sz=   73.0 px=   0.26 startPos=73.0 dir=Close Long crossed=False pnl=0.30076
+09-06 10:50:02 B sz=   71.0 px=   0.26 startPos=0.0 dir=Open Long crossed=True pnl=0.0
+09-06 11:02:25 A sz=   71.0 px=   0.27 startPos=71.0 dir=Close Long crossed=False pnl=0.29891
+09-06 11:05:03 B sz=   69.0 px=   0.27 startPos=0.0 dir=Open Long crossed=True pnl=0.0
+09-06 11:10:45 A sz=   69.0 px=   0.27 startPos=69.0 dir=Close Long crossed=False pnl=0.29739
+09-06 11:15:02 B sz=   68.0 px=   0.28 startPos=0.0 dir=Open Long crossed=True pnl=0.0
+09-06 11:25:35 A sz=   68.0 px=   0.28 startPos=68.0 dir=Close Long crossed=False pnl=0.29988
+09-06 11:30:03 B sz=   66.0 px=   0.28 startPos=0.0 dir=Open Long crossed=True pnl=0.0
+09-06 11:35:54 B sz=   74.0 px=   0.28 startPos=66.0 dir=Open Long crossed=False pnl=0.0
+09-06 11:40:16 B sz=   82.0 px=   0.27 startPos=140.0 dir=Open Long crossed=False pnl=0.0
+09-06 11:47:44 B sz=   91.0 px=   0.27 startPos=222.0 dir=Open Long crossed=False pnl=0.0
+09-06 11:48:10 B sz=  101.0 px=   0.27 startPos=313.0 dir=Open Long crossed=False pnl=0.0
+09-06 11:51:22 B sz=  112.0 px=   0.27 startPos=414.0 dir=Open Long crossed=False pnl=0.0
+09-06 11:51:26 B sz=  136.0 px=   0.27 startPos=649.0 dir=Open Long crossed=False pnl=0.0
+09-06 12:11:44 A sz=  143.0 px=   0.28 startPos=785.0 dir=Close Long crossed=False pnl=0.623623
+09-06 12:11:47 A sz=   26.0 px=   0.28 startPos=26.0 dir=Close Long crossed=False pnl=0.113386
+09-06 12:11:47 A sz=  616.0 px=   0.28 startPos=642.0 dir=Close Long crossed=False pnl=2.686376
+09-06 12:15:03 B sz=   67.0 px=   0.28 startPos=0.0 dir=Open Long crossed=True pnl=0.0
+09-06 12:22:44 B sz=   76.0 px=   0.27 startPos=67.0 dir=Open Long crossed=False pnl=0.0
+09-06 12:25:12 B sz=   85.0 px=   0.27 startPos=143.0 dir=Open Long crossed=False pnl=0.0
+09-06 12:26:33 B sz=   94.0 px=   0.26 startPos=228.0 dir=Open Long crossed=False pnl=0.0
+09-06 13:14:40 A sz=   73.0 px=   0.27 startPos=322.0 dir=Close Long crossed=False pnl=0.294555
+09-06 13:14:40 A sz=  249.0 px=   0.27 startPos=249.0 dir=Close Long crossed=False pnl=1.004715
+09-06 13:15:03 B sz=   68.0 px=   0.27 startPos=0.0 dir=Open Long crossed=True pnl=0.0
+09-06 13:23:59 B sz=   77.0 px=   0.27 startPos=68.0 dir=Open Long crossed=False pnl=0.0
+09-06 14:31:14 B sz=   86.0 px=   0.26 startPos=145.0 dir=Open Long crossed=False pnl=0.0
+09-06 14:31:29 B sz=   96.0 px=   0.26 startPos=231.0 dir=Open Long crossed=False pnl=0.0
+09-06 16:28:31 A sz=  327.0 px=   0.27 startPos=327.0 dir=Close Long crossed=False pnl=1.301133
+09-06 16:30:03 B sz=   69.0 px=   0.27 startPos=0.0 dir=Open Long crossed=True pnl=0.0
+09-06 19:30:31 B sz=   78.0 px=   0.26 startPos=69.0 dir=Open Long crossed=False pnl=0.0
+09-06 21:46:19 A sz=  147.0 px=   0.27 startPos=147.0 dir=Close Long crossed=False pnl=0.585942
+09-06 21:50:02 B sz=   70.0 px=   0.27 startPos=0.0 dir=Open Long crossed=True pnl=0.0
+09-06 23:20:51 A sz=   70.0 px=   0.27 startPos=70.0 dir=Close Long crossed=False pnl=0.2814
+09-06 23:26:08 B sz=   69.0 px=   0.27 startPos=0.0 dir=Open Long crossed=True pnl=0.0
+09-06 23:45:30 A sz=   69.0 px=   0.28 startPos=69.0 dir=Close Long crossed=False pnl=0.28083
+09-06 23:50:02 B sz=   68.0 px=   0.28 startPos=0.0 dir=Open Long crossed=True pnl=0.0
+09-07 00:55:14 B sz=   76.0 px=   0.27 startPos=68.0 dir=Open Long crossed=False pnl=0.0
+09-07 01:09:35 B sz=   85.0 px=   0.27 startPos=144.0 dir=Open Long crossed=False pnl=0.0
+09-07 01:19:27 B sz=   95.0 px=   0.26 startPos=229.0 dir=Open Long crossed=False pnl=0.0
+09-07 02:21:09 A sz=  324.0 px=   0.27 startPos=324.0 dir=Close Long crossed=False pnl=1.304748
+09-07 02:25:04 B sz=   69.0 px=   0.27 startPos=0.0 dir=Open Long crossed=True pnl=0.0
+09-07 03:32:10 B sz=   78.0 px=   0.26 startPos=69.0 dir=Open Long crossed=False pnl=0.0
+09-07 03:49:45 B sz=   87.0 px=   0.26 startPos=147.0 dir=Open Long crossed=False pnl=0.0
+09-07 03:49:54 B sz=   97.0 px=   0.26 startPos=234.0 dir=Open Long crossed=False pnl=0.0
+09-07 03:49:55 B sz=  107.0 px=   0.26 startPos=331.0 dir=Open Long crossed=False pnl=0.0
+09-07 03:49:57 B sz=  119.0 px=   0.25 startPos=438.0 dir=Open Long crossed=False pnl=0.0
+09-07 03:50:18 B sz=  131.0 px=   0.25 startPos=557.0 dir=Open Long crossed=False pnl=0.0
+09-07 03:59:13 B sz=  145.0 px=   0.25 startPos=688.0 dir=Open Long crossed=False pnl=0.0
+09-07 04:00:38 B sz=  161.0 px=   0.25 startPos=833.0 dir=Open Long crossed=False pnl=0.0
+09-07 04:00:43 B sz=  178.0 px=   0.25 startPos=994.0 dir=Open Long crossed=False pnl=0.0
+09-07 10:45:11 A sz=  122.0 px=   0.26 startPos=122.0 dir=Close Long crossed=False pnl=0.466284
+09-07 10:45:11 A sz= 1050.0 px=   0.26 startPos=1172.0 dir=Close Long crossed=False pnl=4.0131
+09-07 10:50:06 B sz=   72.0 px=   0.26 startPos=0.0 dir=Open Long crossed=True pnl=0.0
+09-07 14:39:36 B sz=   82.0 px=   0.25 startPos=72.0 dir=Open Long crossed=False pnl=0.0
+09-07 15:33:31 B sz=   91.0 px=   0.25 startPos=154.0 dir=Open Long crossed=False pnl=0.0
+09-07 15:40:48 B sz=  101.0 px=   0.25 startPos=245.0 dir=Open Long crossed=False pnl=0.0
+09-07 16:16:15 B sz=  112.0 px=   0.25 startPos=346.0 dir=Open Long crossed=False pnl=0.0
+09-07 19:45:26 A sz=  458.0 px=   0.25 startPos=458.0 dir=Close Long crossed=False pnl=1.716584
+09-07 19:45:32 B sz=   74.0 px=   0.25 startPos=0.0 dir=Open Long crossed=True pnl=0.0
+09-08 03:30:01 B sz=   83.0 px=   0.25 startPos=74.0 dir=Open Long crossed=False pnl=0.0
+09-08 06:41:56 B sz=   93.0 px=   0.24 startPos=157.0 dir=Open Long crossed=False pnl=0.0
+09-08 07:14:25 B sz=  103.0 px=   0.24 startPos=250.0 dir=Open Long crossed=False pnl=0.0
+09-08 08:12:23 B sz=  114.0 px=   0.24 startPos=353.0 dir=Open Long crossed=False pnl=0.0
+09-08 13:39:12 B sz=  126.0 px=   0.24 startPos=467.0 dir=Open Long crossed=False pnl=0.0
+09-08 13:39:53 B sz=  140.0 px=   0.24 startPos=593.0 dir=Open Long crossed=False pnl=0.0
+09-08 13:41:04 B sz=  155.0 px=   0.24 startPos=733.0 dir=Open Long crossed=False pnl=0.0
+09-08 13:41:07 B sz=  171.0 px=   0.23 startPos=888.0 dir=Open Long crossed=False pnl=0.0
+09-08 15:45:26 A sz= 1059.0 px=   0.24 startPos=1059.0 dir=Close Long crossed=True pnl=2.489709
+
+============================================================
+STARTPOSITION vs COMPUTED POSITION
+============================================================
+JUP: mismatches=55/77 final_computed=-123.00
+NEAR: mismatches=218/280 final_computed=178.10
+ONDO: mismatches=104/152 final_computed=248.00
+XLM: mismatches=18/22 final_computed=795.00
+
+============================================================
+LAST 5 FILLS PER COIN
+============================================================
+
+ETH:
+  09-06 08:30 B sz=0.01 px=2494.30 startPos=0.006 dir=Open Long
+  09-06 08:30 B sz=0.00 px=2494.30 startPos=0.0116 dir=Open Long
+  09-06 14:17 B sz=0.01 px=2480.90 startPos=0.0125 dir=Open Long
+  09-08 13:33 B sz=0.01 px=2455.00 startPos=0.0195 dir=Open Long
+  09-08 15:45 A sz=0.03 px=2495.10 startPos=0.0272 dir=Close Long
+
+HYPE:
+  09-22 21:58 B sz=0.56 px=97.30 startPos=0.0 dir=Open Long
+  09-22 22:09 B sz=0.62 px=96.83 startPos=0.56 dir=Open Long
+  09-23 08:49 B sz=0.69 px=95.98 startPos=1.18 dir=Open Long
+  09-23 13:09 B sz=0.77 px=94.45 startPos=1.87 dir=Open Long
+  09-24 02:07 B sz=0.87 px=91.70 startPos=2.64 dir=Open Long
+
+INJ:
+  09-24 16:53 B sz=4.30 px=8.59 startPos=4.0 dir=Open Long
+  09-24 17:22 B sz=4.60 px=8.53 startPos=8.3 dir=Open Long
+  09-24 17:38 B sz=4.90 px=8.42 startPos=12.9 dir=Open Long
+  09-24 18:02 B sz=5.30 px=8.24 startPos=17.8 dir=Open Long
+  09-25 01:26 B sz=5.90 px=7.94 startPos=23.1 dir=Open Long
+
+JUP:
+  09-08 13:39 B sz=126.00 px=0.24 startPos=467.0 dir=Open Long
+  09-08 13:39 B sz=140.00 px=0.24 startPos=593.0 dir=Open Long
+  09-08 13:41 B sz=155.00 px=0.24 startPos=733.0 dir=Open Long
+  09-08 13:41 B sz=171.00 px=0.23 startPos=888.0 dir=Open Long
+  09-08 15:45 A sz=1059.00 px=0.24 startPos=1059.0 dir=Close Long
+
+NEAR:
+  09-25 13:57 B sz=13.40 px=5.17 startPos=0.0 dir=Open Long
+  09-25 13:57 B sz=14.20 px=5.16 startPos=13.4 dir=Open Long
+  09-25 14:03 B sz=15.20 px=5.11 startPos=27.6 dir=Open Long
+  09-25 17:25 B sz=16.60 px=4.99 startPos=42.8 dir=Open Long
+  09-26 13:33 B sz=18.40 px=4.77 startPos=59.4 dir=Open Long
+
+ONDO:
+  09-25 07:53 A sz=27.00 px=0.56 startPos=27.0 dir=Close Long
+  09-25 08:33 B sz=26.00 px=0.57 startPos=0.0 dir=Open Long
+  09-25 08:38 B sz=32.00 px=0.56 startPos=26.0 dir=Open Long
+  09-25 09:06 B sz=39.00 px=0.56 startPos=58.0 dir=Open Long
+  09-25 11:42 B sz=48.00 px=0.55 startPos=97.0 dir=Open Long
+
+UNI:
+  09-23 03:14 B sz=2.20 px=10.88 startPos=0.0 dir=Open Long
+  09-23 03:16 B sz=2.40 px=10.80 startPos=2.2 dir=Open Long
+  09-23 04:03 B sz=2.50 px=10.64 startPos=4.6 dir=Open Long
+  09-23 08:05 B sz=2.80 px=10.34 startPos=7.1 dir=Open Long
+  09-23 10:24 B sz=3.10 px=9.72 startPos=9.9 dir=Open Long
+
+XLM:
+  09-16 17:43 B sz=251.00 px=0.17 startPos=777.0 dir=Open Long
+  09-18 14:18 A sz=1028.00 px=0.19 startPos=1028.0 dir=Close Long
+  09-18 15:04 B sz=181.00 px=0.19 startPos=0.0 dir=Open Long
+  09-18 15:09 B sz=193.00 px=0.19 startPos=181.0 dir=Open Long
+  09-18 18:11 A sz=374.00 px=0.19 startPos=374.0 dir=Close Long
+
+XMR:
+  09-21 06:48 B sz=0.05 px=626.72 startPos=0.048 dir=Open Long
+  09-21 06:49 B sz=0.06 px=621.22 startPos=0.099 dir=Open Long
+  09-21 07:24 B sz=0.06 px=611.33 startPos=0.154 dir=Open Long
+  09-21 07:33 B sz=0.07 px=593.53 startPos=0.213 dir=Open Long
+  09-21 09:51 B sz=0.07 px=561.49 startPos=0.278 dir=Open Long
+
+ZEC:
+  09-04 17:15 B sz=0.03 px=1035.80 startPos=0.06 dir=Open Long
+  09-04 17:15 B sz=0.03 px=1032.30 startPos=0.09 dir=Open Long
+  09-04 17:16 B sz=0.04 px=1026.20 startPos=0.12 dir=Open Long
+  09-04 17:25 B sz=0.04 px=1015.20 startPos=0.16 dir=Open Long
+  09-04 17:40 A sz=0.20 px=1018.90 startPos=0.2 dir=Close Long
+
+ZRO:
+  09-26 08:07 B sz=9.00 px=1.61 startPos=6.3 dir=Open Long
+  09-26 08:58 B sz=13.10 px=1.58 startPos=15.3 dir=Open Long
+  09-26 14:51 A sz=28.40 px=1.64 startPos=28.4 dir=Close Long
+  09-26 15:14 B sz=6.10 px=1.67 startPos=0.0 dir=Open Long
+  09-26 15:26 B sz=8.80 px=1.65 startPos=6.1 dir=Open Long
+[0m
+[0m$ [0mcat > /tmp/analyze7.py << 'EOF'
+import json
+from datetime import datetime, timezone
+from collections import Counter, defaultdict
+
+with open("/tmp/fills.json") as f:
+    data = json.load(f)
+
+def dt(t):
+    return datetime.fromtimestamp(t/1000, tz=timezone.utc)
+
+# Analyze grid spacing for a clean coin (JUP)
+print("="*60)
+print("JUP BUY PRICE LEVELS (chronological, deduplicated)")
+print("="*60)
+jup = sorted([d for d in data if d["coin"]=="JUP"], key=lambda x: x["time"])
+buy_prices = []
+for d in jup:
+    if d["side"]=="B":
+        buy_prices.append(float(d["px"]))
+# Show unique buy prices in order
+seen = []
+for p in buy_prices:
+    if not seen or abs(p - seen[-1]) > 0.001:
+        seen.append(p)
+print("Unique buy prices in order:", [round(p,4) for p in seen])
+# Check step sizes
+for i in range(1, len(seen)):
+    pct = (seen[i-1] - seen[i]) / seen[i-1] * 100
+    print(f"  {seen[i-1]:.4f} -> {seen[i]:.4f}  drop={pct:.2f}%")
+
+# Check NEAR grid
+print("\n" + "="*60)
+print("NEAR BUY PRICE LEVELS")
+print("="*60)
+near = sorted([d for d in data if d["coin"]=="NEAR"], key=lambda x: x["time"])
+seen = []
+for d in near:
+    if d["side"]=="B":
+        p = float(d["px"])
+        if not seen or abs(p - seen[-1]) > 0.005:
+            seen.append(p)
+print("Unique buy prices:", [round(p,4) for p in seen])
+for i in range(1, len(seen)):
+    pct = (seen[i-1] - seen[i]) / seen[i-1] * 100
+    print(f"  {seen[i-1]:.4f} -> {seen[i]:.4f}  drop={pct:.2f}%")
+
+# Check ZRO grid
+print("\n" + "="*60)
+print("ZRO BUY PRICE LEVELS")
+print("="*60)
+zro = sorted([d for d in data if d["coin"]=="ZRO"], key=lambda x: x["time"])
+seen = []
+for d in roam if False else [d for d in data if d["coin"]=="ZRO"]:
+    pass
+zro = sorted([d for d in data if d["coin"]=="ZRO"], key=lambda x: x["time"])
+seen = []
+for d in roam:
+    pass
+seen = []
+for d in [d for d in data if d["coin"]=="ZRO"]:
+    pass
+seen = []
+for d in [d for d in data if d["coin"]=="ZRO"]:
+    pass
+seen = []
+for d in [d for d in data if d["coin"]=="ZRO"]:
+    pass
+EOF
+python3 /tmp/analyze7.py
+============================================================
+JUP BUY PRICE LEVELS (chronological, deduplicated)
+============================================================
+Unique buy prices in order: [0.2402, 0.2451, 0.2469, 0.2528, 0.2574, 0.2632, 0.2693, 0.2757, 0.2829, 0.2772, 0.2749, 0.2731, 0.2716, 0.2702, 0.2679, 0.2773, 0.2699, 0.2668, 0.2645, 0.2735, 0.2662, 0.2632, 0.2609, 0.2697, 0.2625, 0.2678, 0.2715, 0.2764, 0.269, 0.266, 0.2636, 0.2705, 0.2633, 0.2603, 0.258, 0.2561, 0.2544, 0.2528, 0.2514, 0.2501, 0.2489, 0.2591, 0.2522, 0.2494, 0.2472, 0.2453, 0.2541, 0.2474, 0.2446, 0.2424, 0.2406, 0.239, 0.2376, 0.2362, 0.235]
+  0.2402 -> 0.2451  drop=-2.06%
+  0.2451 -> 0.2469  drop=-0.71%
+  0.2469 -> 0.2528  drop=-2.41%
+  0.2528 -> 0.2574  drop=-1.80%
+  0.2574 -> 0.2632  drop=-2.28%
+  0.2632 -> 0.2693  drop=-2.31%
+  0.2693 -> 0.2757  drop=-2.37%
+  0.2757 -> 0.2829  drop=-2.61%
+  0.2829 -> 0.2772  drop=2.00%
+  0.2772 -> 0.2749  drop=0.84%
+  0.2749 -> 0.2731  drop=0.65%
+  0.2731 -> 0.2716  drop=0.55%
+  0.2716 -> 0.2702  drop=0.49%
+  0.2702 -> 0.2679  drop=0.86%
+  0.2679 -> 0.2773  drop=-3.50%
+  0.2773 -> 0.2699  drop=2.67%
+  0.2699 -> 0.2668  drop=1.14%
+  0.2668 -> 0.2645  drop=0.88%
+  0.2645 -> 0.2735  drop=-3.43%
+  0.2735 -> 0.2662  drop=2.67%
+  0.2662 -> 0.2632  drop=1.14%
+  0.2632 -> 0.2609  drop=0.88%
+  0.2609 -> 0.2697  drop=-3.35%
+  0.2697 -> 0.2625  drop=2.67%
+  0.2625 -> 0.2678  drop=-2.04%
+  0.2678 -> 0.2715  drop=-1.37%
+  0.2715 -> 0.2764  drop=-1.81%
+  0.2764 -> 0.2690  drop=2.67%
+  0.2690 -> 0.2660  drop=1.13%
+  0.2660 -> 0.2636  drop=0.88%
+  0.2636 -> 0.2705  drop=-2.61%
+  0.2705 -> 0.2633  drop=2.67%
+  0.2633 -> 0.2603  drop=1.14%
+  0.2603 -> 0.2580  drop=0.88%
+  0.2580 -> 0.2561  drop=0.75%
+  0.2561 -> 0.2544  drop=0.66%
+  0.2544 -> 0.2528  drop=0.61%
+  0.2528 -> 0.2514  drop=0.56%
+  0.2514 -> 0.2501  drop=0.52%
+  0.2501 -> 0.2489  drop=0.50%
+  0.2489 -> 0.2591  drop=-4.13%
+  0.2591 -> 0.2522  drop=2.67%
+  0.2522 -> 0.2494  drop=1.13%
+  0.2494 -> 0.2472  drop=0.88%
+  0.2472 -> 0.2453  drop=0.75%
+  0.2453 -> 0.2541  drop=-3.60%
+  0.2541 -> 0.2474  drop=2.67%
+  0.2474 -> 0.2446  drop=1.13%
+  0.2446 -> 0.2424  drop=0.88%
+  0.2424 -> 0.2406  drop=0.75%
+  0.2406 -> 0.2390  drop=0.67%
+  0.2390 -> 0.2376  drop=0.61%
+  0.2376 -> 0.2362  drop=0.56%
+  0.2362 -> 0.2350  drop=0.52%
+
+============================================================
+NEAR BUY PRICE LEVELS
+============================================================
+Unique buy prices: [2.4149, 2.3926, 2.3456, 2.4405, 2.5314, 2.508, 2.5622, 2.6192, 2.595, 2.544, 2.6438, 2.6194, 2.5679, 2.4739, 2.6477, 2.6233, 2.7035, 2.6786, 2.6259, 2.5298, 2.379, 2.6514, 2.6269, 2.704, 2.679, 2.7332, 2.8214, 2.7954, 2.8699, 2.8434, 2.9428, 2.9864, 3.054, 3.0202, 3.1329, 3.1591, 3.1241, 3.2882, 3.283, 3.2518, 3.3777, 3.4268, 3.4214, 3.3889, 3.4901, 3.4846, 3.4515, 3.5462, 3.5406, 3.5069, 3.424, 3.5747, 3.569, 3.5351, 3.4515, 3.5955, 3.5898, 3.7444, 3.7384, 3.7029, 3.6154, 3.6651, 3.7538, 3.7478, 3.7122, 3.6244, 3.7908, 3.7848, 3.7488, 3.6602, 3.789, 3.783, 3.747, 3.8658, 3.8597, 3.823, 3.7326, 3.5677, 3.8879, 3.9613, 3.9545, 4.0644, 4.0579, 4.2233, 4.2151, 4.1751, 4.286, 4.2792, 4.2385, 4.1383, 4.3372, 4.3303, 4.2892, 4.1877, 4.3442, 4.3373, 4.3869, 4.3799, 4.2357, 4.0486, 4.2892, 4.2824, 4.2417, 4.3226, 4.3157, 4.3841, 4.45, 4.4429, 4.4007, 4.5362, 4.529, 4.486, 4.3799, 4.5539, 4.5467, 4.5035, 4.5722, 4.5649, 4.5216, 4.6117, 4.6044, 4.5606, 4.4528, 4.2561, 4.5637, 4.5564, 4.5132, 4.6086, 4.6013, 4.5576, 4.6528, 4.6454, 4.6013, 4.7176, 4.7101, 4.6654, 4.7483, 4.7408, 4.6957, 4.5847, 4.3821, 4.6984, 4.6909, 4.6464, 4.5365, 4.3361, 4.0216, 4.5201, 4.5129, 4.47, 4.3643, 4.1715, 4.4981, 4.4909, 4.6297, 4.6943, 4.6423, 4.5325, 4.6897, 4.6822, 4.6378, 4.7979, 4.7903, 4.7448, 4.6326, 4.8609, 4.8525, 4.9247, 4.9169, 4.9368, 4.929, 4.8821, 5.0319, 5.0239, 4.9762, 5.0535, 5.0455, 4.9975, 5.1107, 5.1026, 5.0541, 5.1691, 5.1609, 5.1119, 4.991, 4.7705]
+  2.4149 -> 2.3926  drop=0.92%
+  2.3926 -> 2.3456  drop=1.96%
+  2.3456 -> 2.4405  drop=-4.05%
+  2.4405 -> 2.5314  drop=-3.72%
+  2.5314 -> 2.5080  drop=0.92%
+  2.5080 -> 2.5622  drop=-2.16%
+  2.5622 -> 2.6192  drop=-2.22%
+  2.6192 -> 2.5950  drop=0.92%
+  2.5950 -> 2.5440  drop=1.97%
+  2.5440 -> 2.6438  drop=-3.92%
+  2.6438 -> 2.6194  drop=0.92%
+  2.6194 -> 2.5679  drop=1.97%
+  2.5679 -> 2.4739  drop=3.66%
+  2.4739 -> 2.6477  drop=-7.03%
+  2.6477 -> 2.6233  drop=0.92%
+  2.6233 -> 2.7035  drop=-3.06%
+  2.7035 -> 2.6786  drop=0.92%
+  2.6786 -> 2.6259  drop=1.97%
+  2.6259 -> 2.5298  drop=3.66%
+  2.5298 -> 2.3790  drop=5.96%
+  2.3790 -> 2.6514  drop=-11.45%
+  2.6514 -> 2.6269  drop=0.92%
+  2.6269 -> 2.7040  drop=-2.94%
+  2.7040 -> 2.6790  drop=0.92%
+  2.6790 -> 2.7332  drop=-2.02%
+  2.7332 -> 2.8214  drop=-3.23%
+  2.8214 -> 2.7954  drop=0.92%
+  2.7954 -> 2.8699  drop=-2.67%
+  2.8699 -> 2.8434  drop=0.92%
+  2.8434 -> 2.9428  drop=-3.50%
+  2.9428 -> 2.9864  drop=-1.48%
+  2.9864 -> 3.0540  drop=-2.26%
+  3.0540 -> 3.0202  drop=1.11%
+  3.0202 -> 3.1329  drop=-3.73%
+  3.1329 -> 3.1591  drop=-0.84%
+  3.1591 -> 3.1241  drop=1.11%
+  3.1241 -> 3.2882  drop=-5.25%
+  3.2882 -> 3.2830  drop=0.16%
+  3.2830 -> 3.2518  drop=0.95%
+  3.2518 -> 3.3777  drop=-3.87%
+  3.3777 -> 3.4268  drop=-1.45%
+  3.4268 -> 3.4214  drop=0.16%
+  3.4214 -> 3.3889  drop=0.95%
+  3.3889 -> 3.4901  drop=-2.99%
+  3.4901 -> 3.4846  drop=0.16%
+  3.4846 -> 3.4515  drop=0.95%
+  3.4515 -> 3.5462  drop=-2.74%
+  3.5462 -> 3.5406  drop=0.16%
+  3.5406 -> 3.5069  drop=0.95%
+  3.5069 -> 3.4240  drop=2.36%
+  3.4240 -> 3.5747  drop=-4.40%
+  3.5747 -> 3.5690  drop=0.16%
+  3.5690 -> 3.5351  drop=0.95%
+  3.5351 -> 3.4515  drop=2.36%
+  3.4515 -> 3.5955  drop=-4.17%
+  3.5955 -> 3.5898  drop=0.16%
+  3.5898 -> 3.7444  drop=-4.31%
+  3.7444 -> 3.7384  drop=0.16%
+  3.7384 -> 3.7029  drop=0.95%
+  3.7029 -> 3.6154  drop=2.36%
+  3.6154 -> 3.6651  drop=-1.37%
+  3.6651 -> 3.7538  drop=-2.42%
+  3.7538 -> 3.7478  drop=0.16%
+  3.7478 -> 3.7122  drop=0.95%
+  3.7122 -> 3.6244  drop=2.37%
+  3.6244 -> 3.7908  drop=-4.59%
+  3.7908 -> 3.7848  drop=0.16%
+  3.7848 -> 3.7488  drop=0.95%
+  3.7488 -> 3.6602  drop=2.36%
+  3.6602 -> 3.7890  drop=-3.52%
+  3.7890 -> 3.7830  drop=0.16%
+  3.7830 -> 3.7470  drop=0.95%
+  3.7470 -> 3.8658  drop=-3.17%
+  3.8658 -> 3.8597  drop=0.16%
+  3.8597 -> 3.8230  drop=0.95%
+  3.8230 -> 3.7326  drop=2.36%
+  3.7326 -> 3.5677  drop=4.42%
+  3.5677 -> 3.8879  drop=-8.97%
+  3.8879 -> 3.9613  drop=-1.89%
+  3.9613 -> 3.9545  drop=0.17%
+  3.9545 -> 4.0644  drop=-2.78%
+  4.0644 -> 4.0579  drop=0.16%
+  4.0579 -> 4.2233  drop=-4.08%
+  4.2233 -> 4.2151  drop=0.19%
+  4.2151 -> 4.1751  drop=0.95%
+  4.1751 -> 4.2860  drop=-2.66%
+  4.2860 -> 4.2792  drop=0.16%
+  4.2792 -> 4.2385  drop=0.95%
+  4.2385 -> 4.1383  drop=2.36%
+  4.1383 -> 4.3372  drop=-4.81%
+  4.3372 -> 4.3303  drop=0.16%
+  4.3303 -> 4.2892  drop=0.95%
+  4.2892 -> 4.1877  drop=2.37%
+  4.1877 -> 4.3442  drop=-3.74%
+  4.3442 -> 4.3373  drop=0.16%
+  4.3373 -> 4.3869  drop=-1.14%
+  4.3869 -> 4.3799  drop=0.16%
+  4.3799 -> 4.2357  drop=3.29%
+  4.2357 -> 4.0486  drop=4.42%
+  4.0486 -> 4.2892  drop=-5.94%
+  4.2892 -> 4.2824  drop=0.16%
+  4.2824 -> 4.2417  drop=0.95%
+  4.2417 -> 4.3226  drop=-1.91%
+  4.3226 -> 4.3157  drop=0.16%
+  4.3157 -> 4.3841  drop=-1.58%
+  4.3841 -> 4.4500  drop=-1.50%
+  4.4500 -> 4.4429  drop=0.16%
+  4.4429 -> 4.4007  drop=0.95%
+  4.4007 -> 4.5362  drop=-3.08%
+  4.5362 -> 4.5290  drop=0.16%
+  4.5290 -> 4.4860  drop=0.95%
+  4.4860 -> 4.3799  drop=2.37%
+  4.3799 -> 4.5539  drop=-3.97%
+  4.5539 -> 4.5467  drop=0.16%
+  4.5467 -> 4.5035  drop=0.95%
+  4.5035 -> 4.5722  drop=-1.53%
+  4.5722 -> 4.5649  drop=0.16%
+  4.5649 -> 4.5216  drop=0.95%
+  4.5216 -> 4.6117  drop=-1.99%
+  4.6117 -> 4.6044  drop=0.16%
+  4.6044 -> 4.5606  drop=0.95%
+  4.5606 -> 4.4528  drop=2.36%
+  4.4528 -> 4.2561  drop=4.42%
+  4.2561 -> 4.5637  drop=-7.23%
+  4.5637 -> 4.5564  drop=0.16%
+  4.5564 -> 4.5132  drop=0.95%
+  4.5132 -> 4.6086  drop=-2.11%
+  4.6086 -> 4.6013  drop=0.16%
+  4.6013 -> 4.5576  drop=0.95%
+  4.5576 -> 4.6528  drop=-2.09%
+  4.6528 -> 4.6454  drop=0.16%
+  4.6454 -> 4.6013  drop=0.95%
+  4.6013 -> 4.7176  drop=-2.53%
+  4.7176 -> 4.7101  drop=0.16%
+  4.7101 -> 4.6654  drop=0.95%
+  4.6654 -> 4.7483  drop=-1.78%
+  4.7483 -> 4.7408  drop=0.16%
+  4.7408 -> 4.6957  drop=0.95%
+  4.6957 -> 4.5847  drop=2.36%
+  4.5847 -> 4.3821  drop=4.42%
+  4.3821 -> 4.6984  drop=-7.22%
+  4.6984 -> 4.6909  drop=0.16%
+  4.6909 -> 4.6464  drop=0.95%
+  4.6464 -> 4.5365  drop=2.37%
+  4.5365 -> 4.3361  drop=4.42%
+  4.3361 -> 4.0216  drop=7.25%
+  4.0216 -> 4.5201  drop=-12.40%
+  4.5201 -> 4.5129  drop=0.16%
+  4.5129 -> 4.4700  drop=0.95%
+  4.4700 -> 4.3643  drop=2.36%
+  4.3643 -> 4.1715  drop=4.42%
+  4.1715 -> 4.4981  drop=-7.83%
+  4.4981 -> 4.4909  drop=0.16%
+  4.4909 -> 4.6297  drop=-3.09%
+  4.6297 -> 4.6943  drop=-1.40%
+  4.6943 -> 4.6423  drop=1.11%
+  4.6423 -> 4.5325  drop=2.37%
+  4.5325 -> 4.6897  drop=-3.47%
+  4.6897 -> 4.6822  drop=0.16%
+  4.6822 -> 4.6378  drop=0.95%
+  4.6378 -> 4.7979  drop=-3.45%
+  4.7979 -> 4.7903  drop=0.16%
+  4.7903 -> 4.7448  drop=0.95%
+  4.7448 -> 4.6326  drop=2.36%
+  4.6326 -> 4.8609  drop=-4.93%
+  4.8609 -> 4.8525  drop=0.17%
+  4.8525 -> 4.9247  drop=-1.49%
+  4.9247 -> 4.9169  drop=0.16%
+  4.9169 -> 4.9368  drop=-0.40%
+  4.9368 -> 4.9290  drop=0.16%
+  4.9290 -> 4.8821  drop=0.95%
+  4.8821 -> 5.0319  drop=-3.07%
+  5.0319 -> 5.0239  drop=0.16%
+  5.0239 -> 4.9762  drop=0.95%
+  4.9762 -> 5.0535  drop=-1.55%
+  5.0535 -> 5.0455  drop=0.16%
+  5.0455 -> 4.9975  drop=0.95%
+  4.9975 -> 5.1107  drop=-2.27%
+  5.1107 -> 5.1026  drop=0.16%
+  5.1026 -> 5.0541  drop=0.95%
+  5.0541 -> 5.1691  drop=-2.28%
+  5.1691 -> 5.1609  drop=0.16%
+  5.1609 -> 5.1119  drop=0.95%
+  5.1119 -> 4.9910  drop=2.37%
+  4.9910 -> 4.7705  drop=4.42%
+
+============================================================
+ZRO BUY PRICE LEVELS
+============================================================
+Traceback (most recent call last):
+  File "/tmp/analyze7.py", line 57, in <module>
+    for d in roam:
+             ^^^^
+NameError: name 'roam' is not defined
+[0m
+[0m✗ [0m failed
+[91m[1mError: [0mThe bash tool was called with invalid arguments: ["command"]: is missing and is required.
+Please rewrite the input so it satisfies the expected schema.
+[0m✗ [0m failed
+[91m[1mError: [0mThe bash tool was called with invalid arguments: ["command"]: is missing and is required.
+Please rewrite the input so it satisfies the expected schema.
+[0m
+[0m← [0mWrite /tmp/analyze8.py
+Wrote file successfully.
+[0m
+[0m← [0mWrite /tmp/analyze8.py
+Wrote file successfully.
+[0m
+[0m← [0mEdit /tmp/analyze8.py
+Index: /tmp/analyze8.py
+===================================================================
+--- /tmp/analyze8.py
++++ /tmp/analyze8.py
+@@ -81,12 +81,12 @@
+ print("\n" + "="*60)
+ print("ZRO PRICE LADDER")
+ print("="*60)
+ zro = sorted([d for d in data if d["coin"]=="ZRO"], key=lambda x: x["time"])
+-zro_buys = [(d["time"], float(d["px"]), float(d["sz"])) for d in troch if False else [d for d in data if d["coin"]=="ZRO"] if d["side"]=="B"]
++zro_buys = [(d["time"], float(d["px"]), float(d["sz"])) for d in [d for d in data if d["coin"]=="ZRO"] if d["side"]=="B"]
+ steps_found = Counter()
+ for i in range(1, len(zro_buys)):
+-    pct = (zro_buys[i-1][1] - troch_buys[i][1]) / troch_buys[i-1][1] * 100
++    pct = (zro_buys[i-1][1] - z ro_buys[i][1]) / z ro_buys[i-1][1] * 100
+     for s in [0.5, 1.0, 2.0, 4.0, 8.0]:
+         if abs(abs(pct) - s) < 0.1:
+             steps_found[s] += 1
+             break
+
+[0m
+[0m← [0mWrite /tmp/analyze8.py
+Wrote file successfully.
+[0m
+[0m← [0mWrite /tmp/analyze8.py
+Wrote file successfully.
+[0m
+[0m$ [0mpython3 /tmp/analyze8.py
+NEAR: {'other': 186, 2.0: 6, 4.0: 2, 1.0: 16}
+HYPE: {'other': 222, 1.0: 3, 4.0: 2, 2.0: 1, 0.5: 19}
+XMR: {'other': 341, 0.5: 24, 1.0: 5, 2.0: 1}
+ZRO: {2.0: 10, 'other': 91, 0.5: 1}
+INJ: {'other': 105, 1.0: 1, 2.0: 5, 4.0: 1}
+ONDO: {'other': 108, 1.0: 2, 2.0: 2}
+UNI: {'other': 44, 2.0: 1}
+ZEC: {'other': 123, 0.5: 1, 1.0: 3, 2.0: 5}
+JUP: {'other': 48, 2.0: 2, 0.5: 4}
+XLM: {'other': 16}
+ETH: {'other': 2, 0.5: 1, 1.0: 1}
+
+============================================================
+NEAR LADDER CYCLES
+============================================================
+Complete cycles: 62
+  Cycle 0: buys=[2.415, 2.412, 2.393, 2.346] sell=2.444 sell_sz=0
+  Cycle 1: buys=[2.441, 2.437] sell=2.495 sell_sz=25
+  Cycle 2: buys=[2.531, 2.528, 2.508] sell=2.580 sell_sz=39
+  Cycle 3: buys=[2.562] sell=2.621 sell_sz=12
+  Cycle 4: buys=[2.619, 2.616, 2.595, 2.544] sell=2.651 sell_sz=52
+  Cycle 5: buys=[2.644, 2.64, 2.619, 2.568, 2.474] sell=2.642 sell_sz=67
+  Cycle 6: buys=[2.648, 2.644, 2.623] sell=2.699 sell_sz=37
+  Cycle 7: buys=[2.704, 2.7, 2.679, 2.626, 2.53, 2.379] sell=2.646 sell_sz=83
+  Cycle 8: buys=[2.651, 2.648, 2.627] sell=2.702 sell_sz=39
+  Cycle 9: buys=[2.704, 2.7, 2.679] sell=2.737 sell_sz=38
+  Cycle 10: buys=[2.733, 2.73, 2.73] sell=2.791 sell_sz=24
+  Cycle 11: buys=[2.821, 2.818, 2.795] sell=2.868 sell_sz=37
+
+============================================================
+SELL SIZE vs N_BUYS
+============================================================
+  Cycle 0: n_buys=4 sell_sz=0 ratio=0.0
+  Cycle 1: n_buys=2 sell_sz=25 ratio=12.6
+  Cycle 2: n_buys=3 sell_sz=39 ratio=13.0
+  Cycle 3: n_buys=1 sell_sz=12 ratio=12.0
+  Cycle 4: n_buys=4 sell_sz=52 ratio=13.1
+  Cycle 5: n_buys=5 sell_sz=67 ratio=13.5
+  Cycle 6: n_buys=3 sell_sz=37 ratio=12.4
+  Cycle 7: n_buys=6 sell_sz=83 ratio=13.9
+  Cycle 8: n_buys=3 sell_sz=39 ratio=12.9
+  Cycle 9: n_buys=3 sell_sz=38 ratio=12.6
+  Cycle 10: n_buys=3 sell_sz=24 ratio=8.0
+  Cycle 11: n_buys=3 sell_sz=37 ratio=12.3
+  Cycle 12: n_buys=4 sell_sz=37 ratio=9.2
+  Cycle 13: n_buys=2 sell_sz=23 ratio=11.7
+  Cycle 14: n_buys=1 sell_sz=11 ratio=11.2
+  Cycle 15: n_buys=3 sell_sz=4 ratio=1.4
+  Cycle 16: n_buys=2 sell_sz=22 ratio=11.1
+  Cycle 17: n_buys=3 sell_sz=34 ratio=11.4
+  Cycle 18: n_buys=3 sell_sz=33 ratio=11.1
+  Cycle 19: n_buys=1 sell_sz=10 ratio=10.2
+
+============================================================
+SELL vs LAST BUY PRICE
+============================================================
+  Cycle 0: last_buy=2.346 sell=2.444 diff=4.21%
+  Cycle 1: last_buy=2.437 sell=2.495 diff=2.36%
+  Cycle 2: last_buy=2.508 sell=2.580 diff=2.87%
+  Cycle 3: last_buy=2.562 sell=2.621 diff=2.30%
+  Cycle 4: last_buy=2.544 sell=2.651 diff=4.20%
+  Cycle 5: last_buy=2.474 sell=2.642 diff=6.79%
+  Cycle 6: last_buy=2.623 sell=2.699 diff=2.87%
+  Cycle 7: last_buy=2.379 sell=2.646 diff=11.20%
+  Cycle 8: last_buy=2.627 sell=2.702 diff=2.87%
+  Cycle 9: last_buy=2.679 sell=2.737 diff=2.16%
+  Cycle 10: last_buy=2.730 sell=2.791 diff=2.26%
+  Cycle 11: last_buy=2.795 sell=2.868 diff=2.61%
+  Cycle 12: last_buy=2.843 sell=2.925 diff=2.87%
+  Cycle 13: last_buy=2.938 sell=3.005 diff=2.28%
+  Cycle 14: last_buy=2.986 sell=3.052 diff=2.20%
+  Cycle 15: last_buy=3.020 sell=3.107 diff=2.88%
+  Cycle 16: last_buy=3.128 sell=3.199 diff=2.28%
+  Cycle 17: last_buy=3.124 sell=3.214 diff=2.88%
+  Cycle 18: last_buy=3.252 sell=3.345 diff=2.88%
+  Cycle 19: last_buy=3.378 sell=3.451 diff=2.17%
+[0m
+[0m← [0mWrite /tmp/analyze9.py
+Wrote file successfully.
+[0m
+[0m$ [0mpython3 /tmp/analyze9.py
+============================================================
+JUP LADDER DETAIL (buy sizes as price drops)
+============================================================
+  Cycle 0: [65@0.240] -> sell 65@0.244
+  Cycle 1: [76@0.245] -> sell 76@0.249
+  Cycle 2: [76@0.247] -> sell 76@0.251
+  Cycle 3: [74@0.253] -> sell 74@0.257
+  Cycle 4: [73@0.257] -> sell 73@0.261
+  Cycle 5: [71@0.263] -> sell 71@0.267
+  Cycle 6: [69@0.269] -> sell 69@0.274
+  Cycle 7: [68@0.276] -> sell 68@0.280
+  Cycle 8: [66@0.283 74@0.277 82@0.275 91@0.273 101@0.272 112@0.270 136@0.268] -> sell 143@0.277
+  Cycle 9: [67@0.277 76@0.270 85@0.267 94@0.264] -> sell 73@0.273
+  Cycle 10: [68@0.274 77@0.266 86@0.263 96@0.261] -> sell 327@0.269
+  Cycle 11: [69@0.270 78@0.262] -> sell 147@0.270
+
+============================================================
+BUY SIZE vs PRICE DROP (all cycles, all coins)
+============================================================
+Increasing size as price drops: 239
+Decreasing size: 3
+Non-monotonic: 56
+
+============================================================
+LADDER STEP SIZES (buy-to-buy price % drop)
+============================================================
+Drop distribution: {'0.2-0.5%': 166, '0.5-1.0%': 192, '1-2%': 117, '2-4%': 80, '4-8%': 24, '<0.2%': 412, '>8%': 2}
+Mean drop: 0.73%
+Median drop: 0.37%
+
+============================================================
+SELL vs LAST BUY (all cycles)
+============================================================
+Sell vs last buy diff: {'2-4%': 170, '>8%': 10, '4-8%': 51, '0-1%': 65, '1-2%': 94}
+Mean: 2.66%
+
+============================================================
+BUY SIZE PER COIN (mean)
+============================================================
+ETH    buy_sz mean=   0.01 median=   0.01 | sell_sz mean=   0.03
+HYPE   buy_sz mean=   0.96 median=   0.73 | sell_sz mean=   2.23
+INJ    buy_sz mean=   4.44 median=   4.40 | sell_sz mean=  10.73
+JUP    buy_sz mean=  94.22 median=  85.00 | sell_sz mean= 241.14
+NEAR   buy_sz mean=  12.81 median=  13.20 | sell_sz mean=  36.58
+ONDO   buy_sz mean=  38.81 median=  36.00 | sell_sz mean= 106.08
+UNI    buy_sz mean=   2.45 median=   2.50 | sell_sz mean=   6.56
+XLM    buy_sz mean= 184.06 median= 189.00 | sell_sz mean= 466.80
+XMR    buy_sz mean=   0.07 median=   0.07 | sell_sz mean=   0.28
+ZEC    buy_sz mean=   0.03 median=   0.03 | sell_sz mean=   0.11
+ZRO    buy_sz mean=  16.00 median=  15.60 | sell_sz mean=  32.49
+
+============================================================
+SELL SZ / TOTAL BUY SZ PER CYCLE
+============================================================
+Ratios: {'~1.0': 294, '1.0-1.5': 16, '<0.5': 51, '>1.5': 7, '0.5-0.9': 22}
+Mean ratio: 0.92
+[0m
+[0m✗ [0mWrite  failed
+[91m[1mError: [0mThe write tool was called with invalid arguments: ["content"]: is missing and is required
+["filePath"]: is missing and is required.
+Please rewrite the input so it satisfies the expected schema.
+[0m
+[0m← [0mWrite /tmp/analyze10.py
+Wrote file successfully.
+[0m
+[0m$ [0mpython3 /tmp/analyze10.py
+============================================================
+SELL vs FIRST BUY IN CYCLE
+============================================================
+Sell vs first buy: {'loss': 74, '1-2%': 161, '0-1%': 142, '2-4%': 37, '4-8%': 1, '>8%': 1}
+Mean: 0.70%  Median: 0.95%
+
+============================================================
+OPEN CYCLES (buys with no matching sell)
+============================================================
+ETH: open pos=0.00 last_price=2495.1 n_open_buys=5
+HYPE: open pos=2.55 last_price=91.701 n_open_buys=259
+INJ: open pos=29.00 last_price=7.941 n_open_buys=114
+NEAR: open pos=77.80 last_price=4.7705 n_open_buys=219
+ONDO: open pos=145.00 last_price=0.54702 n_open_buys=113
+UNI: open pos=13.00 last_price=9.7182 n_open_buys=48
+XMR: open pos=0.35 last_price=561.49 n_open_buys=403
+ZEC: open pos=0.00 last_price=1018.9 n_open_buys=145
+ZRO: open pos=14.90 last_price=1.6501 n_open_buys=104
+
+============================================================
+CROSSED (TAKER) vs MAKER
+============================================================
+Crossed: {False: 1475, True: 525}
+Maker: 1475 (73.8%)  Taker: 525 (26.2%)
+
+============================================================
+BUY INTERVALS (seconds between consecutive buys, same coin)
+============================================================
+NEAR: mean=7095.7s median=660.7s min=0.0s max=435284.2s
+JUP: mean=3584.8s median=900.5s min=0.0s max=27869.4s
+ZRO: mean=4534.2s median=1230.7s min=0.0s max=105766.3s
+HYPE: mean=38109.1s median=10044.6s min=0.0s max=1987333.5s
+
+============================================================
+COINS PER DAY
+============================================================
+Days with >1 coin: 29/78
+Max coins in a day: 7
+
+============================================================
+TOTAL PnL SUMMARY
+============================================================
+Total closed PnL: $868.72
+Total fees: $24.40
+Net: $844.32
+  ETH    pnl=$0.40 fee=$0.04 net=$0.35
+  HYPE   pnl=$340.80 fee=$9.33 net=$331.47
+  INJ    pnl=$55.66 fee=$1.43 net=$54.23
+  JUP    pnl=$19.52 fee=$0.57 net=$18.96
+  NEAR   pnl=$216.29 fee=$4.11 net=$212.18
+  ONDO   pnl=$39.80 fee=$0.69 net=$39.10
+  UNI    pnl=$21.88 fee=$0.41 net=$21.47
+  XLM    pnl=$10.28 fee=$0.24 net=$10.03
+  XMR    pnl=$105.40 fee=$4.98 net=$100.42
+  ZEC    pnl=$21.78 fee=$1.60 net=$20.18
+  ZRO    pnl=$36.91 fee=$0.98 net=$35.92
+
+============================================================
+TWAP ORDERS
+============================================================
+TWAP fills: 0
+
+============================================================
+LARGE FILLS (>500 notional)
+============================================================
+Large fills: 7
+  09-17 23:12 HYPE A sz=8.36 px=84.946 notional=710
+  09-09 06:24 HYPE A sz=8.13 px=86.553 notional=704
+  08-31 16:48 HYPE A sz=7.69 px=83.811 notional=645
+  08-19 16:08 HYPE A sz=11.13 px=62.457 notional=695
+  06-25 22:01 HYPE A sz=7.96 px=64.408 notional=513
+  06-20 12:18 HYPE A sz=8.18 px=71.382 notional=584
+  06-08 15:46 HYPE A sz=7.61 px=65.726 notional=500
+[0m
+[0m← [0mWrite /tmp/analyze11.py
+Wrote file successfully.
+[0m
+[0m$ [0mpython3 /tmp/analyze11.py
+/tmp/analyze11.py:28: DeprecationWarning: datetime.datetime.utcfromtimestamp() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.fromtimestamp(timestamp, datetime.UTC).
+  print(f"  b[4:8] LE={le_ts} -> {datetime.utcfromtimestamp(le_ts)}")
+/tmp/analyze11.py:29: DeprecationWarning: datetime.datetime.utcfromtimestamp() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.fromtimestamp(timestamp, datetime.UTC).
+  print(f"  b[4:8] BE={be_ts} -> {datetime.utcfromtimestamp(be_ts) if be_ts < 4102444800 else 'invalid'}")
+/tmp/analyze11.py:72: DeprecationWarning: datetime.datetime.utcfromtimestamp() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.fromtimestamp(timestamp, datetime.UTC).
+  print(f"Range: {datetime.utcfromtimestamp(min(ts_list))} to {datetime.utcfromtimestamp(max(ts_list))}")
+============================================================
+CLOID DECODING
+============================================================
+coin=ZRO side=B trade_time=09-26 15:26:57
+  cloid=0x010201a0de46d8600001b145f6e20aee
+  b[0:4]=010201a0 b[4:8]=de46d860 b[8:12]=0001b145
+  b[4:8] LE=1624786654 -> 2021-06-27 09:37:34
+  b[4:8] BE=3729184864 -> 2088-03-03 20:41:04
+  b[8:12] LE counter=1169228032
+coin=ZRO side=B trade_time=09-26 15:14:02
+  cloid=0x010101a0de46d8600000b145f6e20aee
+  b[0:4]=010101a0 b[4:8]=de46d860 b[8:12]=0000b145
+  b[4:8] LE=1624786654 -> 2021-06-27 09:37:34
+  b[4:8] BE=3729184864 -> 2088-03-03 20:41:04
+  b[8:12] LE counter=1169227776
+coin=ZRO side=A trade_time=09-26 14:51:04
+  cloid=0x010301a0dc96b760002bb145f6e20aee
+  b[0:4]=010301a0 b[4:8]=dc96b760 b[8:12]=002bb145
+  b[4:8] LE=1622644444 -> 2021-06-02 14:34:04
+  b[4:8] BE=3700864864 -> 2087-04-11 02:01:04
+  b[8:12] LE counter=1169238784
+coin=NEAR side=B trade_time=09-26 13:33:37
+  cloid=0x010201a0d8d9fd800004a9fb8458da31
+  b[0:4]=010201a0 b[4:8]=d8d9fd80 b[8:12]=0004a9fb
+  b[4:8] LE=2164120024 -> 2038-07-30 16:27:04
+  b[4:8] BE=3638164864 -> 2085-04-15 09:21:04
+  b[8:12] LE counter=4222157824
+coin=ZRO side=B trade_time=09-26 08:58:31
+  cloid=0x010201a0dc96b7600002b145f6e20aee
+  b[0:4]=010201a0 b[4:8]=dc96b760 b[8:12]=0002b145
+  b[4:8] LE=1622644444 -> 2021-06-02 14:34:04
+  b[4:8] BE=3700864864 -> 2087-04-11 02:01:04
+  b[8:12] LE counter=1169228288
+
+============================================================
+CLOID SEQUENTIALITY
+============================================================
+
+NEAR: first 5 cloids:
+  09-08 15:52 B cloid=0x010101a08123c4400000a9fb8458da31
+  09-08 15:52 B cloid=0x010201a08123c4400001a9fb8458da31
+  09-08 16:10 B cloid=0x010201a08123c4400002a9fb8458da31
+  09-08 17:42 B cloid=0x010201a08123c4400003a9fb8458da31
+  09-09 07:40 A cloid=0x010301a08123c4400004a9fb8458da31
+
+ZRO: first 5 cloids:
+  09-21 05:43 B cloid=0x010101a0c27c48400000b145f6e20aee
+  09-21 06:23 A cloid=0x010301a0c27c48400001b145f6e20aee
+  09-21 06:36 B cloid=0x010101a0c2acce200000b145f6e20aee
+  09-21 08:23 A cloid=0x010301a0c2acce200002b145f6e20aee
+  09-21 08:26 B cloid=0x010101a0c31183600000b145f6e20aee
+
+JUP: first 5 cloids:
+  09-06 06:55 B cloid=0x010101a0757b25c00000e12ed9c08470
+  09-06 08:50 A cloid=0x010301a0757b25c00001e12ed9c08470
+  09-06 08:55 B cloid=0x010101a075e902c00000e12ed9c08470
+  09-06 09:13 A cloid=0x010301a075e902c00002e12ed9c08470
+  09-06 09:15 B cloid=0x010101a075fb52400000e12ed9c08470
+
+============================================================
+CLOID PREFIX DISTRIBUTION
+============================================================
+Prefixes: {'010201a0': 980, '010101a0': 375, '010301a0': 404}
+
+============================================================
+CLOID TIMESTAMP (b[4:8] LE)
+============================================================
+Range: 2021-01-24 02:26:19 to 2021-07-26 01:15:34
+Count: 286
+
+============================================================
+CLOID PAIRING (buy cloid -> sell cloid)
+============================================================
+Buy cloids: 1295, Sell cloids: 334, Overlap: 0
+
+============================================================
+GRID STEP CONSISTENCY
+============================================================
+[0m
+[0m← [0mWrite /tmp/analyze12.py
+Wrote file successfully.
+[0m
+[0m$ [0mpython3 /tmp/analyze12.py
+============================================================
+CLOID BYTE 1 vs SIDE/SIZE
+============================================================
+
+b1=01: n=375 sides={'B': 375}
+  mean_sz=13.16 median_sz=4.10
+  coins: {'ZRO': 51, 'NEAR': 72, 'ONDO': 37, 'INJ': 36, 'UNI': 16, 'HYPE': 28, 'XMR': 68, 'XLM': 5, 'JUP': 18, 'ETH': 1, 'ZEC': 43}
+
+b1=02: n=980 sides={'B': 980}
+  mean_sz=13.33 median_sz=0.66
+  coins: {'ZRO': 53, 'NEAR': 147, 'ONDO': 76, 'INJ': 78, 'HYPE': 103, 'UNI': 32, 'XMR': 335, 'XLM': 12, 'JUP': 38, 'ETH': 4, 'ZEC': 102}
+
+b1=03: n=404 sides={'A': 404}
+  mean_sz=37.32 median_sz=9.10
+  coins: {'ZRO': 54, 'NEAR': 74, 'ONDO': 37, 'INJ': 45, 'UNI': 16, 'HYPE': 15, 'XMR': 100, 'XLM': 3, 'JUP': 21, 'ZEC': 39}
+
+============================================================
+b1=01 vs b1=02 BUY SIZE COMPARISON
+============================================================
+NEAR: b1=01: n=72 mean=11.5  b1=02: n=147 mean=13.3  
+ZRO: b1=01: n=51 mean=12.8  b1=02: n=53 mean=19.2  
+JUP: b1=01: n=18 mean=70.2  b1=02: n=38 mean=106.3  
+HYPE: b1=01: n=28 mean=0.5  b1=02: n=103 mean=0.7  
+
+============================================================
+b1 PATTERN IN CYCLES
+============================================================
+
+NEAR: first 15 fills with b1
+  09-08 15:52 B sz=   12.3 px=2.415 b1=01
+  09-08 15:52 B sz=   12.5 px=2.412 b1=02
+  09-08 16:10 B sz=   13.4 px=2.393 b1=02
+  09-08 17:42 B sz=   14.5 px=2.346 b1=02
+  09-09 07:40 A sz=    0.1 px=2.444 b1=03
+  09-09 07:41 A sz=   52.6 px=2.444 b1=03
+  09-09 07:45 B sz=   12.2 px=2.441 b1=01
+  09-09 07:46 B sz=   12.9 px=2.437 b1=02
+  09-09 10:26 A sz=   25.1 px=2.495 b1=03
+  09-09 10:30 B sz=   12.2 px=2.531 b1=01
+  09-09 10:30 B sz=   12.9 px=2.528 b1=02
+  09-09 11:05 B sz=   13.8 px=2.508 b1=02
+  09-09 11:41 A sz=   38.9 px=2.580 b1=03
+  09-09 11:45 B sz=   12.0 px=2.562 b1=01
+  09-09 12:15 A sz=   12.0 px=2.621 b1=03
+
+ZRO: first 15 fills with b1
+  09-21 05:43 B sz=   10.7 px=1.153 b1=01
+  09-21 06:23 A sz=   10.7 px=1.171 b1=03
+  09-21 06:36 B sz=   10.5 px=1.176 b1=01
+  09-21 08:23 A sz=   10.5 px=1.194 b1=03
+  09-21 08:26 B sz=   10.3 px=1.198 b1=01
+  09-21 09:13 A sz=   10.3 px=1.216 b1=03
+  09-21 09:16 B sz=   10.2 px=1.212 b1=01
+  09-21 10:47 A sz=   10.2 px=1.230 b1=03
+  09-21 10:53 B sz=   10.1 px=1.229 b1=01
+  09-21 11:06 A sz=   10.1 px=1.247 b1=03
+  09-21 11:11 B sz=   10.0 px=1.240 b1=01
+  09-21 12:58 A sz=   10.0 px=1.259 b1=03
+  09-21 13:01 B sz=   10.0 px=1.232 b1=01
+  09-22 13:01 A sz=   10.0 px=1.251 b1=03
+  09-22 13:06 B sz=    9.9 px=1.252 b1=01
+
+============================================================
+b1 vs BUY SIZE RANK IN CYCLE
+============================================================
+
+============================================================
+SAME-COIN b1=01 vs b1=02 SIZE COMPARISON
+============================================================
+ETH   : b1=01 n=  1 mean=   0.01 | b1=02 n=  4 mean=   0.01 ratio=0.88
+HYPE  : b1=01 n= 28 mean=   0.47 | b1=02 n=103 mean=   0.69 ratio=1.47
+INJ   : b1=01 n= 36 mean=   4.03 | b1=02 n= 78 mean=   4.60 ratio=1.14
+JUP   : b1=01 n= 18 mean=  70.22 | b1=02 n= 38 mean= 106.34 ratio=1.51
+NEAR  : b1=01 n= 72 mean=  11.50 | b1=02 n=147 mean=  13.25 ratio=1.15
+ONDO  : b1=01 n= 37 mean=  29.89 | b1=02 n= 76 mean=  43.14 ratio=1.44
+UNI   : b1=01 n= 16 mean=   2.31 | b1=02 n= 32 mean=   2.53 ratio=1.10
+XLM   : b1=01 n=  5 mean= 177.60 | b1=02 n= 12 mean= 186.75 ratio=1.05
+XMR   : b1=01 n= 68 mean=   0.06 | b1=02 n=335 mean=   0.07 ratio=1.17
+ZEC   : b1=01 n= 43 mean=   0.03 | b1=02 n=102 mean=   0.03 ratio=1.22
+ZRO   : b1=01 n= 51 mean=  12.75 | b1=02 n= 53 mean=  19.15 ratio=1.50
+[0m
+[0m← [0mWrite /tmp/analyze13.py
+Wrote file successfully.
+[0m
+[0m$ [0mpython3 /tmp/analyze13.py
+============================================================
+GRID STEP ANALYSIS
+============================================================
+NEAR: n_buys=219 down_steps=141 up_steps=77
+  Most common down ratios: [(1.0, 62), (0.99, 47), (0.98, 21)]
+  Median down ratio: 0.9921 -> 0.79% drop
+  step=0.995 (0.5% drop): 109/141 (77%)
+  step=0.99 (1.0% drop): 47/141 (33%)
+  step=0.98 (2.0% drop): 21/141 (15%)
+ZRO: n_buys=104 down_steps=56 up_steps=47
+  Most common down ratios: [(0.99, 37), (0.98, 14), (0.97, 3)]
+  Median down ratio: 0.9877 -> 1.23% drop
+  step=0.995 (0.5% drop): 23/56 (41%)
+  step=0.99 (1.0% drop): 37/56 (66%)
+  step=0.98 (2.0% drop): 14/56 (25%)
+JUP: n_buys=56 down_steps=37 up_steps=18
+  Most common down ratios: [(0.99, 27), (0.97, 7), (1.0, 2)]
+  Median down ratio: 0.9912 -> 0.88% drop
+  step=0.995 (0.5% drop): 23/37 (62%)
+  step=0.99 (1.0% drop): 27/37 (73%)
+  step=0.97 (3.0% drop): 7/37 (19%)
+HYPE: n_buys=259 down_steps=171 up_steps=87
+  Most common down ratios: [(1.0, 75), (0.99, 42), (0.98, 21)]
+  Median down ratio: 0.9944 -> 0.56% drop
+  step=0.995 (0.5% drop): 112/171 (65%)
+  step=0.99 (1.0% drop): 42/171 (25%)
+  step=0.98 (2.0% drop): 21/171 (12%)
+ONDO: n_buys=113 down_steps=74 up_steps=38
+  Most common down ratios: [(0.99, 41), (1.0, 17), (0.98, 10)]
+  Median down ratio: 0.9942 -> 0.58% drop
+  step=0.995 (0.5% drop): 38/74 (51%)
+  step=0.99 (1.0% drop): 41/74 (55%)
+  step=0.98 (2.0% drop): 10/74 (14%)
+INJ: n_buys=114 down_steps=77 up_steps=36
+  Most common down ratios: [(0.99, 36), (1.0, 32), (0.98, 6)]
+  Median down ratio: 0.9928 -> 0.72% drop
+  step=0.995 (0.5% drop): 54/77 (70%)
+  step=0.99 (1.0% drop): 36/77 (47%)
+UNI: n_buys=48 down_steps=31 up_steps=16
+  Most common down ratios: [(0.99, 19), (1.0, 6), (0.97, 3)]
+  Median down ratio: 0.9906 -> 0.94% drop
+  step=0.995 (0.5% drop): 19/31 (61%)
+  step=0.99 (1.0% drop): 19/31 (61%)
+XMR: n_buys=403 down_steps=304 up_steps=98
+  Most common down ratios: [(1.0, 272), (0.99, 16), (0.98, 8)]
+  Median down ratio: 0.9993 -> 0.07% drop
+  step=0.995 (0.5% drop): 287/304 (94%)
+ZEC: n_buys=145 down_steps=100 up_steps=44
+  Most common down ratios: [(1.0, 79), (0.99, 17), (0.98, 3)]
+  Median down ratio: 0.9982 -> 0.18% drop
+  step=0.995 (0.5% drop): 90/100 (90%)
+  step=0.99 (1.0% drop): 17/100 (17%)
+XLM: n_buys=17 down_steps=11 up_steps=5
+  Most common down ratios: [(1.0, 5), (0.99, 3), (0.96, 2)]
+  Median down ratio: 0.9854 -> 1.46% drop
+  step=0.995 (0.5% drop): 5/11 (45%)
+  step=0.99 (1.0% drop): 3/11 (27%)
+  step=0.96 (4.0% drop): 2/11 (18%)
+
+============================================================
+EXACT GRID STEP (all coins)
+============================================================
+Top 10 down ratios: [(1.0, 146), (0.999, 136), (0.998, 99), (0.997, 70), (0.996, 68), (0.991, 62), (0.995, 47), (0.994, 46), (0.993, 39), (0.988, 34)]
+  step=0.995: 762/1005 (75.8%)
+  step=0.99: 287/1005 (28.6%)
+  step=0.98: 85/1005 (8.5%)
+  step=0.97: 37/1005 (3.7%)
+  step=0.96: 26/1005 (2.6%)
+  step=0.95: 5/1005 (0.5%)
+  step=0.92: 2/1005 (0.2%)
+  step=0.9: 1/1005 (0.1%)
+  step=0.88: 1/1005 (0.1%)
+  step=0.85: 0/1005 (0.0%)
+  step=0.8: 0/1005 (0.0%)
+
+============================================================
+GRID LEVELS PER CYCLE
+============================================================
+NEAR: n_cycles=66 mean_buys_per_cycle=3.2 max=7
+ZRO: n_cycles=49 mean_buys_per_cycle=2.1 max=5
+JUP: n_cycles=18 mean_buys_per_cycle=3.1 max=10
+HYPE: n_cycles=87 mean_buys_per_cycle=2.9 max=15
+ONDO: n_cycles=36 mean_buys_per_cycle=3.0 max=6
+
+============================================================
+MARTINGALE CHECK: buy size vs price drop
+============================================================
+NEAR: 49/66 cycles have increasing size as price drops
+ZRO: 25/49 cycles have increasing size as price drops
+JUP: 7/18 cycles have increasing size as price drops
+ONDO: 28/36 cycles have increasing size as price drops
+[0m
+[0m✗ [0mWrite  failed
+[91m[1mError: [0mThe write tool was called with invalid arguments: ["content"]: is missing and is required
+["filePath"]: is missing and is required.
+Please rewrite the input so it satisfies the expected schema.
+[0m
+[0m← [0mWrite /tmp/analyze14.py
+Wrote file successfully.
+[0m
+[0m$ [0mpython3 /tmp/analyze14.py
+============================================================
+PRECISE GRID STEP FROM LADDERS
+============================================================
+Top 15 grid steps: [(0.9999, 48), (0.9984, 45), (0.9987, 44), (0.9998, 41), (0.9905, 36), (0.9993, 34), (0.9982, 32), (0.9958, 30), (0.999, 30), (0.9996, 30), (0.9877, 26), (0.9952, 25), (0.9975, 23), (0.9928, 21), (0.9924, 20)]
+  step=0.995: 116/948 (12.2%)
+  step=0.99: 75/948 (7.9%)
+  step=0.98: 22/948 (2.3%)
+  step=0.97: 4/948 (0.4%)
+  step=0.96: 1/948 (0.1%)
+  step=0.95: 0/948 (0.0%)
+
+Mean step: 0.99178
+Median step: 0.99581
+1-median = 0.42%
+
+============================================================
+SIZE SCALING PER GRID LEVEL
+============================================================
+NEAR: size ratios between levels: mean=1.15 median=1.07
+  ~1.1x: 132/136 (97%)
+ZRO: size ratios between levels: mean=2.89 median=1.20
+  ~1.2x: 44/52 (85%)
+JUP: size ratios between levels: mean=1.11 median=1.11
+  ~1.1x: 38/38 (100%)
+ONDO: size ratios between levels: mean=1.22 median=1.22
+  ~1.2x: 66/70 (94%)
+HYPE: size ratios between levels: mean=1.57 median=1.07
+  ~1.1x: 89/157 (57%)
+
+============================================================
+BASE POSITION SIZE (first buy in cycle)
+============================================================
+ETH   : base_sz mean=0.01 median=0.01 n=1
+HYPE  : base_sz mean=0.89 median=0.67 n=87
+INJ   : base_sz mean=4.11 median=4.00 n=34
+JUP   : base_sz mean=70.22 median=69.00 n=18
+NEAR  : base_sz mean=11.84 median=12.70 n=66
+ONDO  : base_sz mean=30.00 median=30.00 n=36
+UNI   : base_sz mean=2.31 median=2.40 n=15
+XLM   : base_sz mean=177.60 median=178.00 n=5
+XMR   : base_sz mean=0.06 median=0.06 n=66
+ZEC   : base_sz mean=0.03 median=0.03 n=39
+ZRO   : base_sz mean=12.79 median=10.50 n=49
+
+============================================================
+TOTAL NOTIONAL PER COIN
+============================================================
+ETH    buy_notional=$67 sell_notional=$68
+HYPE   buy_notional=$17803 sell_notional=$17881
+INJ    buy_notional=$3929 sell_notional=$3742
+JUP    buy_notional=$1365 sell_notional=$1384
+NEAR   buy_notional=$10926 sell_notional=$10751
+ONDO   buy_notional=$1902 sell_notional=$1861
+UNI    buy_notional=$1118 sell_notional=$1004
+XLM    buy_notional=$595 sell_notional=$606
+XMR    buy_notional=$13899 sell_notional=$13792
+ZEC    buy_notional=$4205 sell_notional=$4226
+ZRO    buy_notional=$2448 sell_notional=$2460
+[0m
+[0m← [0mWrite /tmp/fetch_state.py
+Wrote file successfully.
+[0m
+[0m$ [0mpython3 /tmp/fetch_state.py
+retry 0: status=422
+  retry 1: status=422
+  retry 2: status=422
+  retry 3: status=422
+  retry 4: status=422
+
+CLEARINGHOUSE:
+{
+  "marginSummary": {
+    "accountValue": "2183.306723",
+    "totalNtlPos": "1355.26692",
+    "totalRawUsd": "828.039803",
+    "totalMarginUsed": "1355.26692"
+  },
+  "crossMarginSummary": {
+    "accountValue": "2183.306723",
+    "totalNtlPos": "1355.26692",
+    "totalRawUsd": "828.039803",
+    "totalMarginUsed": "1355.26692"
+  },
+  "crossMaintenanceMarginUsed": "90.102512",
+  "withdrawable": "8.211753",
+  "assetPositions": [
+    {
+      "type": "oneWay",
+      "position": {
+        "coin": "INJ",
+        "szi": "29.0",
+        "leverage": {
+          "type": "cross",
+          "value": 1
+        },
+        "entryPx": "8.35997",
+        "positionValue": "227.6036",
+        "unrealizedPnl": "-14.83565",
+        "returnOnEquity": "-0.061193268",
+        "liquidationPx": null,
+        "marginUsed": "227.6036",
+        "maxLeverage": 5,
+        "cumFunding": {
+          "allTime": "0.523599",
+          "sinceOpen": "-0.178878",
+          "sinceChange": "-0.222547"
+        }
+      }
+    },
+    {
+      "type": "oneWay",
+      "position": {
+        "coin": "UNI",
+        "szi": "13.0",
+        "leverage": {
+          "type": "cross",
+          "value": 1
+        },
+        "entryPx": "10.42477",
+        "positionValue": "125.9661",
+        "unrealizedPnl": "-9.55592",
+        "returnOnEquity": "-0.070511936",
+        "liquidationPx": null,
+        "marginUsed": "125.9661",
+        "maxLeverage": 10,
+        "cumFunding": {
+          "allTime": "0.51109",
+          "sinceOpen": "0.194493",
+          "sinceChange": "0.175765"
+        }
+      }
+    },
+    {
+      "type": "oneWay",
+      "position": {
+        "coin": "ZRO",
+        "szi": "14.9",
+        "leverage": {
+          "type": "cross",
+          "value": 1
+        },
+        "entryPx": "1.65943",
+        "positionValue": "24.287",
+        "unrealizedPnl": "-0.43857",
+        "returnOnEquity": "-0.0177375082",
+        "liquidationPx": null,
+        "marginUsed": "24.287",
+        "maxLeverage": 5,
+        "cumFunding": {
+          "allTime": "0.189196",
+          "sinceOpen": "0.000304",
+          "sinceChange": "0.000304"
+        }
+      }
+    },
+    {
+      "type": "oneWay",
+      "position": {
+        "coin": "NEAR",
+        "szi": "77.8",
+        "leverage": {
+          "type": "cross",
+          "value": 1
+        },
+        "entryPx": "5.02415",
+        "positionValue": "378.64093",
+        "unrealizedPnl": "-12.23847",
+        "returnOnEquity": "-0.0313100921",
+        "liquidationPx": null,
+        "marginUsed": "378.64093",
+        "maxLeverage": 10,
+        "cumFunding": {
+          "allTime": "2.149143",
+          "sinceOpen": "0.107369",
+          "sinceChange": "0.014116"
+        }
+      }
+    },
+    {
+      "type": "oneWay",
+      "position": {
+        "coin": "ONDO",
+        "szi": "145.0",
+        "leverage": {
+          "type": "cross",
+          "value": 1
+        },
+        "entryPx": "0.557134",
+        "positionValue": "79.34545",
+        "unrealizedPnl": "-1.43912",
+        "re
+
+META (universe):
+  {'szDecimals': 4, 'name': 'ETH', 'maxLeverage': 25, 'marginTableId': 55}
+  {'szDecimals': 1, 'name': 'INJ', 'maxLeverage': 5, 'marginTableId': 5}
+  {'szDecimals': 1, 'name': 'UNI', 'maxLeverage': 10, 'marginTableId': 52}
+  {'szDecimals': 1, 'name': 'ZRO', 'maxLeverage': 5, 'marginTableId': 5}
+  {'szDecimals': 1, 'name': 'NEAR', 'maxLeverage': 10, 'marginTableId': 52}
+  {'szDecimals': 0, 'name': 'JUP', 'maxLeverage': 10, 'marginTableId': 51}
+  {'szDecimals': 0, 'name': 'ONDO', 'maxLeverage': 10, 'marginTableId': 51}
+  {'szDecimals': 0, 'name': 'XLM', 'maxLeverage': 5, 'marginTableId': 5}
+  {'szDecimals': 2, 'name': 'HYPE', 'maxLeverage': 10, 'marginTableId': 52}
+  {'szDecimals': 2, 'name': 'ZEC', 'maxLeverage': 10, 'marginTableId': 52}
+  {'szDecimals': 3, 'name': 'XMR', 'maxLeverage': 5, 'marginTableId': 5}
+[0m
+[0m✗ [0mWrite  failed
+[91m[1mError: [0mThe write tool was called with invalid arguments: ["filePath"]: is missing and is required.
+Please rewrite the input so it satisfies the expected schema.
+[0m
+[0m← [0mWrite /tmp/fetch_state2.py
+Wrote file successfully.
+[0m
+[0m$ [0mpython3 /tmp/fetch_state2.py
+Account value: None
+Total notional: None
+Withdrawable: 8.211753
+
+Positions:
+  INJ    szi=      29.0 entryPx=   8.35997 posVal=  227.5862 uPnL= -14.85305 lev={'type': 'cross', 'value': 1} maxLev=5
+  UNI    szi=      13.0 entryPx=  10.42477 posVal=  125.9115 uPnL=  -9.61052 lev={'type': 'cross', 'value': 1} maxLev=10
+  ZRO    szi=      14.9 entryPx=   1.65943 posVal=  24.27508 uPnL=  -0.45049 lev={'type': 'cross', 'value': 1} maxLev=5
+  NEAR   szi=      77.8 entryPx=   5.02415 posVal= 378.19358 uPnL= -12.68582 lev={'type': 'cross', 'value': 1} maxLev=10
+  ONDO   szi=     145.0 entryPx=  0.557134 posVal=  79.36575 uPnL=  -1.41882 lev={'type': 'cross', 'value': 1} maxLev=10
+  HYPE   szi=      3.51 entryPx=   94.9445 posVal= 324.72063 uPnL=  -8.53484 lev={'type': 'cross', 'value': 1} maxLev=10
+  XMR    szi=     0.351 entryPx=   603.975 posVal= 194.87871 uPnL= -17.11676 lev={'type': 'cross', 'value': 1} maxLev=5
+userState failed
+[0m
+[0m← [0mWrite /tmp/analyze15.py
+Wrote file successfully.
+[0m
+[0m← [0mWrite /tmp/analyze15.py
+Wrote file successfully.
+[0m
+[0m← [0mWrite /tmp/analyze15.py
+Wrote file successfully.
+[0m
+[0m$ [0mpython3 /tmp/analyze15.py
+============================================================
+EXACT GRID MECHANICS
+============================================================
+
+NEAR: 66 cycles
+Traceback (most recent call last):
+  File "/tmp/analyze15.py", line 41, in <module>
+    total_buy_cost = sum(sz*px for _,sz,_ in buys)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/analyze15.py", line 41, in <genexpr>
+    total_buy_cost = sum(sz*px for _,sz,_ in buys)
+                            ^^
+NameError: name 'px' is not defined
+[0m
+[0m← [0mEdit /tmp/analyze15.py
+Index: /tmp/analyze15.py
+===================================================================
+--- /tmp/analyze15.py
++++ /tmp/analyze15.py
+@@ -37,9 +37,9 @@
+ print(f"\n{c}: {len(cycles)} cycles")
+ for i, (buys, sell_px, sell_sz) in enumerate(cycles[:3]):
+     buy_str = " ".join(f"{sz:.1f}@{px:.3f}(b{b1:02x})" for px,sz,b1 in buys)
+     total_buy_sz = sum(sz for _,sz,_ in buys)
+-    total_buy_cost = sum(sz*px for _,sz,_ in buys)
++    total_buy_cost = sum(sz*px for px,sz,_ in buys)
+     avg_buy = total_buy_cost / total_buy_sz if total_buy_sz > 0 else 0
+     profit_pct = (sell_px - avg_buy) / avg_buy * 100 if avg_buy > 0 else 0
+     print(f"  Cycle {i}: [{buy_str}]")
+     print(f"           -> sell {sell_sz:.1f}@{sell_px:.3f} | total_buy_sz={total_buy_sz:.1f} avg_buy={avg_buy:.3f} profit={profit_pct:.2f}%")
+
+[0m
+[0m✗ [0mEdit /tmp/analyze15.py failed
+[91m[1mError: [0mNo changes to apply: oldString and newString are identical.
+[0m
+[0m← [0mEdit /tmp/analyze15.py
+Index: /tmp/analyze15.py
+===================================================================
+--- /tmp/analyze15.py
++++ /tmp/analyze15.py
+@@ -35,11 +35,11 @@
+             current = []
+ 
+ print(f"\n{c}: {len(cycles)} cycles")
+ for i, (buys, sell_px, sell_sz) in enumerate(cycles[:3]):
+-    buy_str = " ".join(f"{sz:.1f}@{px:.3f}(b{b1:02x})" for px,sz,b1 in buys)
++    buy_str = " ".join(f"{sz:.1f}@{p:.3f}(b{b1:02x})" for p,sz,b1 in buys)
+     total_buy_sz = sum(sz for _,sz,_ in buys)
+-    total_buy_cost = sum(sz*px for px,sz,_ in buys)
++    total_buy_cost = sum(sz*p for p,sz,_ in buys)
+     avg_buy = total_buy_cost / total_buy_sz if total_buy_sz > 0 else 0
+     profit_pct = (sell_px - avg_buy) / avg_buy * 100 if avg_buy > 0 else 0
+     print(f"  Cycle {i}: [{buy_str}]")
+     print(f"           -> sell {sell_sz:.1f}@{sell_px:.3f} | total_buy_sz={total_buy_sz:.1f} avg_buy={avg_buy:.3f} profit={profit_pct:.2f}%")
+
+[0m
+[0m← [0mWrite /tmp/analyze15.py
+Wrote file successfully.
+[0m
+[0m$ [0mpython3 /tmp/analyze15.py
+============================================================
+EXACT GRID MECHANICS
+============================================================
+
+NEAR: 66 cycles
+  Cycle 0: [12.3@2.415(b01) 12.5@2.412(b02) 13.4@2.393(b02) 14.5@2.346(b02)]
+           -> sell 0.1@2.444 | total_buy_sz=52.7 avg_buy=2.389 profit=2.30%
+  Cycle 1: [12.2@2.441(b01) 12.9@2.437(b02)]
+           -> sell 25.1@2.495 | total_buy_sz=25.1 avg_buy=2.439 profit=2.30%
+  Cycle 2: [12.2@2.531(b01) 12.9@2.528(b02) 13.8@2.508(b02)]
+           -> sell 38.9@2.580 | total_buy_sz=38.9 avg_buy=2.522 profit=2.30%
+
+ZRO: 49 cycles
+  Cycle 0: [10.7@1.153(b01)]
+           -> sell 10.7@1.171 | total_buy_sz=10.7 avg_buy=1.153 profit=1.50%
+  Cycle 1: [10.5@1.176(b01)]
+           -> sell 10.5@1.194 | total_buy_sz=10.5 avg_buy=1.176 profit=1.50%
+  Cycle 2: [10.3@1.198(b01)]
+           -> sell 10.3@1.216 | total_buy_sz=10.3 avg_buy=1.198 profit=1.50%
+
+JUP: 18 cycles
+  Cycle 0: [65.0@0.240(b01)]
+           -> sell 65.0@0.244 | total_buy_sz=65.0 avg_buy=0.240 profit=1.70%
+  Cycle 1: [76.0@0.245(b01)]
+           -> sell 76.0@0.249 | total_buy_sz=76.0 avg_buy=0.245 profit=1.60%
+  Cycle 2: [76.0@0.247(b01)]
+           -> sell 76.0@0.251 | total_buy_sz=76.0 avg_buy=0.247 profit=1.60%
+
+ONDO: 36 cycles
+  Cycle 0: [29.0@0.371(b01) 35.0@0.369(b02) 42.0@0.365(b02) 38.0@0.357(b02) 14.0@0.357(b02) 65.0@0.345(b02)]
+           -> sell 59.0@0.367 | total_buy_sz=223.0 avg_buy=0.359 profit=2.20%
+  Cycle 1: [29.0@0.367(b01) 35.0@0.365(b02) 43.0@0.361(b02) 53.0@0.353(b02) 65.0@0.342(b02)]
+           -> sell 225.0@0.364 | total_buy_sz=225.0 avg_buy=0.355 profit=2.70%
+  Cycle 2: [31.0@0.364(b01) 38.0@0.363(b02) 46.0@0.359(b02) 57.0@0.351(b02) 70.0@0.340(b02) 88.0@0.325(b02)]
+           -> sell 330.0@0.355 | total_buy_sz=330.0 avg_buy=0.345 profit=2.70%
+
+HYPE: 87 cycles
+  Cycle 0: [0.6@72.007(b-1) 1.6@70.894(b-1)]
+           -> sell 3.1@72.912 | total_buy_sz=2.2 avg_buy=71.179 profit=2.44%
+  Cycle 1: [2.8@72.606(b-1)]
+           -> sell 2.8@73.607 | total_buy_sz=2.8 avg_buy=72.606 profit=1.38%
+  Cycle 2: [0.5@73.080(b-1) 0.6@71.315(b-1) 0.0@71.489(b-1) 0.4@71.478(b-1) 2.1@69.716(b-1) 0.4@69.797(b-1)]
+           -> sell 0.0@70.719 | total_buy_sz=4.0 avg_buy=70.577 profit=0.20%
+
+============================================================
+SELL vs BASE BUY (first buy in cycle)
+============================================================
+ETH   : sell vs base buy: mean=-0.10% median=-0.10% min=-0.10% max=-0.10%
+HYPE  : sell vs base buy: mean=0.47% median=1.18% min=-11.11% max=8.29%
+INJ   : sell vs base buy: mean=0.73% median=0.95% min=-1.61% max=1.50%
+JUP   : sell vs base buy: mean=-0.10% median=1.50% min=-4.46% max=1.70%
+NEAR  : sell vs base buy: mean=1.26% median=1.55% min=-3.37% max=2.30%
+ONDO  : sell vs base buy: mean=1.13% median=1.77% min=-2.71% max=2.10%
+UNI   : sell vs base buy: mean=1.28% median=1.72% min=-0.94% max=2.20%
+XLM   : sell vs base buy: mean=0.10% median=0.60% min=-2.79% max=1.78%
+XMR   : sell vs base buy: mean=0.50% median=0.61% min=-2.83% max=1.30%
+ZEC   : sell vs base buy: mean=0.22% median=0.46% min=-1.91% max=0.60%
+ZRO   : sell vs base buy: mean=0.83% median=1.08% min=-1.95% max=2.50%
+
+============================================================
+GRID STEP PER COIN
+============================================================
+ETH   : median step=0.54% mean=0.57% n=3
+HYPE  : median step=0.56% mean=1.45% n=155
+INJ   : median step=0.72% mean=0.85% n=72
+JUP   : median step=0.88% mean=1.18% n=37
+NEAR  : median step=0.79% mean=1.06% n=136
+ONDO  : median step=0.58% mean=1.08% n=70
+UNI   : median step=0.94% mean=1.22% n=27
+XLM   : median step=1.46% mean=1.88% n=11
+XMR   : median step=0.07% mean=0.25% n=286
+ZEC   : median step=0.18% mean=0.36% n=99
+ZRO   : median step=1.23% mean=1.30% n=52
+
+============================================================
+ACCOUNT SUMMARY
+============================================================
+Total closed PnL in window: $868.72
+Total fees: $24.40
+Net: $844.32
+Current account value: $2,183.31
+Current open uPnL: -$73.89
+Implied starting account: $1412.88
+
+============================================================
+PER-COIN WIN RATE
+============================================================
+ETH    sells=  1 wins=  1 losses=  0 win_rate=100.0%
+HYPE   sells=114 wins=112 losses=  2 win_rate=98.2%
+INJ    sells= 45 wins= 45 losses=  0 win_rate=100.0%
+JUP    sells= 22 wins= 22 losses=  0 win_rate=100.0%
+NEAR   sells= 76 wins= 76 losses=  0 win_rate=100.0%
+ONDO   sells= 41 wins= 41 losses=  0 win_rate=100.0%
+UNI    sells= 16 wins= 16 losses=  0 win_rate=100.0%
+XLM    sells=  6 wins=  6 losses=  0 win_rate=100.0%
+XMR    sells=102 wins=102 losses=  0 win_rate=100.0%
+ZEC    sells= 40 wins= 39 losses=  1 win_rate=97.5%
+ZRO    sells= 54 wins= 54 losses=  0 win_rate=100.0%
+[0m
+I now have a complete picture. Let me write the final summary.
+
+---
+
+## Strategy Derivation — `0xe755b71641b95ff7a6bd40030e9dc7ac7939e578`
+
+### Summary
+
+This is an **automated high-frequency grid/DCA trading bot** running on Hyperliquid. It trades **long-only** positions across 11 coins (NEAR, HYPE, XMR, ZRO, INJ, ONDO, JUP, UNI, ZEC, XLM, ETH) using a **geometric price grid with martingale position sizing** and a **profit-target sell** per grid level. It operates 24/7 with a US-hours bias, predominantly as a **maker** (74% limit orders).
+
+### Evidence from on-chain data (2,000 fills, 2026-06-02 → 2026-09-26)
+
+**1. Fully automated — cloid structure encodes the strategy**
+
+Every fill has a `cloid` (client order ID). Decoding the bytes reveals 3 distinct order types from the same bot:
+- `b1=0x01` (375 fills, 100% buys) — **base/initial buy** at a grid level
+- `b1=0x02` (980 fills, 100% buys) — **ladder/add buy** at lower grid levels
+- `b1=0x03` (404 fills, 100% sells) — **take-profit sell**
+
+This is not a human; it's a programmatic grid engine.
+
+**2. Grid mechanics (per cycle)**
+
+Each cycle: the bot buys at descending price levels, then sells the accumulated position at a profit:
+- **Grid step**: median ~0.5–1.5% per coin (NEAR 0.79%, ZRO 1.23%, JUP 0.88%, HYPE 0.56%, ONDO 0.58%, XMR 0.07%, ZEC 0.18%)
+- **Profit target**: sell price is ~1.5–2.3% above the volume-weighted average buy price (e.g., ZRO: buy 1.153 → sell 1.171 = +1.56%; NEAR: avg buy 2.389 → sell 2.444 = +2.30%)
+- **Martingale sizing**: buy size increases ~1.1–1.5x per lower grid level (e.g., ONDO: 29→35→42→53→65→88 units as price drops)
+- **Win rate**: 98.2% across all sells (only 3 losing trades in 514 closes)
+
+**3. Position & risk profile**
+- **Cross-margin, 1x leverage** (no leverage used)
+- **Long-only** — all 1483 buys are "Open Long", all 517 sells are "Close Long"
+- **Maker bias**: 73.8% of fills are maker (limit orders), 26.2% taker
+- **Base position sizes** per coin: NEAR ~12, ZRO ~10–13, JUP ~65–76, ONDO ~29–31, HYPE ~0.5–0.9, INJ ~4, UNI ~2.3, XMR ~0.06, ZEC ~0.03, XLM ~178
+
+**4. Account trajectory**
+- Implied starting equity: ~$1,413
+- Current account value: $2,183 (with $74 in open unrealized losses)
+- Net closed PnL in window: +$844 (after $24 in fees)
+- Current open positions: INJ 29, UNI 13, ZRO 14.9, NEAR 77.8, ONDO 145, HYPE 3.51, XMR 0.351 (all underwater, consistent with grid accumulating during dips)
+
+**5. Key behavioral signatures**
+- 2,000 fills over 116 days = ~17 fills/day, but highly concentrated (e.g., 156 fills on 2026-09-03)
+- Active hours: 00:00–23:00 UTC, peak at 15:00–16:00 UTC
+- Multi-coin: up to 7 coins traded in a single day
+- No TWAP orders, no large single fills (max notional ~$710, all HYPE sells)
+
+### Conclusion
+
+The strategy is a **market-making grid bot** that:
+1. Places buy limit orders at geometric grid levels below market
+2. Scales in (martingale) as price descends, increasing position size
+3. Closes each grid cycle at a fixed ~1.5–2.5% profit target
+4. Uses maker orders to minimize fees
+5. Runs continuously across a basket of 11 mid-cap coins on Hyperliquid

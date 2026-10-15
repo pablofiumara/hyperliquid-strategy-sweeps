@@ -1,0 +1,1 @@
+opencode run -m opencode/ling-3.0-flash-fin-free --auto --dir /home/paf/Documents/code/misc/hyperliquid-strategy-sweeps/0xe755b71641b95ff7a6bd40030e9dc7ac7939e578/oc-ling-3.0-flash-fin/work --variant high --agent plan Reply\ with\ exactly:\ OK

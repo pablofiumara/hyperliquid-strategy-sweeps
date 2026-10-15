@@ -1,0 +1,31 @@
+status	tool	model	variant	probe	gate	exit	duration_s	bytes	label
+DONE	cline	cline-free/deepseek-v4.1-flash	xhigh	OK	ok	0	324.0	276519	cline-deepseek-v4.1-flash
+DONE	cline	poolside/laguna-s-2.1:free	xhigh	OK	not_free_metadata	0	1483.0	367493	cline-laguna-s-2.1
+DONE	kilo	kilo/dots-studio/dots-3-note-preview:free	thinking	OK	ok	0	788.0	110410	kilo-dots-3-note-preview
+DONE	kilo	kilo/poolside/laguna-s-2.1:free	thinking	OK	ok	0	1303.0	202695	kilo-laguna-s-2.1
+DONE	kilo	kilo/nvidia/nemotron-3-super-120b-a12b:free	medium	OK	ok	0	328.0	61222	kilo-nemotron-3-super
+DONE	kilo	kilo/nvidia/nemotron-3-ultra-550b-a55b:free	high	OK	ok	0	979.0	143058	kilo-nemotron-3-ultra
+DONE	kilo	kilo/stepfun/step-3.7-flash:free	high	OK	ok	0	853.0	41866	kilo-step-3.7-flash
+DONE	opencode	opencode/big-pickle		OK	ok	0	605.0	109348	oc-big-pickle
+DONE	opencode	opencode/ling-3.0-flash-fin-free	high	OK	ok	0	111.0	83934	oc-ling-3.0-flash-fin
+DONE	opencode	opencode/muse-spark-1.3-contributor-free	xhigh	OK	ok	0	296.0	47055	oc-muse-spark-1.3
+DONE	kilo	kilo/inclusionai/ling-3.0-flash-fin:free	thinking	OK	ok	0	168.0	81662	unverified-kilo-ling-3.0-flash-fin
+SKIPPED_NOT_FREE	cline	cline-free/solar-pro4	xhigh	ERROR	ok	1	0.0	189	cline-solar-pro4
+SKIPPED_NOT_FREE	kilo	kilo/deepseek/deepseek-v4-flash-0731:free	max	ERROR	ok	1	0.0	960	kilo-deepseek-v4-flash-0731
+SKIPPED_NOT_FREE	kilo	kilo/inclusionai/ling-3.0-flash-vl:free	thinking	ERROR	ok	1	0.0	980	kilo-ling-3.0-flash-vl
+SKIPPED_NOT_FREE	opencode	opencode/jev-1.13-free		ERROR	ok	1	0.0	166	oc-jev-1.13
+SKIPPED_NOT_FREE	opencode	opencode/mimo-v2.5-free		ERROR	ok	1	0.0	166	oc-mimo-v2.5
+SKIPPED_NOT_FREE	opencode	opencode/muse-spark-1.2-contributor-free	xhigh	ERROR	ok	1	0.0	166	oc-muse-spark-1.2
+SKIPPED_NOT_FREE	kilo	kilo/thinkingmachines/inkling-small:free	max	ERROR	ok	124	0.0	56	unverified-kilo-inkling-small
+SKIPPED_NOT_FREE	kilo	kilo/qwen/qwen3.8-27b:free	xhigh	ERROR	ok	124	0.0	42	unverified-kilo-qwen3.8-27b
+FAILED	cline	z-ai/glm-5.3-flash	xhigh	OK	not_free_metadata	0	311.0	8000	cline-glm-5.3-flash
+FAILED	cline	cline-free/muse-spark-1.3-contributor	xhigh	skipped	ok	0	674.0	8427	cline-muse-spark-1.3-contributor
+SKIPPED_NEGATIVE_RATING	kilo	kilo/poolside/laguna-xs-2.1:free	thinking	skipped	ok	1	0.0	0	kilo-laguna-xs-2.1
+SKIPPED_NEGATIVE_RATING	kilo	kilo/liquid/lfm-2.5-2.6b:free	thinking	skipped	ok	1	0.0	0	kilo-lfm-2.5-2.6b
+SKIPPED_NEGATIVE_RATING	kilo	kilo/cohere/north-mini-code:free	thinking	skipped	ok	1	0.0	0	kilo-north-mini-code
+SKIPPED_NEGATIVE_RATING	opencode	opencode/nemotron-3-ultra-free		skipped	ok	1	0.0	0	oc-nemotron-3-ultra
+SKIPPED_NEGATIVE_RATING	opencode	opencode/nemotron-3.5-lightning-free		skipped	ok	1	0.0	0	oc-nemotron-3.5-lightning
+SKIPPED_NEGATIVE_RATING	kilo	kilo/inclusionai/ling-3.0-flash-sante:free	thinking	skipped	ok	1	0.0	0	unverified-kilo-ling-3.0-flash-sante
+SKIPPED_NEGATIVE_RATING	kilo	kilo/nvidia/nemotron-3.5-lightning:free	thinking	skipped	ok	1	0.0	0	unverified-kilo-nemotron-3.5-lightning
+SKIPPED_NEGATIVE_RATING	kilo	kilo/nex-agi/nex-n2.5-mini:free	high	skipped	ok	1	0.0	0	unverified-kilo-nex-n2.5-mini
+SKIPPED_NEGATIVE_RATING	kilo	kilo/nex-agi/nex-n2.5-pro:free	high	skipped	ok	1	0.0	0	unverified-kilo-nex-n2.5-pro

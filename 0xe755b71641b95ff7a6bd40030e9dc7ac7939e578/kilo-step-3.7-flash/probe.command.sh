@@ -1,0 +1,1 @@
+kilo run -m kilo/stepfun/step-3.7-flash:free --auto --dir /home/paf/Documents/code/misc/hyperliquid-strategy-sweeps/0xe755b71641b95ff7a6bd40030e9dc7ac7939e578/kilo-step-3.7-flash/work --variant high --agent plan Reply\ with\ exactly:\ OK

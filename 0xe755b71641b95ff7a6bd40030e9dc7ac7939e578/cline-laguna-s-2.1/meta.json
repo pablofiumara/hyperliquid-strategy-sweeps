@@ -1,0 +1,15 @@
+{
+ "wallet": "0xe755b71641b95ff7a6bd40030e9dc7ac7939e578",
+ "label": "cline-laguna-s-2.1",
+ "tool": "cline",
+ "model": "poolside/laguna-s-2.1:free",
+ "variant": "xhigh",
+ "free_gate": "not_free_metadata",
+ "probe": "OK",
+ "status": "DONE",
+ "exit": 0,
+ "duration_s": 1483.0,
+ "bytes": 367493,
+ "extra": "",
+ "prompt_file": "prompt.txt"
+}

@@ -1,0 +1,3 @@
+[0m
+> plan · thinkingmachines/inkling-small:free
+[0m

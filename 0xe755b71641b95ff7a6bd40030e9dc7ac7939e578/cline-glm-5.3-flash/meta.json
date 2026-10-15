@@ -1,0 +1,15 @@
+{
+ "wallet": "0xe755b71641b95ff7a6bd40030e9dc7ac7939e578",
+ "label": "cline-glm-5.3-flash",
+ "tool": "cline",
+ "model": "z-ai/glm-5.3-flash",
+ "variant": "xhigh",
+ "free_gate": "not_free_metadata",
+ "probe": "OK",
+ "status": "FAILED",
+ "exit": 0,
+ "duration_s": 311.0,
+ "bytes": 8000,
+ "extra": "",
+ "prompt_file": "prompt.txt"
+}

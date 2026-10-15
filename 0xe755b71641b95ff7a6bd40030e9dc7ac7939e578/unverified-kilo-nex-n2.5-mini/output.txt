@@ -1,0 +1,1 @@
+skipped: model kilo/nex-agi/nex-n2.5-mini:free has at least one negative rating in the rating app

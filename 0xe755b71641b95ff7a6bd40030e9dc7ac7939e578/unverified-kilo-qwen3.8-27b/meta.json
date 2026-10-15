@@ -1,0 +1,15 @@
+{
+ "wallet": "0xe755b71641b95ff7a6bd40030e9dc7ac7939e578",
+ "label": "unverified-kilo-qwen3.8-27b",
+ "tool": "kilo",
+ "model": "kilo/qwen/qwen3.8-27b:free",
+ "variant": "xhigh",
+ "free_gate": "ok",
+ "probe": "ERROR",
+ "status": "SKIPPED_NOT_FREE",
+ "exit": 124,
+ "duration_s": 0.0,
+ "bytes": 42,
+ "extra": "",
+ "prompt_file": "prompt.txt"
+}

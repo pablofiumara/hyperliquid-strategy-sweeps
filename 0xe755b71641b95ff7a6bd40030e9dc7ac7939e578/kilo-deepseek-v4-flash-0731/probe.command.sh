@@ -1,0 +1,1 @@
+kilo run -m kilo/deepseek/deepseek-v4-flash-0731:free --auto --dir /home/paf/Documents/code/misc/hyperliquid-strategy-sweeps/0xe755b71641b95ff7a6bd40030e9dc7ac7939e578/kilo-deepseek-v4-flash-0731/work --variant max --agent plan Reply\ with\ exactly:\ OK

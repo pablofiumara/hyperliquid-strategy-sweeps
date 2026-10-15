@@ -1,0 +1,15 @@
+{
+ "wallet": "0xe755b71641b95ff7a6bd40030e9dc7ac7939e578",
+ "label": "kilo-ling-3.0-flash-vl",
+ "tool": "kilo",
+ "model": "kilo/inclusionai/ling-3.0-flash-vl:free",
+ "variant": "thinking",
+ "free_gate": "ok",
+ "probe": "ERROR",
+ "status": "SKIPPED_NOT_FREE",
+ "exit": 1,
+ "duration_s": 0.0,
+ "bytes": 980,
+ "extra": "",
+ "prompt_file": "prompt.txt"
+}

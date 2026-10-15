@@ -1,0 +1,15 @@
+{
+ "wallet": "0xe755b71641b95ff7a6bd40030e9dc7ac7939e578",
+ "label": "oc-muse-spark-1.2",
+ "tool": "opencode",
+ "model": "opencode/muse-spark-1.2-contributor-free",
+ "variant": "xhigh",
+ "free_gate": "ok",
+ "probe": "ERROR",
+ "status": "SKIPPED_NOT_FREE",
+ "exit": 1,
+ "duration_s": 0.0,
+ "bytes": 166,
+ "extra": "",
+ "prompt_file": "prompt.txt"
+}

@@ -1,0 +1,15 @@
+{
+ "wallet": "0xe755b71641b95ff7a6bd40030e9dc7ac7939e578",
+ "label": "kilo-laguna-s-2.1",
+ "tool": "kilo",
+ "model": "kilo/poolside/laguna-s-2.1:free",
+ "variant": "thinking",
+ "free_gate": "ok",
+ "probe": "OK",
+ "status": "DONE",
+ "exit": 0,
+ "duration_s": 1303.0,
+ "bytes": 202695,
+ "extra": "",
+ "prompt_file": "prompt.txt"
+}

@@ -1,0 +1,1861 @@
+[0m
+> build · big-pickle
+[0m
+aI'll start by fetching the trader's data from the Hyperliquid API directly.
+[0m$ [0mls -la 2>/dev/null | head -20; echo "---"; python3 -c "import requests; print('requests ok')" 2>&1
+total 8
+drwxrwxr-x 2 paf paf 4096 sep 26 12:55 .
+drwxrwxr-x 3 paf paf 4096 sep 26 12:56 ..
+---
+requests ok
+[0m
+aWorkspace is empty — good, fully independent. Let me build a fetch/aggregate pipeline in /tmp.
+[0m$ [0mmkdir -p /tmp/opencode/hl && cat > /tmp/opencode/hl/fetch.py <<'EOF'
+import requests, json, time, sys
+BASE="https://api.hyperliquid.xyz/info"
+ADDR="0xe755b71641b95ff7a6bd40030e9dc7ac7939e578"
+def post(body):
+    for attempt in range(5):
+        try:
+            r=requests.post(BASE,json=body,timeout=30)
+            if r.status_code==200: return r.json()
+            time.sleep(1+attempt)
+        except Exception as e:
+            time.sleep(1+attempt)
+    raise SystemExit("fail "+str(body))
+if __name__=="__main__":
+    t=sys.argv[1]
+    if t=="fills": res=post({"type":"userFills","user":ADDR})
+    elif t=="funding": res=post({"type":"userFunding","user":ADDR,"startTime":int(float(sys.argv[2])*1000)})
+    elif t=="clearing": res=post({"type":"userClearinghouseState","user":ADDR})
+    elif t=="mids": res=post({"type":"allMids"})
+    json.dump(res,open(sys.argv[-1],"w"))
+    print(t,"n=",len(res) if isinstance(res,list) else "obj")
+EOF
+cd /tmp/opencode/hl && python3 fetch.py fills fills.json
+fills n= 2000
+[0m
+a[0m$ [0mcat > /tmp/opencode/hl/page.py <<'EOF'
+import requests, json, time, os
+BASE="https://api.hyperliquid.xyz/info"
+ADDR="0xe755b71641b95ff7a6bd40030e9dc7ac7939e578"
+def post(body):
+    for a in range(6):
+        try:
+            r=requests.post(BASE,json=body,timeout=40)
+            if r.status_code==200: return r.json()
+        except Exception: pass
+        time.sleep(1+a)
+    return None
+all=[]; start=None
+for page in range(60):
+    body={"type":"userFills","user":ADDR}
+    if start is not None: body["startTime"]=start
+    res=post(body)
+    if not res: print("pagefail",page); break
+    if not res: break
+    all+=res
+    oldest=min(x["time"] for x in res); newest=max(x["time"] for x in res)
+    print("page",page,"n",len(res),"range",round(oldest/1e6),round(newest/1.6e9//1*1,0), time.strftime("%Y-%m-%d",time.gmtime(oldest/1000)), time.strftime("%Y-%m-%d",time.gmtime(newest/1000)))
+    if len(res)<2000: break
+    start=oldest+1
+    if oldest<1.5e12: print("hit 2026-07 floor"); break
+# dedupe
+seen=set(); ded=[]
+for x in sorted(all,key=lambda z:z["time"]):
+    k=(x["time"],x["coin"],x["px"],x["sz"],x["side"],x["dir"],x.get("tid"))
+    if k in seen: continue
+    seen.add(k); ded.append(x)
+json.dump(ded,open("/tmp/opencode/hl/fills_all.json","w"))
+print("TOTAL",len(ded))
+if ded:
+    print("span",time.strftime("%Y-%m-%d",time.gmtime(ded[0]["time"]/1000)),"->",time.strftime("%Y-%m-%d",time.gmtime(ded[-1]["time"]/1000)))
+EOF
+cd /tmp/opencode/hl && python3 page.py
+page 0 n 2000 range 1780383 1119.0 2026-06-02 2026-09-26
+page 1 n 2000 range 1780383 1119.0 2026-06-02 2026-09-26
+page 2 n 2000 range 1780383 1119.0 2026-06-02 2026-09-26
+page 3 n 2000 range 1780383 1119.0 2026-06-02 2026-09-26
+page 4 n 2000 range 1780383 1119.0 2026-06-02 2026-09-26
+page 5 n 2000 range 1780383 1119.0 2026-06-02 2026-09-26
+page 6 n 2000 range 1780383 1119.0 2026-06-02 2026-09-26
+page 7 n 2000 range 1780383 1119.0 2026-06-02 2026-09-26
+page 8 n 2000 range 1780383 1119.0 2026-06-02 2026-09-26
+page 9 n 2000 range 1780383 1119.0 2026-06-02 2026-09-26
+page 10 n 2000 range 1780383 1119.0 2026-06-02 2026-09-26
+page 11 n 2000 range 1780383 1119.0 2026-06-02 2026-09-26
+page 12 n 2000 range 1780383 1119.0 2026-06-02 2026-09-26
+page 13 n 2000 range 1780383 1119.0 2026-06-02 2026-09-26
+page 14 n 2000 range 1780383 1119.0 2026-06-02 2026-09-26
+page 15 n 2000 range 1780383 1119.0 2026-06-02 2026-09-26
+page 16 n 2000 range 1780383 1119.0 2026-06-02 2026-09-26
+page 17 n 2000 range 1780383 1119.0 2026-06-02 2026-09-26
+page 18 n 2000 range 1780383 1119.0 2026-06-02 2026-09-26
+page 19 n 2000 range 1780383 1119.0 2026-06-02 2026-09-26
+page 20 n 2000 range 1780383 1119.0 2026-06-02 2026-09-26
+pagefail 21
+TOTAL 2000
+span 2026-06-02 -> 2026-09-26
+[0m
+aPagination is capped (2000 = full set). Now aggregating.
+[0m$ [0mcat > /tmp/opencode/hl/agg.py <<'EOF'
+import json, time, statistics as st
+from collections import Counter, defaultdict
+F=json.load(open("/tmp/opencode/hl/fills_all.json"))
+print("N fills",len(F))
+print("sample keys",sorted(F[0].keys()))
+print("first ts",time.strftime("%Y-%m-%d %H:%M",time.gmtime(F[0]["time"]/1000)))
+print("last  ts",time.strftime("%Y-%m-%d %H:%M",time.gmtime(F[-1]["time"]/1000)))
+print("\n== field value distributions ==")
+for k in ["side","dir","closedPnl>0","feeToken"]:
+    pass
+print("side:",Counter(f["side"] for f in F))
+print("dir :",Counter(f["dir"] for f in F))
+print("feeToken:",Counter(f.get("feeToken") for f in F))
+print("feeAccounted:",Counter(f.get("feeAccounted") for f in F if "feeAccounted" in f))
+print("closedPnl sign:",Counter(("pos" if f["closedPnl"]>0 else "neg" if f["closedPnl"]<0 else "zero") for f in F))
+print("n coins:",len(set(f["coin"] for f in F)))
+print("\n== per coin ==")
+rows=[]
+for c,n in Counter(f["coin"] for f in F).most_common():
+    sub=[f for f in F if f["coin"]==c]
+    notional=sum(f["px"]*f["sz"] for f in sub)
+    pnl=sum(f["closedPnl"] for f in sub)
+    fee=sum(f.get("fee",0) for f in sub)
+    szs=[f["sz"] for f in sub]
+    t0,t1=min(f["time"] for f in sub),max(f["time"] for f in sub)
+    days=len(set(time.strftime("%Y-%m-%d",time.gmtime(f["time"]/1000)) for f in sub))
+    rows.append((c,n,notional,pnl,fee,pnl-fee,st.median(szs),days,time.strftime("%m-%d",time.gmtime(t0/1000)),time.strftime("%m-%d",time.gmtime(t1/1000)),len(set(f["side"] for f in sub))))
+rows.sort(key=lambda r:-r[2])
+print(f"{'coin':<10}{'n':>5}{'notional$':>13}{'pnl$':>11}{'fee$':>9}{'net$':>11}{'medSz':>10}{'days':>5}  {'first':<6}{'last':<6} sides")
+for r in rows:
+    print(f"{r[0]:<10}{r[1]:>5}{r[2]:>13,.0f}{r[3]:>11,.1f}{r[4]:>9,.1f}{r[5]:>11,.1f}{r[6]:>10.3f}{r[7]:>5}  {r[8]:<6}{r[9]:<6} {r[10]}")
+print(f"{'TOTAL':<10}{len(F):>5}{sum(f['px']*f['sz'] for f in F):>13,.0f}{sum(f['closedPnl'] for f in F):>11,.1f}{sum(f.get('fee',0) for f in F):>9,.1f}{sum(f['closedPnl']-f.get('fee',0) for f in F):>11,.1f}")
+EOF
+cd /tmp/opencode/hl && python3 agg.py
+N fills 2000
+sample keys ['closedPnl', 'coin', 'crossed', 'dir', 'fee', 'feeToken', 'hash', 'oid', 'px', 'side', 'startPosition', 'sz', 'tid', 'time', 'twapId']
+first ts 2026-06-02 06:58
+last  ts 2026-09-26 15:26
+
+== field value distributions ==
+side: Counter({'B': 1483, 'A': 517})
+dir : Counter({'Open Long': 1483, 'Close Long': 517})
+feeToken: Counter({'USDC': 2000})
+feeAccounted: Counter()
+Traceback (most recent call last):
+  File "/tmp/opencode/hl/agg.py", line 15, in <module>
+    print("closedPnl sign:",Counter(("pos" if f["closedPnl"]>0 else "neg" if f["closedPnl"]<0 else "zero") for f in F))
+                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/collections/__init__.py", line 607, in __init__
+    self.update(iterable, **kwds)
+  File "/usr/lib/python3.12/collections/__init__.py", line 699, in update
+    _count_elements(self, iterable)
+  File "/tmp/opencode/hl/agg.py", line 15, in <genexpr>
+    print("closedPnl sign:",Counter(("pos" if f["closedPnl"]>0 else "neg" if f["closedPnl"]<0 else "zero") for f in F))
+                                              ^^^^^^^^^^^^^^^^
+TypeError: '>' not supported between instances of 'str' and 'int'
+[0m
+aKey finding already: `dir` is **only** "Open Long"/"Close Long" → long-only. Let me fix and go deeper.
+[0m$ [0mcat > /tmp/opencode/hl/agg.py <<'EOF'
+import json, time, statistics as st
+from collections import Counter, defaultdict
+F=json.load(open("/tmp/opencode/hl/fills_all.json"))
+def P(x):
+    try: return float(x)
+    except: return 0.0
+print("N fills",len(F))
+print("side:",Counter(f["side"] for f in F),"  dir:",Counter(f["dir"] for f in F))
+pnl=[P(f["closedPnl"]) for f in F]
+print("closedPnl sign:",Counter(("pos" if p>0 else "neg" if p<0 else "zero") for p in pnl))
+print("n nonzero-pnl fills:",sum(1 for p in pnl if p!=0))
+print("coins:",len(set(f["coin"] for f in F)))
+print("crossed:",Counter(f.get("crossed") for f in F))
+print("twapId non-null:",sum(1 for f in F if f.get("twapId")))
+print("\n== per coin ==")
+rows=[]
+for c,n in Counter(f["coin"] for f in F).most_common():
+    sub=[f for f in F if f["coin"]==c]
+    notional=sum(P(f["px"])*P(f["sz"]) for f in sub)
+    p=sum(P(f["closedPnl"]) for f in sub); fee=sum(P(f.get("fee")) for f in sub)
+    szs=sorted(P(f["sz"]) for f in sub)
+    t0,t1=min(f["time"] for f in sub),max(f["time"] for f in sub)
+    days=len(set(time.strftime("%Y-%m-%d",time.gmtime(f["time"]/1000)) for f in sub))
+    no=sum(1 for f in sub if f["dir"]=="Open Long")
+    rows.append((c,n,notional,p,fee,p-fee,st.median(szs),szs[-1],days,time.strftime("%m-%d",time.gmtime(t0/1000)),time.strftime("%m-%d",time.gmtime(t1/1000)),no))
+rows.sort(key=lambda r:-r[2])
+print(f"{'coin':<9}{'n':>5}{'notional$':>12}{'pnl$':>10}{'fee$':>8}{'net$':>10}{'medSz':>9}{'maxSz':>9}{'days':>5}{'opens':>7}  {'first':<6}{'last':<6}")
+for r in rows:
+    print(f"{r[0]:<9}{r[1]:>5}{r[2]:>12,.0f}{r[3]:>10,.1f}{r[4]:>8,.1f}{r[5]:>10,.1f}{r[6]:>9.2f}{r[7]:>9.2f}{r[8]:>5}{r[12]:>7}  {r[9]:<6}{r[10]:<6}")
+T=len(F)
+print(f"{'TOTAL':<9}{T:>5}{sum(P(f['px'])*P(f['sz']) for f in F):>12,.0f}{sum(pnl):>10,.1f}{sum(P(f.get('fee')) for f in F):>8,.1f}{sum(pnl)-sum(P(f.get('fee')) for f in F):>10,.1f}")
+EOF
+cd /tmp/opencode/hl && python3 agg.py
+N fills 2000
+side: Counter({'B': 1483, 'A': 517})   dir: Counter({'Open Long': 1483, 'Close Long': 517})
+closedPnl sign: Counter({'zero': 1483, 'pos': 514, 'neg': 3})
+n nonzero-pnl fills: 517
+coins: 11
+crossed: Counter({False: 1475, True: 525})
+twapId non-null: 0
+
+== per coin ==
+coin         n   notional$      pnl$    fee$      net$    medSz    maxSz days  opens  first last  
+Traceback (most recent call last):
+  File "/tmp/opencode/hl/agg.py", line 29, in <module>
+    print(f"{r[0]:<9}{r[1]:>5}{r[2]:>12,.0f}{r[3]:>10,.1f}{r[4]:>8,.1f}{r[5]:>10,.1f}{r[6]:>9.2f}{r[7]:>9.2f}{r[8]:>5}{r[12]:>7}  {r[9]:<6}{r[10]:<6}")
+                                                                                                                       ~^^^^
+IndexError: tuple index out of range
+[0m
+a[0m$ [0mcd /tmp/opencode/hl && sed -i 's/{r\[12\]:>7}/{r[11]:>7}/' agg.py && python3 agg.py
+N fills 2000
+side: Counter({'B': 1483, 'A': 517})   dir: Counter({'Open Long': 1483, 'Close Long': 517})
+closedPnl sign: Counter({'zero': 1483, 'pos': 514, 'neg': 3})
+n nonzero-pnl fills: 517
+coins: 11
+crossed: Counter({False: 1475, True: 525})
+twapId non-null: 0
+
+== per coin ==
+coin         n   notional$      pnl$    fee$      net$    medSz    maxSz days  opens  first last  
+HYPE       373      35,684     340.8     9.3     331.5     0.75    11.13   67    259  06-02 09-24 
+XMR        505      27,691     105.4     5.0     100.4     0.07     0.86   17    403  08-25 09-21 
+NEAR       295      21,677     216.3     4.1     212.2    13.70    97.90   13    219  09-08 09-26 
+ZEC        185       8,431      21.8     1.6      20.2     0.03     0.32    5    145  08-31 09-04 
+INJ        159       7,670      55.7     1.4      54.2     4.50    24.70    7    114  09-18 09-25 
+ZRO        158       4,909      36.9     1.0      35.9    15.90   133.40    6    104  09-21 09-26 
+ONDO       154       3,764      39.8     0.7      39.1    39.00   330.00   15    113  09-09 09-25 
+JUP         78       2,749      19.5     0.6      19.0    84.00  1059.00    3     56  09-06 09-08 
+UNI         64       2,122      21.9     0.4      21.5     2.50    13.70    4     48  09-18 09-23 
+XLM         23       1,201      10.3     0.2      10.0   193.00  1028.00    6     17  09-08 09-18 
+ETH          6         135       0.4     0.0       0.4     0.01     0.03    2      5  09-06 09-08 
+TOTAL     2000     116,033     868.7    24.4     844.3
+[0m
+aFees are tiny (0.021%) → maker-heavy. Let me reconstruct position episodes and check fill sizing patterns.
+[0m$ [0mcat > /tmp/opencode/hl/ep.py <<'EOF'
+import json, time, statistics as st
+from collections import Counter, defaultdict
+F=json.load(open("/tmp/opencode/hl/fills_all.json"))
+def P(x):
+    try: return float(x)
+    except: return 0.0
+# fee rate
+rates=[P(f["fee"])/(P(f["px"])*P(f["sz"])) for f in F if P(f["px"])*P(f["sz"])>0]
+print("fee rate bps quantiles:", [round(sorted(rates)[int(len(rates)*q)]*1e4,3) for q in (0,.05,.25,.5,.75,.95,1-1e-9)])
+print("fee rate bps by crossed:", {c: round(st.median([P(f['fee'])/(P(f['px'])*P(f['sz']))*1e4 for f in F if f['crossed']==c]),3) for c in (True,False)})
+print("median fee$ per fill:", round(st.median([P(f['fee']) for f in F]),5))
+
+# episode reconstruction per coin
+F.sort(key=lambda f:f["time"])
+eps=defaultdict(list)
+for c in set(f["coin"] for f in F):
+    sub=[f for f in F if f["coin"]==c]
+    cur=[]; pos=0.0
+    for f in sub:
+        s=P(f["sz"])
+        if f["dir"]=="Open Long":
+            cur.append(("O",f)); pos+=s
+        else:
+            cur.append(("C",f)); pos-=s
+            if abs(pos)<1e-9:
+                eps[c].append(cur); cur=[]; pos=0.0
+    if cur: eps[c].append(cur+[("OPEN",None)])
+print("\n== episodes (cycles) per coin ==")
+print(f"{'coin':<8}{'cycles':>7}{'nOpen':>7}{'nClose':>7}{'O/C ratio':>10}{'maxDepth':>9}{'avgDepth':>9}{'hold_h_med':>11}{'pnl$/cyc':>9}{'win%':>6}{'medO_$':>9}{'medC_$':>9}")
+allc=[]
+for c,cl in sorted(eps.items()):
+    cyc=[x for x in cl if x[-1][0]=="C"]
+    allc+= [c]*len(cyc)
+    nO=[sum(1 for t,_ in x if t=="O") for x in cyc]; nC=[sum(1 for t,_ in x if t=="C") for x in cyc]
+    dep=[max(0,sum(P(f["sz"]) for t,f in x if t=="O")-0) for x in cyc]
+    # depth = running cumulative open notional
+    on=[sum(P(f["px"])*P(f["sz"]) for t,f in x if t=="O") for x in cyc]
+    cn=[sum(P(f["px"])*P(f["sz"]) for t,f in x if t=="C") for x in cyc]
+    hold=[]
+    for x in cyc:
+        o=[f["time"] for t,f in x if t=="O"]; cl2=[f["time"] for t,f in x if t=="C"]
+        if o and cl2: hold.append((max(cl2)-min(o))/3.6e6)
+    pnl=[sum(P(f["closedPnl"]) for t,f in x) for x in cyc]
+    print(f"{c:<8}{len(cyc):>7}{sum(nO):>7}{sum(nC):>7}{st.mean([a/b for a,b in zip(nO,nC)]):>10.2f}{max(dep):>9.2f}{st.mean(dep):>9.2f}{(st.median(hold) if hold else 0):>11.1f}{st.mean(pnl):>9.1f}{(100*sum(1 for p in pnl if p>0)/max(1,len(pnl))):>6.0f}{st.median(on):>9,.0f}{st.median(cn):>9,.0f}")
+EOF
+cd /tmp/opencode/hl && python3 ep.py
+fee rate bps quantiles: [1.416, 1.44, 1.44, 1.44, 4.319, 4.32, 4.32]
+fee rate bps by crossed: {True: 4.32, False: 1.44}
+median fee$ per fill: 0.00645
+
+== episodes (cycles) per coin ==
+coin     cycles  nOpen nClose O/C ratio maxDepth avgDepth hold_h_med pnl$/cyc  win%   medO_$   medC_$
+ETH           1      5      1      5.00     0.03     0.03       55.4      0.4   100       67       68
+Traceback (most recent call last):
+  File "/tmp/opencode/hl/ep.py", line 44, in <module>
+    print(f"{c:<8}{len(cyc):>7}{sum(nO):>7}{sum(nC):>7}{st.mean([a/b for a,b in zip(nO,nC)]):>10.2f}{max(dep):>9.2f}{st.mean(dep):>9.2f}{(st.median(hold) if hold else 0):>11.1f}{st.mean(pnl):>9.1f}{(100*sum(1 for p in pnl if p>0)/max(1,len(pnl))):>6.0f}{st.median(on):>9,.0f}{st.median(cn):>9,.0f}")
+                                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/statistics.py", line 486, in mean
+    raise StatisticsError('mean requires at least one data point')
+statistics.StatisticsError: mean requires at least one data point
+[0m
+a[0m$ [0mcd /tmp/opencode/hl && sed -i 's/^    cyc=\[x for x in cl if x\[-1\]\[0\]=="C"\]/    cyc=[x for x in cl if x[-1][0]=="C" and sum(1 for t,_ in x if t=="C")>0]/' ep.py && python3 ep.py
+fee rate bps quantiles: [1.416, 1.44, 1.44, 1.44, 4.319, 4.32, 4.32]
+fee rate bps by crossed: {True: 4.32, False: 1.44}
+median fee$ per fill: 0.00645
+
+== episodes (cycles) per coin ==
+coin     cycles  nOpen nClose O/C ratio maxDepth avgDepth hold_h_med pnl$/cyc  win%   medO_$   medC_$
+ETH           1      5      1      5.00     0.03     0.03       55.4      0.4   100       67       68
+Traceback (most recent call last):
+  File "/tmp/opencode/hl/ep.py", line 44, in <module>
+    print(f"{c:<8}{len(cyc):>7}{sum(nO):>7}{sum(nC):>7}{st.mean([a/b for a,b in zip(nO,nC)]):>10.2f}{max(dep):>9.2f}{st.mean(dep):>9.2f}{(st.median(hold) if hold else 0):>11.1f}{st.mean(pnl):>9.1f}{(100*sum(1 for p in pnl if p>0)/max(1,len(pnl))):>6.0f}{st.median(on):>9,.0f}{st.median(cn):>9,.0f}")
+                                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/statistics.py", line 486, in mean
+    raise StatisticsError('mean requires at least one data point')
+statistics.StatisticsError: mean requires at least one data point
+[0m
+a[0m$ [0mcat > /tmp/opencode/hl/ep2.py <<'EOF'
+import json, time, statistics as st
+from collections import Counter, defaultdict
+F=json.load(open("/tmp/opencode/hl/fills_all.json"))
+def P(x):
+    try: return float(x)
+    except: return 0.0
+F.sort(key=lambda f:f["time"])
+eps=defaultdict(list)
+for c in set(f["coin"] for f in F):
+    sub=[f for f in F if f["coin"]==c]; cur=[]; pos=0.0
+    for f in sub:
+        s=P(f["sz"])
+        if f["dir"]=="Open Long": cur.append(("O",f)); pos+=s
+        else:
+            cur.append(("C",f)); pos-=s
+            if abs(pos)<1e-9: eps[c].append(cur); cur=[]; pos=0.0
+    if cur: eps[c].append(cur)
+print(f"{'coin':<8}{'cyc':>4}{'opn':>5}{'cls':>5}{'O/C':>6}{'maxOpenSz':>11}{'avgOpenSz':>11}{'hold_h':>8}{'pnl/cyc':>8}{'win%':>6}{'medO$':>9}{'medC$':>9}{'C/O notl':>9}")
+TOT=[]
+for c,cl in sorted(eps.items(), key=lambda kv:-sum(P(f['px'])*P(f['sz']) for x in kv[1] for _,f in x)):
+    nO=sum(1 for x in cl for t,_ in x if t=="O"); nC=sum(1 for x in cl for t,_ in x if t=="C")
+    nopens=[sum(1 for t,_ in x if t=="O") for x in cl]
+    osz=[sum(P(f["sz"]) for t,f in x if t=="O") for x in cl]
+    on=[sum(P(f["px"])*P(f["sz"]) for t,f in x if t=="O") for x in cl]
+    cn=[sum(P(f["px"])*P(f["sz"]) for t,f in x if t=="C") for x in cl]
+    pnl=[sum(P(f["closedPnl"]) for t,f in x) for x in cl]
+    hold=[]
+    for x in cl:
+        o=[f["time"] for t,f in x if t=="O"]
+        if o: hold.append((max(f["time"] for t,f in x)-min(o))/3.6e6)
+    TOT+=pnl
+    print(f"{c:<8}{len(cl):>4}{nO:>5}{nC:>5}{(nO/nC if nC else 0):>6.2f}{max(osz):>11.2f}{st.mean(osz):>11.2f}{st.median(hold):>8.1f}{st.mean(pnl):>8.1f}{(100*sum(1 for p in pnl if p>0)/len(pnl)):>6.0f}{st.median(on):>9,.0f}{st.median(cn):>9,.0f}{(st.median([b/a for a,b in zip(on,cn)]) if nC else 0):>9.2f}")
+print("\ncycle-pnl distribution all coins: n=",len(TOT)," mean",round(st.mean(TOT),1)," median",round(st.median(TOT),1)," win%",round(100*sum(1 for p in TOT if p>0)/len(TOT)))
+print("cycle-pnl quantiles:",[round(sorted(TOT)[int(len(TOT)*q)],1) for q in (0,.1,.25,.5,.75,.9,1-1e-9)])
+EOF
+cd /tmp/opencode/hl && python3 ep2.py
+coin     cyc  opn  cls   O/C  maxOpenSz  avgOpenSz  hold_h pnl/cyc  win%    medO$    medC$ C/O notl
+HYPE       1  259  114  2.27     242.43     242.43  2731.2   340.8   100   17,803   17,881     1.00
+XMR       67  403  102  3.95       0.86       0.41     0.5     1.6    99      194      192     1.01
+NEAR      67  219   76  2.88      97.90      41.43     1.4     3.2    99      153      141     1.02
+ZEC       39  145   40  3.62       0.32       0.12     0.2     0.6    97       93       94     1.01
+INJ       35  114   45  2.53      29.40      14.39     1.0     1.6    97      105      102     1.02
+ZRO       50  104   54  1.93     133.40      33.31     0.8     0.7    98       27       28     1.01
+ONDO      37  113   41  2.76     330.00     118.51     1.7     1.1    97       49       48     1.02
+JUP       18   56   22  2.55    1172.00     294.72     1.0     1.1   100       19       19     1.02
+UNI       16   48   16  3.00      13.70       7.37     2.6     1.4    94       68       69     1.02
+XLM        5   17    6  2.83    1028.00     625.80    20.2     2.1   100      109      111     1.02
+ETH        1    5    1  5.00       0.03       0.03    55.4     0.4   100       67       68     1.01
+
+cycle-pnl distribution all coins: n= 336  mean 2.6  median 1.2  win% 98
+cycle-pnl quantiles: [-2.2, 0.3, 0.6, 1.3, 2.2, 3.4, 340.8]
+[0m
+a98% win rate, tiny bounded profits, sub-hour holds → grid-like, not directional. Let me quantify the grid mechanics.
+[0m$ [0mcat > /tmp/opencode/hl/grid.py <<'EOF'
+import json, time, statistics as st
+from collections import Counter, defaultdict
+F=json.load(open("/tmp/opencode/hl/fills_all.json"))
+def P(x):
+    try: return float(x)
+    except: return 0.0
+F.sort(key=lambda f:f["time"])
+eps=defaultdict(list)
+for c in set(f["coin"] for f in F):
+    sub=[f for f in F if f["coin"]==c]; cur=[]; pos=0.0
+    for f in sub:
+        s=P(f["sz"])
+        if f["dir"]=="Open Long": cur.append(("O",f)); pos+=s
+        else:
+            cur.append(("C",f)); pos-=s
+            if abs(pos)<1e-9: eps[c].append(cur); cur=[]; pos=0.0
+print(f"{'coin':<8}{'cyc':>4}{'retbps_med':>11}{'retbps_mn':>11}{'retbps_mx':>11}{'retbps_p10':>11}{'retbps_p90':>11}{'nlev':>6}{'lev_med':>8}{'tier_up%':>9}{'szgrow':>8}{'o_in_first%':>12}")
+for c,cl in sorted(eps.items()):
+    rb=[];nlev=[];tier=[];szg=[];first=[]
+    for x in cl:
+        o=[f for t,f in x if t=="O"]; cl2=[f for t,f in x if t=="C"]
+        if not o or not cl2: continue
+        on=sum(P(f["px"])*P(f["sz"]) for f in o); ov=sum(P(f["sz"]) for f in o)
+        cn=sum(P(f["px"])*P(f["sz"]) for f in cl2); cv=sum(P(f["sz"]) for f in cl2)
+        if on<=0: continue
+        rb.append(((cn-ov)/ov)*1e4)
+        oo=sorted(set(round(P(f["px"]),6) for f in o)); nlev.append(len(oo))
+        # tier-up: does later open have higher sz than earlier?
+        seq=[P(f["sz"]) for f in sorted(o,key=lambda z:z["time"])]
+        if len(seq)>1: tier.append(100*sum(1 for i in range(1,len(seq)) if seq[i]>seq[i-1])/(len(seq)-1))
+        if len(seq)>1: szg.append(seq[-1]/seq[0])
+        # share of open notional from the FIRST (lowest-time) open fill
+        first.append(100*P(sorted(o,key=lambda z:z["time"])[0]["px"])*P(sorted(o,key=lambda z:z["time"])[0]["sz"])/on)
+    print(f"{c:<8}{len(rb):>4}{st.median(rb):>11.1f}{min(rb):>11.1f}{max(rb):>11.1f}{sorted(rb)[int(.1*len(rb))]:>11.1f}{sorted(rb)[int(.9*len(rb))]:>11.1f}{st.mean(nlev):>6.2f}{st.median(nlev):>8.0f}{(st.mean(tier) if tier else 0):>9.0f}{(st.mean(szg) if szg else 0):>8.2f}{st.mean(first):>12.1f}")
+allrb=[]
+for c,cl in eps.items():
+    for x in cl:
+        o=[f for t,f in x if t=="O"]; cl2=[f for t,f in x if t=="C"]
+        if not o or not cl2: continue
+        on=sum(P(f["px"])*P(f["sz"]) for f in o); ov=sum(P(f["sz"]) for f in o); cn=sum(P(f["px"])*P(f["sz"]) for f in cl2)
+        if on>0: allrb.append(((cn-ov)/ov)*1e4)
+allrb.sort()
+print("\nALL cycles n=%d  ret bps: p1=%.0f p10=%.0f p25=%.0f med=%.0f p75=%.0f p90=%.0f p99=%.0f"%(len(allrb),*[allrb[int(len(allrb)*q)] for q in (0.01,.1,.25,.5,.75,.9,.99)]))
+print("mean %.0f bps | net$ total %.0f"%(st.mean(allrb), sum(allrb)))
+EOF
+cd /tmp/opencode/hl && python3 grid.py
+coin     cyc retbps_med  retbps_mn  retbps_mx retbps_p10 retbps_p90  nlev lev_med tier_up%  szgrow o_in_first%
+ETH        1 24941000.0 24941000.0 24941000.0 24941000.0 24941000.0  4.00       4       50    1.28        22.2
+INJ       34    70348.0    57550.0    76506.0    59176.0    73016.0  3.12       3       95    1.18        39.6
+JUP       18    -7316.1    -7571.9    -7199.2    -7557.5    -7233.1  3.11       1       98    1.71        63.9
+NEAR      66    30895.0    14444.0    41897.0    16509.0    38312.0  3.06       3       91    1.36        37.0
+ONDO      36    -5420.2    -6453.8    -4357.0    -6333.9    -4598.5  2.94       3       96    1.56        39.1
+UNI       15    83500.0    79239.0    98790.0    80845.0    95320.0  2.80       3       96    1.16        42.0
+XLM        5    -8067.8    -8081.1    -8018.5    -8081.1    -8018.5  3.20       3       93    1.19        33.8
+XMR       66  5163300.0  4389600.0  6136800.0  4468100.0  5799500.0  5.73       6       87    1.31        25.5
+ZEC       39  9240800.0  8419900.0 10462000.0  8510600.0 10220000.0  3.56       3       29    1.46        37.8
+ZRO       49     4755.0     1705.0     6421.0     2473.0     6089.0  2.06       2       99    5.54        63.1
+
+ALL cycles n=329  ret bps: p1=-8050 p10=-5905 p25=4742 med=37267 p75=5101600 p90=8606300 p99=10407000
+mean 2221225 bps | net$ total 730782879
+[0m
+aUnits bug — fixing the return calc.
+[0m$ [0mcd /tmp/opencode/hl && python3 - <<'EOF'
+import re
+s=open("grid.py").read()
+s=s.replace("rb.append(((cn-ov)/ov)*1e4)","rb.append(((cn-cv)/cn)*1e4)")
+s=s.replace("if on>0: allrb.append(((cn-ov)/ov)*1e4)","if on>0: allrb.append(((cn-cv)/cn)*1e4)")
+s=s.replace("ov=sum(P(f[\"sz\"]) for f in o); cn=sum(P(f[\"px\"])*P(f[\"sz\"]) for f in cl2)","cn=sum(P(f[\"px\"])*P(f[\"sz\"]) for f in cl2); cv=sum(P(f[\"sz\"]) for f in cl2)")
+s=s.replace("print(\"mean %.0f bps | net$ total %.0f\"%(st.mean(allrb), sum(allrb)))","print(\"mean %.1f bps\"%st.mean(allrb))")
+open("grid.py","w").write(s)
+EOF
+cd /tmp/opencode/hl && python3 grid.py
+coin     cyc retbps_med  retbps_mn  retbps_mx retbps_p10 retbps_p90  nlev lev_med tier_up%  szgrow o_in_first%
+ETH        1     9996.0     9996.0     9996.0     9996.0     9996.0  4.00       4       50    1.28        22.2
+INJ       34     8755.4     8519.6     8844.0     8554.4     8795.4  3.12       3       95    1.18        39.6
+JUP       18   -27259.0   -31184.5   -25704.1   -30941.7   -26141.5  3.11       1       98    1.71        63.9
+NEAR      66     7554.3     5909.0     8073.1     6227.7     7930.1  3.06       3       91    1.36        37.0
+ONDO      36   -11836.4   -18199.2    -7721.1   -17276.9    -8513.4  2.94       3       96    1.56        39.1
+UNI       15     8930.5     8879.4     9080.8     8899.2     9050.5  2.80       3       96    1.16        42.0
+XLM        5   -41754.5   -42113.2   -40466.8   -42113.2   -40466.8  3.20       3       93    1.19        33.8
+XMR       66     9980.7     9977.3     9983.7     9977.7     9982.8  5.73       6       87    1.31        25.5
+ZEC       39     9989.2     9988.1     9990.5     9988.3     9990.2  3.56       3       29    1.46        37.8
+ZRO       49     3222.6     1456.6     3910.2     1982.7     3784.6  2.06       2       99    5.54        63.1
+
+ALL cycles n=329  ret bps: p1=-41277 p10=-14419 p25=3217 med=7884 p75=9980 p90=9988 p99=9990
+mean 2962.0 bps
+[0m
+a[0m$ [0mcd /tmp/opencode/hl && python3 - <<'EOF'
+s=open("grid.py").read()
+s=s.replace("rb.append(((cn-cv)/cn)*1e4)","rb.append(((cn/cv)/(on/ov)-1)*1e4)")
+s=s.replace("if on>0: allrb.append(((cn-cv)/cn)*1e4)","if on>0: allrb.append(((cn/cv)/(on/ov)-1)*1e4)")
+open("grid.py","w").write(s)
+EOF
+cd /tmp/opencode/hl && python3 grid.py
+coin     cyc retbps_med  retbps_mn  retbps_mx retbps_p10 retbps_p90  nlev lev_med tier_up%  szgrow o_in_first%
+ETH        1       59.0       59.0       59.0       59.0       59.0  4.00       4       50    1.28        22.2
+INJ       34      150.0      149.9      183.2      149.9      150.0  3.12       3       95    1.18        39.6
+JUP       18      155.0       97.7      169.9      149.9      160.1  3.11       1       98    1.71        63.9
+NEAR      66      200.1      159.7      230.2      199.9      229.9  3.06       3       91    1.36        37.0
+ONDO      36      210.0      209.9      270.1      209.9      227.5  2.94       3       96    1.56        39.1
+UNI       15      210.4      209.5      240.0      209.6      240.0  2.80       3       96    1.16        42.0
+XLM        5      189.7       71.5      189.8       71.5      189.8  3.20       3       93    1.19        33.8
+XMR       66       70.0       69.9      207.1       69.9      130.0  5.73       6       87    1.31        25.5
+ZEC       39       60.0     -107.2       60.2       59.9       60.0  3.56       3       29    1.46        37.8
+ZRO       49      150.0      149.6      250.1      149.7      150.3  2.06       2       99    5.54        63.1
+
+ALL cycles n=329  ret bps: p1=-9637 p10=-7157 p25=-3395 med=8478 p75=563123 p90=2187733 p99=9513446
+mean 726723.3 bps
+[0m
+aPer-coin returns cluster on **exact round numbers** (60/70/150/200/210 bps). Let me examine ladder structure and debug HYPE.
+[0m$ [0mcat > /tmp/opencode/hl/lad.py <<'EOF'
+import json, time, statistics as st
+from collections import Counter, defaultdict
+F=json.load(open("/tmp/opencode/hl/fills_all.json"))
+def P(x):
+    try: return float(x)
+    except: return 0.0
+F.sort(key=lambda f:f["time"])
+eps=defaultdict(list)
+for c in set(f["coin"] for f in F):
+    sub=[f for f in F if f["coin"]==c]; cur=[]; pos=0.0
+    for f in sub:
+        s=P(f["sz"])
+        if f["dir"]=="Open Long": cur.append(("O",f)); pos+=s
+        else:
+            cur.append(("C",f)); pos-=s
+            if abs(pos)<1e-9: eps[c].append(cur); cur=[]; pos=0.0
+# HYPE diagnostics
+h=eps["HYPE"]; print("HYPE cycles:",len(h), "lens:",[len(x) for x in h])
+x=h[0]; o=[f for t,f in x if t=="O"]; cl2=[f for t,f in x if t=="C"]
+print("HYPE opens",len(o),"closes",len(cl2),"sumO",round(sum(P(f['sz']) for f in o),2),"sumC",round(sum(P(f['sz']) for f in cl2),2))
+print("HYPE open px range",min(P(f['px']) for f in o),max(P(f['px']) for f in o))
+print("HYPE close px range",min(P(f['px']) for f in cl2),max(P(f['px']) for f in cl2))
+print("HYPE last 5 fills:",[(f['dir'],f['px'],f['sz'],time.strftime('%m-%d %H:%M',time.gmtime(f['time']/1000))) for f in o[-3:]], [(f['dir'],f['px'],f['sz']) for f in cl2[-3:]])
+# spacing between consecutive OPEN prices within a cycle (bps)
+print("\n== spacing between consecutive OPEN fill prices within a cycle (bps) ==")
+for c,cl in sorted(eps.items()):
+    sp=[]
+    for x in cl:
+        o=sorted([f for t,f in x if t=="O"],key=lambda z:z["time"])
+        for a,b in zip(o,o[1:]):
+            if P(a["px"])>0: sp.append((P(b["px"])/P(a["px"])-1)*1e4)
+    if sp: print(f"{c:<8} n={len(sp):<5} med={st.median(sp):>8.1f}  q10={sorted(sp)[int(.1*len(sp))]:>8.1f} q90={sorted(sp)[int(.9*len(sp))]:>8.1f}  frac_neg={100*sum(1 for s in sp if s<0)/len(sp):.0f}%")
+# ladder snapshot: one NEAR cycle
+for c in ["NEAR","INJ","ZRO","XMR"]:
+    for x in eps[c]:
+        if len(x)>=6:
+            print(f"\n--- sample {c} cycle ({len(x)} fills) ---")
+            t0=min(f['time'] for t,f in x)
+            for t,f in x:
+                print(f"  {(f['time']-t0)/1000:>8.0f}s {'OPEN ' if t=='O' else 'CLOSE'} px={P(f['px']):>10.4f} sz={P(f['sz']):>9.3f} $={P(f['px'])*P(f['sz']):>8.0f} crossed={f['crossed']} pnl={P(f['closedPnl']):>7.2f}")
+            break
+EOF
+cd /tmp/opencode/hl && python3 lad.py
+HYPE cycles: 0 lens: []
+Traceback (most recent call last):
+  File "/tmp/opencode/hl/lad.py", line 19, in <module>
+    x=h[0]; o=[f for t,f in x if t=="O"]; cl2=[f for t,f in x if t=="C"]
+      ~^^^
+IndexError: list index out of range
+[0m
+aHYPE is a still-open legacy position (never returns to flat). Let me confirm and fix aggregation.
+[0m$ [0mcd /tmp/opencode/hl && python3 - <<'EOF'
+import json, time, statistics as st
+from collections import defaultdict
+F=json.load(open("fills_all.json"))
+def P(x):
+    try: return float(x)
+    except: return 0.0
+F.sort(key=lambda f:f["time"])
+h=[f for f in F if f["coin"]=="HYPE"]
+pos=0
+for f in h: pos += P(f["sz"]) if f["dir"]=="Open Long" else -P(f["sz"])
+print("HYPE net position now:",round(pos,4),"| opens",sum(1 for f in h if f['dir']=='Open Long'),"closes",sum(1 for f in h if f['dir']=='Close Long'))
+print("HYPE px: first open",h[0]['px'],"last fill",h[-1]['px'],"| min",min(P(f['px']) for f in h),"max",max(P(f['px']) for f in h))
+print("HYPE first fill",time.strftime('%Y-%m-%d %H:%M',time.gmtime(h[0]['time']/1000)),"last",time.strftime('%Y-%m-%d %H:%M',time.gmtime(h[-1]['time']/1000)))
+print("HYPE median open sz",st.median([P(f['sz']) for f in h if f['dir']=='Open Long']),"median close sz",st.median([P(f['sz']) for f in h if f['dir']=='Close Long']))
+# other coins: check any still open
+for c in sorted(set(f['coin'] for f in F)):
+    sub=[f for f in F if f['coin']==c]; p=0
+    for f in sub: p += P(f["sz"]) if f["dir"]=="Open Long" else -P(f["sz"])
+    if abs(p)>1e-9: print("  still open:",c,round(p,3))
+EOF
+HYPE net position now: 2.55 | opens 259 closes 114
+HYPE px: first open 72.007 last fill 91.701 | min 54.472 max 97.3
+HYPE first fill 2026-06-02 06:58 last 2026-09-24 02:07
+HYPE median open sz 0.71 median close sz 1.28
+  still open: HYPE 2.55
+  still open: INJ 29.0
+  still open: NEAR 77.8
+  still open: ONDO 145.0
+  still open: UNI 13.0
+  still open: XMR 0.351
+  still open: ZRO 14.9
+[0m
+a[0m$ [0mcd /tmp/opencode/hl && sed -i 's/^h=eps\["HYPE"\]; print.*$/h=[[(f["dir"],f) for f in F if f["coin"]=="HYPE"]]; print("HYPE handled separately")/' lad.py && sed -i 's/^x=h\[0\]; o=.*$//; s/^print("HYPE opens.*$//; s/^print("HYPE open px range.*$//; s/^print("HYPE close px range.*$//; s/^print("HYPE last 5 fills.*$//' lad.py && python3 lad.py
+HYPE handled separately
+
+== spacing between consecutive OPEN fill prices within a cycle (bps) ==
+ETH      n=4     med=   -33.7  q10=  -104.4 q90=     0.0  frac_neg=75%
+INJ      n=74    med=   -71.6  q10=  -122.8 q90=   -41.9  frac_neg=97%
+JUP      n=38    med=   -87.9  q10=  -266.6 q90=   -52.1  frac_neg=97%
+NEAR     n=148   med=   -79.1  q10=  -236.5 q90=   -13.1  frac_neg=92%
+ONDO     n=73    med=   -58.2  q10=  -217.3 q90=   -17.7  frac_neg=96%
+UNI      n=28    med=   -82.7  q10=  -290.0 q90=   -39.1  frac_neg=96%
+XLM      n=12    med=   -84.3  q10=  -383.9 q90=   -22.3  frac_neg=92%
+XMR      n=331   med=    -3.8  q10=   -48.1 q90=     0.0  frac_neg=86%
+ZEC      n=106   med=   -18.3  q10=   -59.5 q90=    -3.0  frac_neg=93%
+ZRO      n=53    med=  -122.5  q10=  -198.8 q90=   -75.9  frac_neg=98%
+
+--- sample NEAR cycle (6 fills) ---
+         0s OPEN  px=    2.4149 sz=   12.300 $=      30 crossed=True pnl=   0.00
+        11s OPEN  px=    2.4117 sz=   12.500 $=      30 crossed=False pnl=   0.00
+      1081s OPEN  px=    2.3926 sz=   13.400 $=      32 crossed=False pnl=   0.00
+      6590s OPEN  px=    2.3456 sz=   14.500 $=      34 crossed=False pnl=   0.00
+     56888s CLOSE px=    2.4444 sz=    0.100 $=       0 crossed=False pnl=   0.01
+     56937s CLOSE px=    2.4444 sz=   52.600 $=     129 crossed=False pnl=   2.89
+
+--- sample INJ cycle (6 fills) ---
+         0s OPEN  px=    7.7132 sz=    2.500 $=      19 crossed=True pnl=   0.00
+         0s OPEN  px=    7.7125 sz=    1.500 $=      12 crossed=True pnl=   0.00
+       148s OPEN  px=    7.6806 sz=    4.200 $=      32 crossed=False pnl=   0.00
+      1149s OPEN  px=    7.6255 sz=    4.500 $=      34 crossed=False pnl=   0.00
+      2599s OPEN  px=    7.5320 sz=    4.900 $=      37 crossed=False pnl=   0.00
+     12930s CLOSE px=    7.7470 sz=   17.600 $=     136 crossed=False pnl=   2.02
+
+--- sample ZRO cycle (6 fills) ---
+         0s OPEN  px=    1.4308 sz=    8.800 $=      13 crossed=True pnl=   0.00
+       108s OPEN  px=    1.4199 sz=   10.500 $=      15 crossed=False pnl=   0.00
+       207s OPEN  px=    1.4025 sz=   12.600 $=      18 crossed=False pnl=   0.00
+      3144s OPEN  px=    1.3746 sz=   15.100 $=      21 crossed=False pnl=   0.00
+      9306s OPEN  px=    1.3301 sz=   18.500 $=      25 crossed=False pnl=   0.00
+     21354s CLOSE px=    1.4029 sz=   65.500 $=      92 crossed=False pnl=   1.36
+
+--- sample XMR cycle (6 fills) ---
+         0s OPEN  px=  444.9300 sz=    0.076 $=      34 crossed=True pnl=   0.00
+        11s OPEN  px=  444.6400 sz=    0.088 $=      39 crossed=False pnl=   0.00
+        11s OPEN  px=  444.8000 sz=    0.083 $=      37 crossed=False pnl=   0.00
+        11s OPEN  px=  444.8800 sz=    0.079 $=      35 crossed=False pnl=   0.00
+        11s OPEN  px=  444.3300 sz=    0.092 $=      41 crossed=False pnl=   0.00
+       577s CLOSE px=  447.8100 sz=    0.418 $=     187 crossed=False pnl=   1.30
+[0m
+aStructure is clear: descending limit ladder with escalating size → one aggregate TP at a fixed % above blended entry. Let me pool the ladder shape across all cycles.
+[0m$ [0mcat > /tmp/opencode/hl/pool.py <<'EOF'
+import json, time, statistics as st
+from collections import defaultdict
+F=json.load(open("/tmp/opencode/hl/fills_all.json"))
+def P(x):
+    try: return float(x)
+    except: return 0.0
+F.sort(key=lambda f:f["time"])
+eps=defaultdict(list)
+for c in set(f["coin"] for f in F):
+    sub=[f for f in F if f["coin"]==c]; cur=[]; pos=0.0
+    for f in sub:
+        s=P(f["sz"])
+        if f["dir"]=="Open Long": cur.append(("O",f)); pos+=s
+        else:
+            cur.append(("C",f)); pos-=s
+            if abs(pos)<1e-9: eps[c].append(cur); cur=[]; pos=0.0
+print("== pooled ladder: rung index -> (size x rung0, price offset bps from rung0) ==")
+for c,cl in sorted(eps.items()):
+    szm=defaultdict(list); off=defaultdict(list); nfl=defaultdict(int); gap=defaultdict(list)
+    for x in cl:
+        o=sorted([f for t,f in x if t=="O"],key=lambda z:z["time"])
+        if len(o)<2: continue
+        s0=P(o[0]["sz"]); p0=P(o[0]["px"])
+        nfl[len(o)]+=1
+        for i,f in enumerate(o):
+            szm[i].append(P(f["sz"])/s0); off[i].append((P(f["px"])/p0-1)*1e4)
+            if i: gap[i].append((f["time"]-o[i-1]["time"])/1000/60)
+    ks=sorted(szm)[:8]
+    print(f"\n{c}  (cycles w/ >=2 rungs: {sum(1 for x in cl if sum(1 for t,_ in x if t=='O')>=2)}; rung-count hist: "+", ".join(f"{k}:{v}" for k,v in sorted(nfl.items())[:7])+")")
+    print("  rung: "+"  ".join(f"{i:>7}" for i in ks))
+    print("  szx : "+"  ".join(f"{st.median(szm[i]):>7.2f}" for i in ks))
+    print("  offbps:"+"  ".join(f"{st.median(off[i]):>7.0f}" for i in ks))
+    print("  dt_min:"+"  ".join(f"{st.median(gap[i]) if gap[i] else 0:>7.0f}" for i in ks if i))
+EOF
+cd /tmp/opencode/hl && python3 pool.py
+== pooled ladder: rung index -> (size x rung0, price offset bps from rung0) ==
+
+ETH  (cycles w/ >=2 rungs: 1; rung-count hist: 5:1)
+  rung:       0        1        2        3        4
+  szx :    1.00     0.93     0.15     1.17     1.28
+  offbps:      0      -14      -14      -67     -171
+  dt_min:     10        0      346     2836
+
+INJ  (cycles w/ >=2 rungs: 30; rung-count hist: 2:8, 3:9, 4:6, 5:5, 6:2)
+  rung:       0        1        2        3        4        5
+  szx :    1.00     1.06     1.14     1.23     1.32     1.47
+  offbps:      0      -42     -113     -235     -441     -791
+  dt_min:      4        6       32       15      163
+
+JUP  (cycles w/ >=2 rungs: 8; rung-count hist: 2:1, 4:3, 5:1, 8:1, 9:1, 10:1)
+  rung:       0        1        2        3        4        5        6        7
+  szx :    1.00     1.13     1.26     1.40     1.55     1.70     1.90     2.09
+  offbps:      0     -267     -377     -462     -533     -596     -653     -705
+  dt_min:     66       18        7       18        3        0        1
+
+NEAR  (cycles w/ >=2 rungs: 60; rung-count hist: 2:12, 3:24, 4:12, 5:9, 6:2, 7:1)
+  rung:       0        1        2        3        4        5        6
+  szx :    1.00     1.06     1.13     1.23     1.36     1.53     1.56
+  offbps:      0      -16     -111     -287     -643     -771    -1440
+  dt_min:      0        7       51      116      253       11
+
+ONDO  (cycles w/ >=2 rungs: 31; rung-count hist: 2:11, 3:7, 4:7, 5:3, 6:3)
+  rung:       0        1        2        3        4        5
+  szx :    1.00     1.21     1.46     1.78     2.18     2.27
+  offbps:      0      -58     -163     -351     -528     -690
+  dt_min:      3       27       48      279      657
+
+UNI  (cycles w/ >=2 rungs: 13; rung-count hist: 2:3, 3:7, 4:1, 5:2)
+  rung:       0        1        2        3        4
+  szx :    1.00     1.06     1.13     1.24     1.34
+  offbps:      0      -71     -173     -359     -699
+  dt_min:      3       21      112      321
+
+XLM  (cycles w/ >=2 rungs: 5; rung-count hist: 2:2, 4:2, 5:1)
+  rung:       0        1        2        3        4
+  szx :    1.00     1.06     1.14     1.26     1.44
+  offbps:      0      -22     -168     -546    -1256
+  dt_min:      1       27      380     1386
+
+XMR  (cycles w/ >=2 rungs: 59; rung-count hist: 2:3, 3:3, 4:4, 5:10, 6:12, 7:9, 8:5)
+  rung:       0        1        2        3        4        5        6        7
+  szx :    1.00     1.06     1.11     1.16     1.22     1.28     1.34     1.39
+  offbps:      0       -1       -3       -7      -14      -27      -52      -76
+  dt_min:      0        0        0        0        1        2        2
+
+ZEC  (cycles w/ >=2 rungs: 33; rung-count hist: 2:7, 3:5, 4:8, 5:5, 6:4, 7:3, 8:1)
+  rung:       0        1        2        3        4        5        6        7
+  szx :    1.00     1.00     1.00     1.33     1.33     1.33     1.33     1.67
+  offbps:      0      -10      -28      -61     -120     -226     -418     -763
+  dt_min:      0        0        1        2       21      227      945
+
+ZRO  (cycles w/ >=2 rungs: 26; rung-count hist: 2:10, 3:9, 4:3, 5:4)
+  rung:       0        1        2        3        4
+  szx :    1.00     1.19     1.42     1.71     2.09
+  offbps:      0      -76     -198     -392     -704
+  dt_min:      7       12       34       80
+[0m
+aTwo clear families. Now let me get funding, account equity, and daily aggregates.
+[0m$ [0mcd /tmp/opencode/hl && python3 fetch.py funding 1750000000 fund1.json 2>&1 | tail -2; python3 fetch.py clearing clearing.json 2>&1|tail -1; python3 fetch.py mids mids.json 2>&1|tail -1
+funding n= 500
+fail {'type': 'userClearinghouseState', 'user': '0xe755b71641b95ff7a6bd40030e9dc7ac7939e578'}
+mids n= obj
+[0m
+a[0m$ [0mcd /tmp/opencode/hl && python3 - <<'EOF'
+import json, time, statistics as st
+from collections import Counter, defaultdict
+FU=json.load(open("fund1.json"))
+print("funding recs",len(FU),"span",time.strftime('%Y-%m-%d',time.gmtime(min(f['time'] for f in FU)/1000)),"->",time.strftime('%Y-%m-%d',time.gmtime(max(f['time'] for f in FU)/1000)))
+usdc=[f for f in FU if f.get("coin")=="USDC"]
+print("USDC funding total $", round(sum(float(f['usdc']) for f in usdc),2), "n=",len(usdc))
+print("positive(paid out) vs negative(cost):", Counter("recv" if float(f['usdc'])>0 else "pay" for f in usdc))
+print("n non-USDC records:",len(FU)-len(usdc), Counter(f.get('coin') for f in FU if f.get('coin')!='USDC').most_common(5))
+M=json.load(open("mids.json"))
+print("\ncurrent mids:", {k:round(float(v),4) for k,v in list(M.items())[:20] if k in ("HYPE","XMR","NEAR","ZEC","INJ","ZRO","ONDO","JUP","UNI","XLM","ETH","BTC","SOL")})
+EOF
+funding recs 500 span 2026-03-13 -> 2026-09-20
+USDC funding total $ 0 n= 0
+positive(paid out) vs negative(cost): Counter()
+n non-USDC records: 500 [(None, 500)]
+
+current mids: {}
+[0m
+a[0m$ [0mcd /tmp/opencode/hl && python3 - <<'EOF'
+import json
+FU=json.load(open("fund1.json"))
+print("keys:",sorted(FU[0].keys()))
+print("sample values (1 rec):",FU[0])
+M=json.load(open("mids.json"))
+print("mids type",type(M),"len",len(M) if hasattr(M,'__len__') else '?')
+EOF
+keys: ['delta', 'hash', 'time']
+sample values (1 rec): {'time': 1773360000000, 'hash': '0x0000000000000000000000000000000000000000000000000000000000000000', 'delta': {'type': 'funding', 'coin': 'HYPE', 'usdc': '-0.001856', 'szi': '1.22', 'fundingRate': '0.0000046361', 'nSamples': 9}}
+mids type <class 'dict'> len 1119
+[0m
+a[0m$ [0mcd /tmp/opencode/hl && python3 - <<'EOF'
+import json, time, statistics as st
+from collections import Counter, defaultdict
+FU=json.load(open("fund1.json"))
+d=[f for f in FU if f['delta'].get('type')=='funding']
+print("funding recs",len(d),"span",time.strftime('%Y-%m-%d',time.gmtime(min(f['time'] for f in d)/1000)),"->",time.strftime('%Y-%m-%d',time.gmtime(max(f['time'] for f in d)/1000)))
+agg=defaultdict(lambda:[0.0,0.0,0])
+for f in d:
+    c=f['delta']['coin']; u=float(f['delta']['usdc']); agg[c][0]+=u; agg[c][1]+=abs(u); agg[c][2]+=1
+print(f"{'coin':<8}{'net$':>10}{'abs$':>10}{'n':>5}{'avgRate_bps':>13}")
+for c,(n,a,k) in sorted(agg.items(),key=lambda kv:kv[1][0]):
+    print(f"{c:<8}{n:>10.3f}{a:>10.3f}{k:>5}{'':>13}")
+print("TOTAL funding net $", round(sum(v[0] for v in agg.values()),3), " gross $|",round(sum(v[1] for v in agg.values()),3))
+# recent 60d only
+cut=time.time()*1000-60*86400*1000
+agg2=defaultdict(float); n2=0
+for f in d:
+    if f['time']>=cut: agg2[f['delta']['coin']]+=float(f['delta']['usdc']); n2+=1
+print("last 60d: n=",n2,"net$",round(sum(agg2.values()),3), {k:round(v,3) for k,v in sorted(agg2.items(),key=lambda kv:kv[1])})
+EOF
+funding recs 500 span 2026-03-13 -> 2026-09-20
+coin          net$      abs$    n  avgRate_bps
+HYPE       -12.798    12.930  227             
+XMR         -6.090     6.090   66             
+NEAR        -0.880     0.880   52             
+XLM         -0.270     0.414   11             
+ONDO        -0.266     0.266   48             
+ZEC         -0.247     0.247    5             
+JUP         -0.120     0.120    3             
+UNI         -0.114     0.114   43             
+INJ         -0.096     0.096   42             
+ETH         -0.032     0.032    3             
+TOTAL funding net $ -20.912  gross $| 21.189
+last 60d: n= 363 net$ -13.584 {'XMR': -6.09, 'HYPE': -5.47, 'NEAR': -0.88, 'XLM': -0.27, 'ONDO': -0.266, 'ZEC': -0.247, 'JUP': -0.12, 'UNI': -0.114, 'INJ': -0.096, 'ETH': -0.032}
+[0m
+a[0m$ [0mcd /tmp/opencode/hl && for i in 1 2 3; do python3 fetch.py clearing clearing.json && break || sleep 3; done; python3 - <<'EOF'
+import json,time
+try:
+    C=json.load(open("clearing.json"))
+    print("marginSummary:",C.get("marginSummary"))
+    print("accountValue:",C.get("accountValue"),"leverage:",C.get("leverage"),"withdrawable:",C.get("withdrawable"))
+    for p in C.get("assetPositions",[]):
+        pi=p["position"]
+        print(f"  {pi['coin']:<6} szi={pi['szi']:>10} entry={pi['entryPx']} notional=${float(pi['positionValue']):>9.0f} uPnL=${pi['unrealizedPnl']:>8.1f} lev={p.get('leverage',{}).get('type')} maxLev={p.get('leverage',{}).get('value')}")
+except Exception as e: print("ERR",e)
+EOF
+fail {'type': 'userClearinghouseState', 'user': '0xe755b71641b95ff7a6bd40030e9dc7ac7939e578'}
+fail {'type': 'userClearinghouseState', 'user': '0xe755b71641b95ff7a6bd40030e9dc7ac7939e578'}
+fail {'type': 'userClearinghouseState', 'user': '0xe755b71641b95ff7a6bd40030e9dc7ac7939e578'}
+ERR [Errno 2] No such file or directory: 'clearing.json'
+[0m
+a[0m$ [0mcd /tmp/opencode/hl && python3 - <<'EOF'
+import requests,json
+A="0xe755b71641b95ff7a6bd40030e9dc7ac7939e578"
+for t in ["clearinghouseState","userState","portfolio","userRole","userSubAccounts","spotUserState","userNonFundingLedgerUpdates"]:
+    try:
+        b={"type":t,"user":A}
+        if t=="userNonFundingLedgerUpdates": b["startTime"]=1750000000000
+        r=requests.post("https://api.hyperliquid.xyz/info",json=b,timeout=20)
+        j=r.json()
+        d=j if isinstance(j,list) else {k:j[k] for k in list(j)[:6]}
+        print(t,"->",r.status_code, str(d)[:220])
+    except Exception as e: print(t,"ERR",e)
+EOF
+clearinghouseState ERR 'NoneType' object is not iterable
+userState ERR Expecting value: line 1 column 1 (char 0)
+portfolio -> 200 [['day', {'accountValueHistory': [[1790350800075, '2195.707048'], [1790359200046, '2196.779048'], [1790366400094, '2206.844136'], [1790374800104, '2198.490096'], [1790383200061, '2194.457918'], [1790391600063, '2190.3380
+userRole ERR 'NoneType' object is not iterable
+userSubAccounts ERR Expecting value: line 1 column 1 (char 0)
+spotUserState ERR Expecting value: line 1 column 1 (char 0)
+userNonFundingLedgerUpdates ERR 'NoneType' object is not iterable
+[0m
+a`portfolio` works. Let me pull the account-value history.
+[0m$ [0mcd /tmp/opencode/hl && python3 - <<'EOF'
+import requests,json,time,statistics as st
+A="0xe755b71641b95ff7a6bd40030e9dc7ac7939e578"
+j=requests.post("https://api.hyperliquid.xyz/info",json={"type":"portfolio","user":A},timeout=30).json()
+json.dump(j,open("portfolio.json","w"))
+for row in j:
+    h=row[1]["accountValueHistory"]
+    days=[(time.strftime('%Y-%m-%d',time.gmtime(t/1000)),float(v)) for t,v in h]
+    print(f"--- window n={len(h)} {days[0][0]} -> {days[-1][0]}")
+    if len(h)>2: print("   first",days[0][1],"last",days[-1][1],"min",min(v for _,v in days),"max",max(v for _,v in days))
+EOF
+Traceback (most recent call last):
+  File "/usr/lib/python3/dist-packages/requests/models.py", line 971, in json
+    return complexjson.loads(self.text, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/json/__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/json/decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/json/decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "<stdin>", line 3, in <module>
+  File "/usr/lib/python3/dist-packages/requests/models.py", line 975, in json
+    raise RequestsJSONDecodeError(e.msg, e.doc, e.pos)
+requests.exceptions.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+[0m
+a[0m$ [0mcd /tmp/opencode/hl && python3 - <<'EOF'
+import requests,json,time,statistics as st
+A="0xe755b71641b95ff7a6bd40030e9dc7ac7939e578"
+j=None
+for a in range(8):
+    try:
+        r=requests.post("https://api.hyperliquid.xyz/info",json={"type":"portfolio","user":A},timeout=40)
+        if r.status_code==200: j=r.json(); break
+    except Exception: pass
+    time.sleep(2+a)
+if j is None: print("FAILED"); raise SystemExit
+json.dump(j,open("portfolio.json","w"))
+for row in j:
+    h=row[1].get("accountValueHistory",[])
+    days=[(time.strftime('%Y-%m-%d',time.gmtime(t/1000)),float(v)) for t,v in h]
+    if len(h)>1:
+        print(f"window n={len(h)} {days[0][0]} -> {days[-1][0]} first={days[0][1]:,.0f} last={days[-1][1]:,.0f} min={min(v for _,v in days):,.0f} max={max(v for _,v in days):,.0f}")
+    for k in row[1]:
+        if k!="accountValueHistory": print("  ",k,str(row[1][k])[:150])
+EOF
+window n=13 2026-09-25 -> 2026-09-26 first=2,196 last=2,194 min=2,179 max=2,207
+   pnlHistory [[1790350800075, '0.0'], [1790359200046, '1.072'], [1790366400094, '11.137088'], [1790374800104, '2.783048'], [1790383200061, '-1.24913'], [1790391600
+   vlm 831.65
+window n=64 2026-09-19 -> 2026-09-26 first=1,967 last=2,194 min=1,921 max=2,209
+   pnlHistory [[1789825200002, '0.0'], [1789839600064, '-5.484912'], [1789848000021, '-16.241631'], [1789855200034, '-22.82199'], [1789870800058, '-11.591782'], [17
+   vlm 31669.64
+window n=45 2026-08-26 -> 2026-09-26 first=1,544 last=2,194 min=1,544 max=2,196
+   pnlHistory [[1787782800045, '0.0'], [1787869200030, '14.182165'], [1787958000040, '5.790887'], [1788043200010, '28.163322'], [1788129600034, '10.866899'], [17882
+   vlm 88065.36
+window n=43 2026-01-28 -> 2026-09-26 first=0 last=2,194 min=0 max=2,194
+   pnlHistory [[1769638800120, '0.0'], [1769642400120, '1.934836'], [1770241200048, '30.00061'], [1770847200067, '33.577606'], [1771455600022, '45.907191'], [177206
+   vlm 141512.49
+window n=13 2026-09-25 -> 2026-09-26 first=2,196 last=2,182 min=2,008 max=2,206
+   pnlHistory [[1790350800075, '0.0'], [1790359200046, '1.066662'], [1790366400094, '11.133095'], [1790374800104, '2.756764'], [1790383200061, '-1.283925'], [179039
+   vlm 831.65
+window n=64 2026-09-19 -> 2026-09-26 first=1,847 last=2,182 min=1,404 max=2,209
+   pnlHistory [[1789825200002, '0.0'], [1789839600064, '-5.540546'], [1789848000021, '-16.347457'], [1789855200034, '-22.977851'], [1789870800058, '-11.836341'], [1
+   vlm 31669.64
+window n=50 2026-08-26 -> 2026-09-26 first=1,527 last=2,182 min=378 max=2,209
+   pnlHistory [[1787782800045, '0.0'], [1787869200030, '14.086347'], [1787958000040, '5.620446'], [1788043200010, '27.904787'], [1788129600034, '10.518817'], [17882
+   vlm 88065.36
+window n=51 2026-01-28 -> 2026-09-26 first=0 last=2,182 min=0 max=2,197
+   pnlHistory [[1769638800120, '0.0'], [1769642400120, '0.010256'], [1770241200048, '0.010256'], [1770847200067, '0.010256'], [1771455600022, '0.010256'], [17720616
+   vlm 131827.3
+[0m
+aAccount equity is only ~$2.2k with $141k lifetime volume. Let me get the full equity curve.
+[0m$ [0mcd /tmp/opencode/hl && python3 - <<'EOF'
+import json,time,statistics as st
+j=json.load(open("portfolio.json"))
+best=max(j,key=lambda r:len(r[1].get("accountValueHistory",[])))
+h=best[1]["accountValueHistory"]; p=best[1]["pnlHistory"]
+av=[(t,float(v)) for t,v in h]; pn=[(t,float(v)) for t,v in p]
+print("n pts",len(av),"span",time.strftime('%Y-%m-%d',time.gmtime(av[0][0]/1000)),"->",time.strftime('%Y-%m-%d',time.gmtime(av[-1][0]/1000)))
+print("equity: first %.0f last %.0f min %.0f max %.0f"%(av[0][1],av[-1][1],min(v for _,v in av),max(v for _,v in av)))
+print("cumPnl: first %.0f last %.0f min %.0f"%(pn[0][1],pn[-1][1],min(v for _,v in pn)))
+# equity by month
+from collections import defaultdict
+m=defaultdict(list)
+for t,v in av: m[time.strftime('%Y-%m',time.gmtime(t/1000))].append(v)
+print("\nmonth: first -> last equity, min, max")
+for k in sorted(m): print(f"  {k}  {m[k][0]:>8,.0f} -> {m[k][-1]:>8,.0f}   min {min(m[k]):>7,.0f}  max {max(m[k]):>7,.0f}")
+# biggest drawdowns on equity
+peak=-1e9; mdd=0; mddt=None; trough=None
+for t,v in av:
+    if v>peak: peak=v
+    dd=(v/peak-1) if peak>0 else 0
+    if dd<mdd: mdd=dd; mddt=t; trough=v
+print("\nmax equity drawdown: %.1f%% trough $%.0f on %s"%(100*mdd,trough,time.strftime('%Y-%m-%d',time.gmtime(mddt/1000))))
+# 4h pnl increments
+inc=[(av[i][0],pn[i][1]-pn[i-1][1]) for i in range(1,len(pn)) if pn[i][0]==av[i][0]]
+inc=[x for x in inc if abs(x[1])>0]
+print("\n4h pnl increments n=%d  mean %.2f  med %.2f  win%% %.0f  sum %.0f"%(len(inc),st.mean(v for _,v in inc),st.median([v for _,v in inc]),100*sum(1 for _,v in inc if v>0)/len(inc),sum(v for _,v in inc)))
+worst=sorted(inc,key=lambda x:x[1])[:5]; bestp=sorted(inc,key=lambda x:-x[1])[:5]
+print("worst 4h:", [(time.strftime('%m-%d %H',time.gmtime(t/1000)),round(v,1)) for t,v in worst])
+print("best 4h :", [(time.strftime('%m-%d %H',time.gmtime(t/1000)),round(v,1)) for t,v in bestp])
+EOF
+n pts 64 span 2026-09-19 -> 2026-09-26
+equity: first 1967 last 2194 min 1921 max 2209
+cumPnl: first 0 last 227 min -46
+
+month: first -> last equity, min, max
+  2026-09     1,967 ->    2,194   min   1,921  max   2,209
+
+max equity drawdown: -2.7% trough $2059 on 2026-09-23
+
+4h pnl increments n=63  mean 3.60  med 1.91  win% 56  sum 227
+worst 4h: [('09-23 16', -57.3), ('09-20 04', -29.2), ('09-24 22', -24.2), ('09-22 05', -22.5), ('09-26 13', -15.7)]
+best 4h : [('09-23 20', 42.8), ('09-24 13', 34.5), ('09-25 11', 29.3), ('09-20 16', 29.0), ('09-20 20', 27.4)]
+[0m
+a[0m$ [0mcd /tmp/opencode/hl && python3 - <<'EOF'
+import json,time,statistics as st
+from collections import defaultdict
+j=json.load(open("portfolio.json"))
+best=min(j,key=lambda r:r[1].get("accountValueHistory",[[9e18]])[0][0])
+h=best[1]["accountValueHistory"]; p=best[1]["pnlHistory"]
+av=[(t,float(v)) for t,v in h]; pn=[(t,float(v)) for t,v in p]
+print("span",time.strftime('%Y-%m-%d',time.gmtime(av[0][0]/1000)),"->",time.strftime('%Y-%m-%d',time.gmtime(av[-1][0]/1000)),"n=",len(av))
+print("equity first %.0f last %.0f | cumPnl last %.0f min %.0f"%(av[0][1],av[-1][1],pn[-1][1],min(v for _,v in pn)))
+m=defaultdict(list)
+for t,v in av: m[time.strftime('%Y-%m',time.gmtime(t/1000))].append(v)
+for k in sorted(m): print(f"  {k}  {m[k][0]:>8,.0f} -> {m[k][-1]:>8,.0f}  min {min(m[k]):>7,.0f} max {max(m[k]):>7,.0f}")
+peak=-1e9;mdd=0;mt=None;tr=None
+for t,v in av:
+    if v>peak: peak=v
+    if peak>0 and v/peak-1<mdd: mdd=v/peak-1; mt=t; tr=v
+print("max equity DD %.1f%% trough $%.0f @ %s"%(100*mdd,tr,time.strftime('%Y-%m-%d',time.gmtime(mt/1000))))
+# daily equity/pnl
+d={}
+for t,v in av: d[time.strftime('%Y-%m-%d',time.gmtime(t/1000))]=v
+ks=sorted(d)
+dp=[d[ks[i]]-d[ks[i-1]] for i in range(1,len(ks))]
+dp=[x for x in dp if abs(x)>1e-9]
+print("\ndaily equity deltas n=%d mean %.2f med %.2f win%% %.0f sum %.0f"%(len(dp),st.mean(dp),st.median(dp),100*sum(1 for x in dp if x>0)/len(dp),sum(dp)))
+EOF
+span 2026-01-28 -> 2026-09-26 n= 43
+equity first 0 last 2194 | cumPnl last 1014 min 0
+  2026-01         0 ->      496  min       0 max     496
+  2026-02       524 ->      545  min     524 max     545
+  2026-03       578 ->      622  min     578 max     622
+  2026-04       611 ->      643  min     611 max     643
+  2026-05       655 ->      724  min     648 max     724
+  2026-06       766 ->      838  min     749 max     838
+  2026-07       855 ->      809  min     809 max     890
+  2026-08       844 ->    1,573  min     833 max   1,573
+  2026-09     1,575 ->    2,194  min   1,575 max   2,194
+max equity DD -9.1% trough $809 @ 2026-07-29
+
+daily equity deltas n=41 mean 41.42 med 16.83 win% 80 sum 1698
+[0m
+aLet me compute daily P&L from fills, and check market drift to separate skill from beta.
+[0m$ [0mcat > /tmp/opencode/hl/daily.py <<'EOF'
+import json, time, statistics as st
+from collections import defaultdict, Counter
+F=json.load(open("/tmp/opencode/hl/fills_all.json"))
+def P(x):
+    try: return float(x)
+    except: return 0.0
+F.sort(key=lambda f:f["time"])
+D=defaultdict(lambda: dict(n=0,pnl=0.0,fee=0.0,vol=0.0,coins=set()))
+for f in F:
+    d=D[time.strftime('%Y-%m-%d',time.gmtime(f['time']/1000))]
+    d['n']+=1; d['pnl']+=P(f['closedPnl']); d['fee']+=P(f.get('fee')); d['vol']+=P(f['px'])*P(f['sz']); d['coins'].add(f['coin'])
+ks=sorted(D)
+net=[D[k]['pnl']-D[k]['fee'] for k in ks]
+print("active days",len(ks),"of",(time.strftime('%Y-%m-%d',time.gmtime(F[0]['time']/1000)),time.strftime('%Y-%m-%d',time.gmtime(F[-1]['time']/1000)))
+print("daily net P&L: mean %.2f med %.2f win%% %.0f  best %.1f worst %.1f  total %.0f"%(st.mean(net),st.median(net),100*sum(1 for x in net if x>0)/len(net),max(net),min(net),sum(net)))
+print("best 5:",[(k,round(D[k]['pnl']-D[k]['fee'],1)) for k in sorted(ks,key=lambda k:-(D[k]['pnl']-D[k]['fee']))[:5]])
+print("worst 5:",[(k,round(D[k]['pnl']-D[k]['fee'],1)) for k in sorted(ks,key=lambda k:(D[k]['pnl']-D[k]['fee']))[:5]])
+print("losing days:",sum(1 for x in net if x<0), "->",[ (k,round(x,1)) for k,x in zip(ks,net) if x<0])
+print("\nlast 14 days detail:")
+print(f"{'day':<12}{'fills':>6}{'coins':>7}{'vol$':>10}{'grossPnl':>10}{'fee':>7}{'net':>8}")
+for k in ks[-14:]:
+    d=D[k]; print(f"{k:<12}{d['n']:>6}{len(d['coins']):>7}{d['vol']:>10,.0f}{d['pnl']:>10.2f}{d['fee']:>7.2f}{d['pnl']-d['fee']:>8.2f}")
+# cadence
+hr=Counter()
+for f in F: hr[f['time']//3.6e6]+=1
+print("\nfills per hour-of-day (UTC):")
+mx=max(hr.values())
+for h in range(24): print(f"  {h:02d}: {'#'*int(40*hr[h]/mx):<40} {hr[h]}")
+EOF
+cd /tmp/opencode/hl && python3 daily.py
+File "/tmp/opencode/hl/daily.py", line 14
+    print("active days",len(ks),"of",(time.strftime('%Y-%m-%d',time.gmtime(F[0]['time']/1000)),time.strftime('%Y-%m-%d',time.gmtime(F[-1]['time']/1000)))
+         ^
+SyntaxError: '(' was never closed
+[0m
+a[0m$ [0mcd /tmp/opencode/hl && sed -i '14s/$/)/' daily.py && python3 daily.py
+active days 78 of ('2026-06-02', '2026-09-26')
+daily net P&L: mean 10.82 med 5.64 win% 74  best 61.6 worst -8.3  total 844
+best 5: [('2026-09-18', 61.6), ('2026-09-23', 61.3), ('2026-09-24', 54.8), ('2026-09-22', 45.8), ('2026-09-17', 43.9)]
+worst 5: [('2026-07-17', -8.3), ('2026-09-10', -0.0), ('2026-06-06', -0.0), ('2026-07-14', -0.0), ('2026-07-16', -0.0)]
+losing days: 20 -> [('2026-06-06', -0.0), ('2026-06-09', -0.0), ('2026-06-10', -0.0), ('2026-06-13', -0.0), ('2026-06-19', -0.0), ('2026-06-21', -0.0), ('2026-06-23', -0.0), ('2026-06-24', -0.0), ('2026-06-30', -0.0), ('2026-07-01', -0.0), ('2026-07-08', -0.0), ('2026-07-13', -0.0), ('2026-07-14', -0.0), ('2026-07-16', -0.0), ('2026-07-17', -8.3), ('2026-07-18', -0.0), ('2026-07-28', -0.0), ('2026-09-10', -0.0), ('2026-09-13', -0.0), ('2026-09-16', -0.0)]
+
+last 14 days detail:
+day          fills  coins      vol$  grossPnl    fee     net
+2026-09-13       1      1        22      0.00   0.00   -0.00
+2026-09-14      13      2       528      6.17   0.10    6.07
+2026-09-15       7      2       305      2.07   0.05    2.02
+2026-09-16       2      2        72      0.00   0.01   -0.01
+2026-09-17      52      3     2,881     44.51   0.56   43.95
+2026-09-18     112      7     6,365     62.96   1.34   61.62
+2026-09-19     125      6     5,344     38.53   1.04   37.50
+2026-09-20      39      3     2,262     22.41   0.44   21.98
+2026-09-21      78      5     4,078     37.99   0.78   37.21
+2026-09-22     106      6     5,072     46.76   0.97   45.79
+2026-09-23     144      5     7,772     62.75   1.42   61.34
+2026-09-24     110      5     5,976     55.90   1.11   54.79
+2026-09-25      79      4     4,459     42.47   0.89   41.58
+2026-09-26       9      2       225      1.39   0.04    1.35
+
+fills per hour-of-day (UTC):
+  00:                                          0
+  01:                                          0
+  02:                                          0
+  03:                                          0
+  04:                                          0
+  05:                                          0
+  06:                                          0
+  07:                                          0
+  08:                                          0
+  09:                                          0
+  10:                                          0
+  11:                                          0
+  12:                                          0
+  13:                                          0
+  14:                                          0
+  15:                                          0
+  16:                                          0
+  17:                                          0
+  18:                                          0
+  19:                                          0
+  20:                                          0
+  21:                                          0
+  22:                                          0
+  23:                                          0
+[0m
+a[0m$ [0mcd /tmp/opencode/hl && sed -i 's|hr\[f\[.time.\]//3.6e6\]+=1|hr[(f["time"]//3.6e6)%24]+=1|' daily.py && python3 daily.py 2>/dev/null | tail -26
+cat > /tmp/opencode/hl/mkt.py <<'EOF'
+import requests,json,time
+C=["HYPE","XMR","NEAR","ZEC","INJ","ZRO","ONDO","JUP","UNI","XLM","ETH","BTC","SOL"]
+out={}
+for c in C:
+    try:
+        r=requests.post("https://api.hyperliquid.xyz/info",json={"type":"candleSnapshot","req":{"coin":c,"interval":"1d","startTime":1780000000000,"endTime":1790500000000}},timeout=30).json()
+        if isinstance(r,list) and r:
+            d=[(int(x['t']),float(x['c']),float(x['h']),float(x['l'])) for x in r]
+            d.sort()
+            out[c]=d
+            p0,p1=d[0][1],d[-1][1]
+            rets=[d[i][1]/d[i-1][1]-1 for i in range(1,len(d))]
+            import statistics as st
+            print(f"{c:<6} n={len(d):<4} {time.strftime('%m-%d',time.gmtime(d[0][0]/1000))}->{time.strftime('%m-%d',time.gmtime(d[-1][0]/1000))}  px {p0:>10.4f}->{p1:>10.4f}  drift {100*(p1/p0-1):>7.1f}%  dailyVol(stdev) {100*st.pstdev(rets):>5.2f}%  upDays {100*sum(1 for x in rets if x>0)/len(rets):>3.0f}%  range/px {100*(max(x[2] for x in d)/min(x[3] for x in d)-1):>5.0f}%")
+        else: print(c,"no data",str(r)[:60])
+    except Exception as e: print(c,"ERR",e)
+json.dump(out,open("candles.json","w"))
+EOF
+python3 /tmp/opencode/hl/mkt.py
+fills per hour-of-day (UTC):
+  00: #############                            51
+  01: ##################                       72
+  02: #############                            52
+  03: ##################                       72
+  04: #################                        67
+  05: #############                            53
+  06: ###############                          58
+  07: #################                        67
+  08: #################                        68
+  09: ####################                     78
+  10: ###############                          60
+  11: ###########################              104
+  12: #############################            111
+  13: ##############################           117
+  14: #############################            113
+  15: #################################        129
+  16: ######################################## 152
+  17: ##########################               100
+  18: ###########################              104
+  19: ########################                 93
+  20: ########################                 93
+  21: ########                                 34
+  22: ########################                 92
+  23: ###############                          60
+HYPE   n=122  05-28->09-26  px    61.5200->   92.5040  drift    50.4%  dailyVol(stdev)  4.56%  upDays  55%  range/px    92%
+XMR no data None
+NEAR no data None
+ZEC no data None
+INJ no data None
+ZRO no data None
+ONDO   n=122  05-28->09-26  px     0.3692->    0.5454  drift    47.7%  dailyVol(stdev)  4.99%  upDays  45%  range/px    98%
+JUP no data None
+UNI no data None
+XLM    n=122  05-28->09-26  px     0.2037->    0.2201  drift     8.1%  dailyVol(stdev)  4.75%  upDays  47%  range/px    95%
+ETH no data None
+BTC no data None
+SOL no data None
+[0m
+a[0m$ [0mcd /tmp/opencode/hl && python3 - <<'EOF'
+import requests,json,time,statistics as st
+C=["XMR","NEAR","ZEC","INJ","ZRO","JUP","UNI","ETH","BTC"]
+out=json.load(open("candles.json"))
+for c in C:
+    for a in range(5):
+        try:
+            r=requests.post("https://api.hyperliquid.xyz/info",json={"type":"candleSnapshot","req":{"coin":c,"interval":"1d","startTime":1780000000000}},timeout=30).json()
+            if isinstance(r,list) and r:
+                d=sorted([(int(x['t']),float(x['c']),float(x['h']),float(x['l'])) for x in r])
+                out[c]=d
+                p0,p1=d[0][1],d[-1][1]; rets=[d[i][1]/d[i-1][1]-1 for i in range(1,len(d))]
+                print(f"{c:<6} n={len(d):<4} {time.strftime('%m-%d',time.gmtime(d[0][0]/1000))}->{time.strftime('%m-%d',time.gmtime(d[-1][0]/1000))} px {p0:>9.4f}->{p1:>9.4f} drift {100*(p1/p0-1):>7.1f}% dVol {100*st.pstdev(rets):>5.2f}% up% {100*sum(1 for x in rets if x>0)/len(rets):>3.0f} range {100*(max(x[2] for x in d)/min(x[3] for x in d)-1):>5.0f}%")
+                break
+        except Exception as e: pass
+        time.sleep(2)
+    else: print(c,"FAILED")
+    time.sleep(0.6)
+json.dump(out,open("candles.json","w"))
+EOF
+XMR    n=122  05-28->09-26 px  354.3500-> 555.0300 drift    56.6% dVol  4.04% up%  52 range   117%
+NEAR   n=122  05-28->09-26 px    2.4199->   4.8447 drift   100.2% dVol  5.73% up%  51 range   239%
+ZEC    n=122  05-28->09-26 px  547.4800->1552.1000 drift   183.5% dVol  7.16% up%  52 range   582%
+INJ    n=122  05-28->09-26 px    5.4627->   7.8585 drift    43.9% dVol  5.53% up%  41 range   120%
+ZRO    n=122  05-28->09-26 px    1.1400->   1.6316 drift    43.1% dVol  5.52% up%  47 range   140%
+JUP    n=122  05-28->09-26 px    0.1756->   0.3483 drift    98.3% dVol  5.31% up%  50 range   147%
+UNI    n=122  05-28->09-26 px    3.0524->   9.6977 drift   217.7% dVol  5.11% up%  54 range   373%
+ETH    n=122  05-28->09-26 px 2009.2000->2691.2000 drift    33.9% dVol  3.05% up%  55 range    87%
+BTC    n=122  05-28->09-26 px 73587.0000->84089.0000 drift    14.3% dVol  2.15% up%  50 range    51%
+[0m
+aNow let me verify the exit mechanic precisely and test for scaling/martingale risk.
+[0m$ [0mcat > /tmp/opencode/hl/mech.py <<'EOF'
+import json, time, statistics as st
+from collections import defaultdict
+F=json.load(open("/tmp/opencode/hl/fills_all.json"))
+def P(x):
+    try: return float(x)
+    except: return 0.0
+F.sort(key=lambda f:f["time"])
+eps=defaultdict(list)
+for c in set(f["coin"] for f in F):
+    sub=[f for f in F if f["coin"]==c]; cur=[]; pos=0.0
+    for f in sub:
+        s=P(f["sz"])
+        if f["dir"]=="Open Long": cur.append(("O",f)); pos+=s
+        else:
+            cur.append(("C",f)); pos-=s
+            if abs(pos)<1e-9: eps[c].append(cur); cur=[]; pos=0.0
+print("== exit price vs VWAEP: is TP a fixed % above blended cost? ==")
+for c,cl in sorted(eps.items()):
+    r=[];r2=[];depth=[];nunreal=[]
+    for x in cl:
+        o=sorted([f for t,f in x if t=="O"],key=lambda z:z["time"]); cl2=[f for t,f in x if t=="C"]
+        if not o or not cl2: continue
+        ov=sum(P(f["sz"]) for f in o); vw=sum(P(f["px"])*P(f["sz"]) for f in o)/ov
+        xo=sum(P(f["px"])*P(f["sz"]) for f in cl2)/sum(P(f["sz"]) for f in cl2)
+        r.append((xo/vw-1)*1e4)
+        r2.append((xo/P(o[-1]["px"])-1)*1e4)          # vs LAST (lowest) rung
+        depth.append((P(o[0]["px"])/P(o[-1]["px"])-1)*1e4)  # ladder depth bps
+        nunreal.append((max(f["time"] for t,f in x)-o[0]["time"])/3.6e6)
+    if not r: continue
+    rs=sorted(r)
+    print(f"{c:<8} n={len(r):<4} TP vs VWAP bps: p5={rs[int(.05*len(rs))]:>7.1f} med={st.median(r):>7.1f} p95={rs[int(.95*len(rs))]:>7.1f} iqr={rs[int(.75*len(rs))]-rs[int(.25*len(rs))]:>6.1f} | TP vs lastRung med={st.median(r2):>7.1f} | ladderDepth bps med={st.median(depth):>6.0f} p95={sorted(depth)[int(.95*len(depth))]:>6.0f} | build_h med={st.median(nunreal):>5.1f} p95={sorted(nunreal)[int(.95*len(nunreal))]:>5.1f}")
+print("\n== rung-0 size in $ over time (per coin) - is sizing fixed $ or % equity? ==")
+for c,cl in sorted(eps.items()):
+    rows=[]
+    for x in cl:
+        o=sorted([f for t,f in x if t=="O"],key=lambda z:z["time"])
+        if o: rows.append((o[0]["time"],P(o[0]["px"])*P(o[0]["sz"])))
+    if len(rows)<5: continue
+    rows.sort()
+    k=len(rows)//4
+    q=[st.median([v for _,v in rows[i*k:(i+1)*k]]) for i in range(4)]
+    first=[r for r in rows if r[0]<rows[len(rows)//2][0]]; last=[r for r in rows if r[0]>=rows[len(rows)//2][0]]
+    print(f"{c:<8} rung0$ by quarter: "+" ".join(f"{v:>7.0f}" for v in q)+f"   ratio Q4/Q1={q[3]/q[0]:>5.2f}  n={len(rows)}")
+print("\n== peak position notional vs $2.2k equity (margin risk) ==")
+for c in sorted(set(f['coin'] for f in F)):
+    pos=0.0; peak=0.0; lastpx=0
+    for f in [x for x in F if x['coin']==c]:
+        pos += P(f["sz"]) if f["dir"]=="Open Long" else -P(f["sz"]); lastpx=P(f["px"])
+        peak=max(peak,pos*lastpx)
+    print(f"{c:<8} peak position notional ${peak:>8,.0f}  = {100*peak/2194:>5.1f}% of equity   now ${pos*lastpx:>7,.0f}")
+EOF
+cd /tmp/opencode/hl && python3 mech.py
+== exit price vs VWAEP: is TP a fixed % above blended cost? ==
+ETH      n=1    TP vs VWAP bps: p5=   59.0 med=   59.0 p95=   59.0 iqr=   0.0 | TP vs lastRung med=  163.3 | ladderDepth bps med=   174 p95=   174 | build_h med= 55.4 p95= 55.4
+INJ      n=34   TP vs VWAP bps: p5=  149.9 med=  150.0 p95=  150.1 iqr=   0.1 | TP vs lastRung med=  210.5 | ladderDepth bps med=   115 p95=   859 | build_h med=  1.0 p95= 17.2
+JUP      n=18   TP vs VWAP bps: p5=   97.7 med=  155.0 p95=  169.9 iqr=  10.1 | TP vs lastRung med=  165.0 | ladderDepth bps med=     0 p95=   870 | build_h med=  1.0 p95= 20.0
+NEAR     n=66   TP vs VWAP bps: p5=  199.9 med=  200.1 p95=  230.1 iqr=  19.9 | TP vs lastRung med=  268.2 | ladderDepth bps med=   112 p95=   836 | build_h med=  1.4 p95= 20.6
+ONDO     n=36   TP vs VWAP bps: p5=  209.9 med=  210.0 p95=  269.9 iqr=   0.1 | TP vs lastRung med=  291.5 | ladderDepth bps med=   157 p95=   742 | build_h med=  1.5 p95= 61.6
+UNI      n=15   TP vs VWAP bps: p5=  209.5 med=  210.4 p95=  240.0 iqr=  30.1 | TP vs lastRung med=  315.8 | ladderDepth bps med=   135 p95=   989 | build_h med=  2.0 p95= 64.0
+XLM      n=5    TP vs VWAP bps: p5=   71.5 med=  189.7 p95=  189.8 iqr=  11.5 | TP vs lastRung med=  294.6 | ladderDepth bps med=   171 p95=  1437 | build_h med= 20.2 p95=139.5
+XMR      n=66   TP vs VWAP bps: p5=   69.9 med=   70.0 p95=  130.0 iqr=   0.1 | TP vs lastRung med=  101.9 | ladderDepth bps med=    27 p95=   743 | build_h med=  0.5 p95= 17.8
+ZEC      n=39   TP vs VWAP bps: p5=   59.7 med=   60.0 p95=   60.1 iqr=   0.1 | TP vs lastRung med=   75.4 | ladderDepth bps med=    29 p95=   436 | build_h med=  0.2 p95= 11.5
+ZRO      n=49   TP vs VWAP bps: p5=  149.7 med=  150.0 p95=  150.3 iqr=   0.3 | TP vs lastRung med=  185.6 | ladderDepth bps med=    77 p95=   757 | build_h med=  0.9 p95=  7.5
+
+== rung-0 size in $ over time (per coin) - is sizing fixed $ or % equity? ==
+INJ      rung0$ by quarter:      33      31      32      34   ratio Q4/Q1= 1.02  n=34
+JUP      rung0$ by quarter:      19      19      19      19   ratio Q4/Q1= 1.00  n=18
+NEAR     rung0$ by quarter:      31      35      56      65   ratio Q4/Q1= 2.05  n=66
+ONDO     rung0$ by quarter:      12      13      14      15   ratio Q4/Q1= 1.19  n=36
+UNI      rung0$ by quarter:      21      22      23      23   ratio Q4/Q1= 1.08  n=15
+XLM      rung0$ by quarter:      34      34      34      34   ratio Q4/Q1= 1.00  n=5
+XMR      rung0$ by quarter:      34      28      28      29   ratio Q4/Q1= 0.85  n=66
+ZEC      rung0$ by quarter:      26      26      29      29   ratio Q4/Q1= 1.15  n=39
+ZRO      rung0$ by quarter:      12      13      27      25   ratio Q4/Q1= 2.00  n=49
+
+== peak position notional vs $2.2k equity (margin risk) ==
+ETH      peak position notional $      67  =   3.0% of equity   now $      0
+HYPE     peak position notional $     662  =  30.2% of equity   now $    234
+INJ      peak position notional $     230  =  10.5% of equity   now $    230
+JUP      peak position notional $     292  =  13.3% of equity   now $      0
+NEAR     peak position notional $     394  =  17.9% of equity   now $    371
+ONDO     peak position notional $     107  =   4.9% of equity   now $     79
+UNI      peak position notional $     126  =   5.8% of equity   now $    126
+XLM      peak position notional $     177  =   8.1% of equity   now $      0
+XMR      peak position notional $     433  =  19.7% of equity   now $    197
+ZEC      peak position notional $     256  =  11.7% of equity   now $      0
+ZRO      peak position notional $     199  =   9.1% of equity   now $     25
+[0m
+a[0m$ [0mcat > /tmp/opencode/hl/hype.py <<'EOF'
+import json, time, statistics as st
+from collections import defaultdict, Counter
+F=json.load(open("/tmp/opencode/hl/fills_all.json"))
+def P(x):
+    try: return float(x)
+    except: return 0.0
+F.sort(key=lambda f:f["time"])
+# HYPE running position sampled weekly
+h=[f for f in F if f["coin"]=="HYPE"]
+pos=0.0; samples={}
+for f in h:
+    pos += P(f["sz"]) if f["dir"]=="Open Long" else -P(f["sz"])
+    wk=time.strftime('%Y-W%W',time.gmtime(f["time"]/1000))
+    samples[wk]=(pos,P(f["px"]),pos*P(f["px"]))
+print("HYPE weekly end-position (coin, px, notional$):")
+out=list(samples.items())
+for i in range(0,len(out),2):
+    print("  "+" | ".join(f"{k[5:]}: {v[0]:>6.2f}@{v[1]:>6.1f}=${v[2]:>5.0f}" for k,v in out[i:i+2]))
+print("HYPE position max %.2f  min %.2f  n_closes>50%%of_pos %d"%(max(s[1][0] for s in samples.values()),min(s[1][0] for s in samples.values()),
+   sum(1 for f in h if f['dir']=='Close Long' and P(f['sz'])>0.5*max(1,P(f['sz'])))))
+# exit fill structure per cycle (all coins)
+eps=defaultdict(list)
+for c in set(f["coin"] for f in F):
+    sub=[f for f in F if f["coin"]==c]; cur=[]; p2=0.0
+    for f in sub:
+        s=P(f["sz"])
+        if f["dir"]=="Open Long": cur.append(("O",f)); p2+=s
+        else:
+            cur.append(("C",f)); p2-=s
+            if abs(p2)<1e-9: eps[c].append(cur); cur=[]; p2=0.0
+print("\n== close-fill structure per cycle ==")
+ncc=Counter(); mixed=0; tot=0; dust=0
+for c,cl in eps.items():
+    for x in cl:
+        cl2=[f for t,f in x if t=="C"]
+        if not cl2: continue
+        tot+=1; ncc[len(cl2)]+=1
+        o=[f for t,f in x if t=="O"]; ov=sum(P(f["sz"]) for f in o); vw=sum(P(f["px"])*P(f["sz"]) for f in o)/ov
+        bps=set(round((P(f["px"])/vw-1)*1e4) for f in cl2)
+        if len(bps)>1: mixed+=1
+        for f in cl2:
+            if P(f["sz"])<0.03*ov: dust+=1
+print("cycles",tot,"| close-fills-per-cycle hist:",dict(sorted(ncc.items())))
+print("cycles where closes happened at >1 distinct price (partial TP + runner):",mixed,f"({100*mixed/tot:.0f}%)")
+print("dust close fills (<3% of position size):",dust)
+# how often is the close a single fill
+print("\n== P&L per close fill (all coins, excl HYPE) ==")
+pl=[P(f['closedPnl']) for f in F if f['dir']=='Close Long' and f['coin']!='HYPE']
+pl.sort(); print("n",len(pl),"p5 %.2f p25 %.2f med %.2f p75 %.2f p95 %.2f max %.2f | neg %d"%(pl[int(.05*len(pl))],pl[int(.25*len(pl))],st.median(pl),pl[int(.75*len(pl))],pl[int(.95*len(pl))],pl[-1],sum(1 for x in pl if x<0)))
+EOF
+cd /tmp/opencode/hl && python3 hype.py
+HYPE weekly end-position (coin, px, notional$):
+  W22:  11.75@  56.4=$  662 | W23:  -0.34@  63.6=$  -22
+  W24:   2.00@  66.8=$  134 | W25:   2.26@  61.7=$  139
+  W26:  -0.34@  71.5=$  -24 | W27:   3.22@  67.6=$  218
+  W28:   6.97@  59.1=$  412 | W30:  10.17@  54.5=$  554
+  W33:  -0.96@  80.9=$  -78 | W34:   6.73@  79.3=$  534
+  W35:   0.53@  86.7=$   46 | W36:   7.40@  79.7=$  590
+  W37:   2.19@  91.2=$  200 | W38:   2.55@  91.7=$  234
+Traceback (most recent call last):
+  File "/tmp/opencode/hl/hype.py", line 19, in <module>
+    print("HYPE position max %.2f  min %.2f  n_closes>50%%of_pos %d"%(max(s[1][0] for s in samples.values()),min(s[1][0] for s in samples.values()),
+                                                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/opencode/hl/hype.py", line 19, in <genexpr>
+    print("HYPE position max %.2f  min %.2f  n_closes>50%%of_pos %d"%(max(s[1][0] for s in samples.values()),min(s[1][0] for s in samples.values()),
+                                                                          ~~~~^^^
+TypeError: 'float' object is not subscriptable
+[0m
+a[0m$ [0mcd /tmp/opencode/hl && python3 - <<'EOF'
+import json,time
+F=json.load(open("fills_all.json"))
+def P(x):
+    try: return float(x)
+    except: return 0.0
+F.sort(key=lambda f:f["time"])
+for c in ["HYPE"]:
+    pos=0.0; flips=[]
+    for f in [x for x in F if x["coin"]==c]:
+        before=pos
+        pos += P(f["sz"]) if f["dir"]=="Open Long" else -P(f["sz"])
+        if before>=0 and pos<0: flips.append(("L->S",f,before,pos))
+        if before<=0 and pos>0: flips.append(("S->L",f,before,pos))
+    print(c,"final",round(pos,3),"| sign flips:",len(flips))
+    for t,f,b,a in flips[:6]:
+        print("   ",t,time.strftime('%m-%d %H:%M',time.gmtime(f['time']/1000)),"dir=",f['dir'],"sz=",f['sz'],"px=",f['px'],"pos",round(b,2),"->",round(a,2))
+EOF
+HYPE final 2.55 | sign flips: 133
+    S->L 06-02 06:58 dir= Open Long sz= 0.55 px= 72.007 pos 0.0 -> 0.55
+    L->S 06-02 11:40 dir= Close Long sz= 3.11 px= 72.912 pos 2.15 -> -0.96
+    S->L 06-02 12:16 dir= Open Long sz= 2.75 px= 72.606 pos -0.96 -> 1.79
+    L->S 06-02 12:54 dir= Close Long sz= 2.75 px= 73.607 pos 1.79 -> -0.96
+    S->L 06-02 15:02 dir= Open Long sz= 0.56 px= 71.315 pos -0.42 -> 0.14
+    L->S 06-03 04:13 dir= Close Long sz= 3.61 px= 72.175 pos 2.65 -> -0.96
+[0m
+aImportant correction: the account **flips long↔short** (133 sign flips on HYPE alone) — the `dir` field is misleading. Let me rebuild position tracking from `side`.
+[0m$ [0mcat > /tmp/opencode/hl/rebuild.py <<'EOF'
+import json, time, statistics as st
+from collections import defaultdict, Counter
+F=json.load(open("/tmp/opencode/hl/fills_all.json"))
+def P(x):
+    try: return float(x)
+    except: return 0.0
+F.sort(key=lambda f:f["time"])
+print("side:",Counter(f["side"] for f in F),"dir:",Counter(f["dir"] for f in F))
+# side-based position
+stats=defaultdict(lambda: dict(flips=0,maxpos=0,minpos=0))
+for c in set(f["coin"] for f in F):
+    pos=0.0; prev=0.0; fl=0; mx=0; mn=0
+    for f in [x for x in F if x["coin"]==c]:
+        pos += P(f["sz"]) if f["side"]=="B" else -P(f["sz"])
+        if prev>=0 and pos<0: fl+=1
+        if prev<=0 and pos>0: fl+=1
+        prev=pos; mx=max(mx,pos); mn=min(mn,pos)
+    stats[c]=dict(flips=fl,maxpos=mx,minpos=mn,final=pos)
+print(f"\n{'coin':<8}{'sideFlips':>10}{'maxLong':>9}{'maxShort':>10}{'final':>9}{'gross$max':>11}{'now$':>8}")
+for c in sorted(stats, key=lambda c:-max(stats[c]['maxpos'],-stats[c]['minpos'])*0):
+    s=stats[c]
+    print(f"{c:<8}{s['flips']:>10}{s['maxpos']:>9.2f}{-s['minpos']:>10.2f}{s['final']:>9.2f}{s['maxpos']*0+s['maxpos']:>11.2f}")
+# cycles from side
+eps=defaultdict(list)
+for c in set(f["coin"] for f in F):
+    sub=[f for f in F if f["coin"]==c]; cur=[]; pos=0.0
+    for f in sub:
+        s=P(f["sz"]); d=1 if f["side"]=="B" else -1
+        cur.append((d,f)); pos+=d*s
+        if abs(pos)<1e-9: eps[c].append(cur); cur=[]; pos=0.0
+    if cur: eps[c].append(cur)
+print("\n== side-based cycles ==")
+print(f"{'coin':<8}{'cyc':>5}{'long':>5}{'short':>6}{'nBuys':>7}{'nSells':>8}{'hold_h_med':>11}{'pnl/cyc':>9}{'win%':>6}{'retbps_med':>11}{'retbps_iqr':>12}")
+ALLL=[];ALLS=[]
+for c,cl in sorted(eps.items()):
+    L=[];S=[]
+    for x in cl:
+        d=x[0][0]; (L if d==1 else S).append(x)
+    def m(a):
+        if not a: return (0,0,0,0,0)
+        h=[(max(f['time'] for _,f in x)-x[0][1]['time'])/3.6e6 for x in a]
+        pnl=[sum(P(f['closedPnl']) for _,f in x) for x in a]
+        rb=[]
+        for x in a:
+            d=x[0][0]; ent=[f for dd,f in x if dd==d]; ex=[f for dd,f in x if dd!=d]
+            if not ent or not ex: continue
+            ev=sum(P(f['px'])*P(f['sz']) for f in ent); es=sum(P(f['sz']) for f in ent)
+            xv=sum(P(f['px'])*P(f['sz']) for f in ex); xs=sum(P(f['sz']) for f in ex)
+            if ev<=0: continue
+            rb.append(((xv/xs)/(ev/es)-1)*1e4*(1 if d==1 else -1))
+        rb.sort()
+        return (len(a),st.median(h),st.mean(pnl),100*sum(1 for p in pnl if p>0)/len(pnl), st.median(rb) if rb else 0, (rb[int(.75*len(rb))]-rb[int(.25*len(rb))]) if rb else 0, sum(1 for _,f in a[0] if 1))
+    for lbl,a,acc in (("L",L,ALLL),("S",S,ALLS)):
+        nb=sum(1 for x in a for d,_ in x if d==1); ns=sum(1 for x in a for d,_ in x if d==-1)
+        r=m(a)
+        print(f"{c+'/'+lbl:<8}{r[0]:>5}{len(L) if lbl=='L' else 0:>5}{len(S) if lbl=='S' else 0:>6}{nb:>7}{ns:>8}{r[1]:>11.1f}{r[2]:>9.2f}{r[3]:>6.0f}{r[4]:>11.1f}{r[5]:>12.1f}")
+        acc+=a
+json.dump({c:[[d,f] for d,f in x] for c,cl in eps.items() for x in cl[:0]},open("/dev/null","w"))
+print("\nTOTAL long cycles",len(ALLL),"short cycles",len(ALLS))
+for lbl,acc in (("LONG",ALLL),("SHORT",ALLS)):
+    pnl=[sum(P(f['closedPnl']) for _,f in x) for x in acc]
+    if not pnl: continue
+    print(f"{lbl}: n={len(pnl)} mean={st.mean(pnl):.2f} med={st.median(pnl):.2f} win%={100*sum(1 for p in pnl if p>0)/len(pnl):.0f} total=${sum(pnl):.1f}")
+EOF
+cd /tmp/opencode/hl && python3 rebuild.py
+side: Counter({'B': 1483, 'A': 517}) dir: Counter({'Open Long': 1483, 'Close Long': 517})
+
+coin     sideFlips  maxLong  maxShort    final  gross$max    now$
+INJ             31    29.40      0.00    29.00      29.40
+XMR            119     0.86      0.00     0.35       0.86
+NEAR           117    97.90      0.00    77.80      97.90
+ONDO            37   330.00      0.00   145.00     330.00
+HYPE           133    11.75      0.96     2.55      11.75
+ZEC              1     0.32      0.00     0.00       0.32
+XLM              5  1028.00      0.00     0.00    1028.00
+ZRO             30   133.40      0.00    14.90     133.40
+ETH              1     0.03      0.00     0.00       0.03
+UNI             16    13.70      0.00    13.00      13.70
+JUP             18  1172.00      0.00     0.00    1172.00
+
+== side-based cycles ==
+coin      cyc long short  nBuys  nSells hold_h_med  pnl/cyc  win% retbps_med  retbps_iqr
+ETH/L       1    1     0      5       1       55.4     0.40   100       59.0         0.0
+Traceback (most recent call last):
+  File "/tmp/opencode/hl/rebuild.py", line 56, in <module>
+    print(f"{c+'/'+lbl:<8}{r[0]:>5}{len(L) if lbl=='L' else 0:>5}{len(S) if lbl=='S' else 0:>6}{nb:>7}{ns:>8}{r[1]:>11.1f}{r[2]:>9.2f}{r[3]:>6.0f}{r[4]:>11.1f}{r[5]:>12.1f}")
+                                                                                                                                                                ~^^^
+IndexError: tuple index out of range
+[0m
+a[0m$ [0mcd /tmp/opencode/hl && sed -i 's/return (len(a),st.median(h),st.mean(pnl),100\*sum(1 for p in pnl if p>0)\/len(pnl), st.median(rb) if rb else 0, (rb\[int(.75\*len(rb))\]-rb\[int(.25\*len(rb))\]) if rb else 0, sum(1 for _,f in a\[0\] if 1))/return (len(a),st.median(h),st.mean(pnl),100*sum(1 for p in pnl if p>0)\/len(pnl), st.median(rb) if rb else 0, (rb[int(.75*len(rb))]-rb[int(.25*len(rb))]) if rb else 0)/' rebuild.py && python3 rebuild.py 2>&1 | tail -32
+side: Counter({'B': 1483, 'A': 517}) dir: Counter({'Open Long': 1483, 'Close Long': 517})
+
+coin     sideFlips  maxLong  maxShort    final  gross$max    now$
+UNI             16    13.70      0.00    13.00      13.70
+HYPE           133    11.75      0.96     2.55      11.75
+XMR            119     0.86      0.00     0.35       0.86
+ZEC              1     0.32      0.00     0.00       0.32
+NEAR           117    97.90      0.00    77.80      97.90
+INJ             31    29.40      0.00    29.00      29.40
+ONDO            37   330.00      0.00   145.00     330.00
+ETH              1     0.03      0.00     0.00       0.03
+XLM              5  1028.00      0.00     0.00    1028.00
+ZRO             30   133.40      0.00    14.90     133.40
+JUP             18  1172.00      0.00     0.00    1172.00
+
+== side-based cycles ==
+coin      cyc long short  nBuys  nSells hold_h_med  pnl/cyc  win% retbps_med  retbps_iqr
+ETH/L       1    1     0      5       1       55.4     0.40   100       59.0         0.0
+Traceback (most recent call last):
+  File "/tmp/opencode/hl/rebuild.py", line 56, in <module>
+    print(f"{c+'/'+lbl:<8}{r[0]:>5}{len(L) if lbl=='L' else 0:>5}{len(S) if lbl=='S' else 0:>6}{nb:>7}{ns:>8}{r[1]:>11.1f}{r[2]:>9.2f}{r[3]:>6.0f}{r[4]:>11.1f}{r[5]:>12.1f}")
+                                                                                                                                                                ~^^^
+IndexError: tuple index out of range
+[0m
+a[0m$ [0mcat > /tmp/opencode/hl/rb2.py <<'EOF'
+import json, time, statistics as st
+from collections import defaultdict
+F=json.load(open("/tmp/opencode/hl/fills_all.json"))
+def P(x):
+    try: return float(x)
+    except: return 0.0
+F.sort(key=lambda f:f["time"])
+eps=defaultdict(list)
+for c in set(f["coin"] for f in F):
+    sub=[f for f in F if f["coin"]==c]; cur=[]; pos=0.0
+    for f in sub:
+        s=P(f["sz"]); d=1 if f["side"]=="B" else -1
+        cur.append((d,f)); pos+=d*s
+        if abs(pos)<1e-9: eps[c].append(cur); cur=[]; pos=0.0
+    if cur: eps[c].append(cur)
+def stat(a):
+    if not a: return None
+    h=[(max(f['time'] for _,f in x)-x[0][1]['time'])/3.6e6 for x in a]
+    pnl=[sum(P(f['closedPnl']) for _,f in x) for x in a]
+    rb=[]
+    for x in a:
+        d=x[0][0]
+        ent=[f for dd,f in x if dd==d]; ex=[f for dd,f in x if dd!=d]
+        if not ent or not ex: continue
+        ev=sum(P(f['px'])*P(f['sz']) for f in ent); es=sum(P(f['sz']) for f in ent)
+        xv=sum(P(f['px'])*P(f['sz']) for f in ex); xs=sum(P(f['sz']) for f in ex)
+        if ev<=0 or xs<=0: continue
+        rb.append((((xv/xs)/(ev/es))-1)*1e4*d)
+    rb.sort()
+    return dict(n=len(a),hold=st.median(h),pnl=st.mean(pnl),
+                win=100*sum(1 for p in pnl if p>0)/len(pnl),
+                rb=st.median(rb) if rb else 0, iqr=(rb[int(.75*len(rb))]-rb[int(.25*len(rb))]) if rb else 0)
+print(f"{'coin':<9}{'cyc':>5}{'hold_h':>8}{'pnl/cyc':>9}{'win%':>6}{'retbps':>9}{'iqr':>8}{'ret_p5':>9}{'ret_p95':>9}")
+ALLC=[]
+for c,cl in sorted(eps.items()):
+    for x in cl: ALLC.append((c,x))
+    s=stat(cl)
+    if s: print(f"{c:<9}{s['n']:>5}{s['hold']:>8.1f}{s['pnl']:>9.2f}{s['win']:>6.0f}{s['rb']:>9.1f}{s['iqr']:>8.1f}")
+# per-coin cycle-count by direction
+print("\nshort-side cycles:", sum(1 for c,x in ALLC if x[0][0]==-1), "of", len(ALLC))
+s=stat([x for c,x in ALLC if x[0][0]==-1]); print("  short stat:",{k:round(v,2) for k,v in s.items()} if s else None)
+s=stat([x for c,x in ALLC if x[0][0]==1 and c!="HYPE"]); print("\nLONG ex-HYPE:",{k:round(v,2) for k,v in s.items()} if s else None)
+s=stat([x for c,x in ALLC if c=="HYPE"]); print("HYPE cycles:",{k:round(v,2) for k,v in s.items()} if s else None)
+# overall pnl reconciliation
+tot=sum(P(f['closedPnl']) for f in F)
+print("\nreconcile: sum closedPnl all fills = $%.2f ; sum over cycles = $%.2f ; unassigned(open) = $%.2f"%(tot,
+  sum(sum(P(f['closedPnl']) for _,f in x) for c,x in ALLC), tot-sum(sum(P(f['closedPnl']) for _,f in x) for c,x in ALLC)))
+EOF
+cd /tmp/opencode/hl && python3 rb2.py
+coin       cyc  hold_h  pnl/cyc  win%   retbps     iqr   ret_p5  ret_p95
+ETH          1    55.4     0.40   100     59.0     0.0
+HYPE         1  2731.2   340.80   100    150.7     0.0
+INJ         35     1.0     1.59    97    150.0     0.1
+JUP         18     1.0     1.08   100    155.0    10.1
+NEAR        67     1.4     3.23    99    200.1    19.9
+ONDO        37     1.7     1.08    97    210.0     0.1
+UNI         16     2.6     1.37    94    210.4    30.1
+XLM          5    20.2     2.06   100    189.7    11.5
+XMR         67     0.5     1.57    99     70.0     0.1
+ZEC         39     0.2     0.56    97     60.0     0.1
+ZRO         50     0.8     0.74    98    150.0     0.3
+
+short-side cycles: 0 of 336
+  short stat: None
+
+LONG ex-HYPE: {'n': 335, 'hold': 0.92, 'pnl': 1.58, 'win': 97.91, 'rb': 150.02, 'iqr': 130.07}
+HYPE cycles: {'n': 1, 'hold': 2731.15, 'pnl': 340.8, 'win': 100.0, 'rb': 150.74, 'iqr': 0.0}
+
+reconcile: sum closedPnl all fills = $868.72 ; sum over cycles = $868.72 ; unassigned(open) = $0.00
+[0m
+aNow let me verify the HYPE module and compute net edge economics.
+[0m$ [0mcat > /tmp/opencode/hl/final.py <<'EOF'
+import json, time, statistics as st
+from collections import defaultdict, Counter
+F=json.load(open("/tmp/opencode/hl/fills_all.json"))
+def P(x):
+    try: return float(x)
+    except: return 0.0
+F.sort(key=lambda f:f["time"])
+# 1) HYPE: return of each SELL vs running avg cost
+h=[f for f in F if f["coin"]=="HYPE"]; q=0.0; cogs=0.0; rb=[]
+for f in h:
+    if f["side"]=="B": q+=P(f["sz"]); cogs+=P(f["px"])*P(f["sz"])
+    else:
+        s=P(f["sz"])
+        if q>0 and cogs>0:
+            av=cogs/q; eff=min(s,q)
+            rb.append(((P(f["px"])/av-1)*1e4)*(1 if q>0 else -1))
+            cogs-=P(f["px"])*eff; q-=eff
+        if q<=1e-9: q=max(q,0); cogs=0
+rb.sort()
+print("HYPE: n sells",len(rb),"ret vs running VWAP bps: p10 %.0f med %.0f p90 %.0f  |  frac>0: %.0f%%"%(rb[int(.1*len(rb))],st.median(rb),rb[int(.9*len(rb))],100*sum(1 for x in rb if x>0)/len(rb)))
+# 2) net economics
+gross=sum(P(f['closedPnl']) for f in F); fee=sum(P(f.get('fee')) for f in F)
+vol=sum(P(f['px'])*P(f['sz']) for f in F)
+print("\n== economics over 2026-06-02..2026-09-26 (116d) ==")
+print(f"gross trading P&L  ${gross:,.2f}")
+print(f"fees              -${fee:,.2f}   ({1e4*fee/vol:.2f} bps of volume; maker 1.44bps / taker 4.32bps; {100*sum(1 for f in F if not f['crossed'])/len(F):.0f}% maker)")
+print(f"funding (approx)  -$20.91")
+print(f"NET               ${gross-fee-20.91:,.2f}")
+print(f"volume            ${vol:,.0f}  ->  net {1e4*(gross-fee-20.91)/vol:.1f} bps of volume")
+print(f"avg equity ~$1,500 -> ~{1e4*(gross-fee-20.91)/116/1500:.2f}%/day ; ~{1e4*(gross-fee-20.91)/1500:.1f}% cumulative on avg equity")
+# 3) last 30d only
+cut=F[-1]["time"]-30*86400*1000
+f30=[f for f in F if f["time"]>=cut]
+g30=sum(P(f['closedPnl']) for f in f30); fe30=sum(P(f.get('fee')) for f in f30); v30=sum(P(f['px'])*P(f['sz']) for f in f30)
+print(f"\nlast 30d: vol ${v30:,.0f}  gross ${g30:,.2f}  fee ${fe30:,.2f}  net ${g30-fe30:,.2f}  ({1e4*(g30-fe30)/v30:.1f} bps of vol, ~{g30-fe30:.0f}$/mo on ~$2.1k eq = {1e4*(g30-fe30)/30/2100:.2f}%/day)")
+# 4) cycles per day
+eps=defaultdict(int); tot=0
+for c in set(f["coin"] for f in F):
+    pos=0.0
+    for f in [x for x in F if x["coin"]==c]:
+        pos += P(f["sz"]) if f["side"]=="B" else -P(f["sz"])
+        if abs(pos)<1e-9: eps[c]+=1; tot+=1
+days=len(set(time.strftime('%Y-%m-%d',time.gmtime(f['time']/1000)) for f in F))
+print(f"\ncompleted cycles: {tot} over {days} active days = {tot/days:.1f} cycles/day")
+# 5) TP target table w/ ladder params
+print("\n== per-coin config (derived) ==")
+print(f"{'coin':<8}{'TP_bps':>8}{'ladderDepth_bps_med':>21}{'rungSzGrowth/rung':>19}{'rungSpacing_bps_med':>20}{'medHold_h':>11}{'cyc':>5}{'rung0_notional$':>17}")
+for c in sorted(eps, key=lambda c:-(sum(P(f['px'])*P(f['sz']) for f in F if f['coin']==c))):
+    sub=[f for f in F if f['coin']==c]
+    # ladder: group by contiguous non-flat runs starting from 0
+    runs=[]; cur=[]; pos=0.0
+    for f in sub:
+        cur.append(f); pos += P(f["sz"]) if f["side"]=="B" else -P(f["sz"])
+        if abs(pos)<1e-9: runs.append(cur); cur=[]; pos=0.0
+    runs=[r for r in runs if len(r)>=3]
+    dep=[];sp=[];gr=[]
+    for r in runs:
+        o=[f for f in r if f["side"]=="B"]
+        if len(o)<2: continue
+        dep.append((P(o[0]['px'])/P(o[-1]['px'])-1)*1e4)
+        for a,b in zip(o,o[1:]): sp.append((P(b['px'])/P(a['px'])-1)*1e4)
+        for a,b in zip(o,o[1:]): gr.append(P(b['sz'])/P(a['sz']))
+    rb=[]
+    for r in runs:
+        o=[f for f in r if f['side']=='B']; s=[f for f in r if f['side']=='A']
+        if not o or not s: continue
+        ev=sum(P(f['px'])*P(f['sz']) for f in o); es=sum(P(f['sz']) for f in o)
+        xv=sum(P(f['px'])*P(f['sz']) for f in s); xs=sum(P(f['sz']) for f in s)
+        if ev>0 and xs>0: rb.append(((xv/xs)/(ev/es)-1)*1e4)
+    r0=[]
+    for r in runs:
+        o=[f for f in r if f['side']=='B']
+        if o: r0.append(P(o[0]['px'])*P(o[0]['sz']))
+    print(f"{c:<8}{(st.median(rb) if rb else 0):>8.0f}{(st.median(dep) if dep else 0):>21.0f}{(st.median(gr) if gr else 0):>19.3f}{(st.median(sp) if sp else 0):>20.0f}{0:>11.1f}{eps[c]:>5}{(st.median(r0) if r0 else 0):>17.0f}")
+EOF
+cd /tmp/opencode/hl && python3 final.py
+HYPE: n sells 108 ret vs running VWAP bps: p10 144 med 1152 p90 24605  |  frac>0: 100%
+
+== economics over 2026-06-02..2026-09-26 (116d) ==
+gross trading P&L  $868.72
+fees              -$24.40   (2.10 bps of volume; maker 1.44bps / taker 4.32bps; 74% maker)
+funding (approx)  -$20.91
+NET               $823.41
+volume            $116,033  ->  net 71.0 bps of volume
+avg equity ~$1,500 -> ~47.32%/day ; ~5489.4% cumulative on avg equity
+
+last 30d: vol $87,248  gross $606.88  fee $16.88  net $589.99  (67.6 bps of vol, ~590$/mo on ~$2.1k eq = 93.65%/day)
+
+completed cycles: 329 over 78 active days = 4.2 cycles/day
+
+== per-coin config (derived) ==
+coin      TP_bps  ladderDepth_bps_med  rungSzGrowth/rung rungSpacing_bps_med  medHold_h  cyc  rung0_notional$
+XMR           70                   27              1.053                  -4        0.0   66               29
+NEAR         200                  112              1.067                 -79        0.0   66               53
+ZEC           60                   62              1.000                 -18        0.0   39               27
+INJ          150                  115              1.071                 -72        0.0   34               33
+ZRO          150                  202              1.196                -123        0.0   49               25
+ONDO         210                  165              1.214                 -58        0.0   36               14
+JUP          150                  500              1.111                 -88        0.0   18               19
+UNI          210                  135              1.078                 -83        0.0   15               22
+XLM          190                  171              1.078                 -84        0.0    5               34
+ETH           59                  174              1.017                 -34        0.0    1               15
+[0m
+a[0m$ [0mcd /tmp/opencode/hl && python3 - <<'EOF'
+import json,time,statistics as st
+from collections import defaultdict
+F=json.load(open("fills_all.json"))
+def P(x):
+    try: return float(x)
+    except: return 0.0
+F.sort(key=lambda f:f["time"])
+h=[f for f in F if f["coin"]=="HYPE"]
+cl=[P(f["closedPnl"]) for f in h if f["side"]=="A"]
+cl.sort()
+print("HYPE close fills n=%d  pnl$: p10 %.1f med %.1f p90 %.1f max %.1f  sum $%.1f  pos%%=%.0f"%(len(cl),cl[int(.1*len(cl))],st.median(cl),cl[int(.9*len(cl))],cl[-1],sum(cl),100*sum(1 for x in cl if x>0)/len(cl)))
+op=[P(f["px"])*P(f["sz"]) for f in h if f["side"]=="B"]; cln=[P(f["px"])*P(f["sz"]) for f in h if f["side"]=="A"]
+print("HYPE bought $%.0f (%d fills, med $%.0f) | sold $%.0f (%d fills, med $%.0f)"%(sum(op),len(op),st.median(op),sum(cln),len(cln),st.median(cln)))
+# position stats
+pos=0.0; ps=[]
+for f in h:
+    pos += P(f["sz"]) if f["side"]=="B" else -P(f["sz"]); ps.append(pos*  P(f["px"]))
+print("HYPE position notional: med $%.0f mean $%.0f max $%.0f min $%.0f"%(st.median(ps),st.mean(ps),max(ps),min(ps)))
+# inter-fill gap
+g=sorted((b["time"]-a["time"])/60000 for a,b in zip(h,h[1:]))
+print("HYPE gap between fills (min): med %.0f  p90 %.0f  max %.0f"%(st.median(g),g[int(.9*len(g))],g[-1]))
+# non-HYPE close fills
+o=[P(f["closedPnl"]) for f in F if f["side"]=="A" and f["coin"]!="HYPE"]; o.sort()
+print("\nnon-HYPE close fills n=%d pnl$: p5 %.2f p50 %.2f p95 %.2f max %.2f sum $%.1f neg=%d"%(len(o),o[int(.05*len(o))],st.median(o),o[int(.95*len(o))],o[-1],sum(o),sum(1 for x in o if x<0)))
+# median gap between consecutive fills overall
+for c in ["XMR","ZEC","NEAR","INJ","ZRO","ONDO"]:
+    sub=[f for f in F if f["coin"]==c]
+    g=sorted((b["time"]-a["time"])/60000 for a,b in zip(sub,sub[1:]))
+    print(f"{c:<6} fills {len(sub):<4} gap_min: med {st.median(g):>6.0f} p90 {g[int(.9*len(g))]:>7.0f} max {g[-1]:>8.0f}  maker% {100*sum(1 for f in sub if not f['crossed'])/len(sub):.0f}")
+EOF
+HYPE close fills n=114  pnl$: p10 0.3 med 1.6 p90 8.4 max 23.7  sum $340.8  pos%=98
+HYPE bought $17803 (259 fills, med $60) | sold $17881 (114 fills, med $92)
+HYPE position notional: med $21 mean $83 max $662 min $-92
+HYPE gap between fills (min): med 85  p90 748  max 31985
+
+non-HYPE close fills n=403 pnl$: p5 0.15 p50 0.94 p95 3.91 max 8.72 sum $527.9 neg=1
+XMR    fills 505  gap_min: med      1 p90      89 max    15747  maker% 80
+ZEC    fills 185  gap_min: med      2 p90      32 max     1670  maker% 75
+NEAR   fills 295  gap_min: med      6 p90     127 max     7252  maker% 75
+INJ    fills 159  gap_min: med      7 p90     107 max     3102  maker% 77
+ZRO    fills 158  gap_min: med      8 p90      79 max     1759  maker% 68
+ONDO   fills 154  gap_min: med     16 p90     393 max     2975  maker% 75
+[0m
+a[0m$ [0mcd /tmp/opencode/hl && python3 - <<'EOF'
+import json,time,statistics as st
+from collections import defaultdict
+F=json.load(open("fills_all.json"))
+def P(x):
+    try: return float(x)
+    except: return 0.0
+F.sort(key=lambda f:f["time"])
+eps=defaultdict(list)
+for c in set(f["coin"] for f in F):
+    sub=[f for f in F if f["coin"]==c]; cur=[]; pos=0.0
+    for f in sub:
+        cur.append(f); pos += P(f["sz"]) if f["side"]=="B" else -P(f["sz"])
+        if abs(pos)<1e-9: eps[c].append(cur); cur=[]; pos=0.0
+loss=[]
+for c,cl in eps.items():
+    for x in cl:
+        p=sum(P(f["closedPnl"]) for f in x)
+        if p<0:
+            o=[f for f in x if f["side"]=="B"]; s=[f for f in x if f["side"]=="A"]
+            dep=(P(o[0]['px'])/P(o[-1]['px'])-1)*1e4 if len(o)>1 else 0
+            hold=(x[-1]['time']-x[0]['time'])/3.6e6
+            loss.append((round(p,2),c,len(o),len(s),round(dep),round(hold,1)))
+loss.sort()
+print("losing cycles (of 329):",len(loss))
+for l in loss: print("   pnl $%s  %s  rungs=%d closes=%d depth=%dbps hold=%sh"%l)
+# worst per-fill loss
+lf=sorted([(P(f['closedPnl']),f['coin'],f['sz'],f['px'],time.strftime('%m-%d',time.gmtime(f['time']/1000))) for f in F if f['side']=='A'])[:5]
+print("worst close fills:",[(a,b,round(c,3),d,e) for a,b,c,d,e in lf])
+# what price move caused the worst: approximate
+print("\n== drawdown of the equity from the fill P&L series (daily, excl HYPE) ==")
+D=defaultdict(float)
+for f in F:
+    if f["coin"]!="HYPE": D[time.strftime('%Y-%m-%d',time.gmtime(f['time']/1000))]+=P(f['closedPnl'])-P(f.get('fee'))
+ks=sorted(D); run=0; worst=0; wt=None
+for k in ks:
+    run+=D[k]
+    if run<worst: worst=run; wt=k
+print("cumulative scalper P&L: min $%.1f on %s ; final $%.1f"%(worst,wt,sum(D.values())))
+EOF
+losing cycles (of 329): 1
+   pnl $-2.21  ZEC  rungs=6 closes=1 depth=231bps hold=0.4h
+Traceback (most recent call last):
+  File "<stdin>", line 28, in <module>
+TypeError: type str doesn't define __round__ method
+[0m
+a[0m$ [0mcd /tmp/opencode/hl && python3 - <<'EOF'
+import json,time,statistics as st
+F=json.load(open("fills_all.json")); C=json.load(open("candles.json"))
+def P(x):
+    try: return float(x)
+    except: return 0.0
+first={}
+for f in sorted(F,key=lambda z:z["time"]):
+    first.setdefault(f["coin"],f["time"])
+print(f"{'coin':<7}{'first trade':<12}{'px then':>10}{'7d prior':>10}{'30d prior':>11}{'pctile of 122d range':>24}")
+for c,t in sorted(first.items(),key=lambda kv:kv[1]):
+    d=C.get(c)
+    if not d: print(f"{c:<7}{time.strftime('%Y-%m-%d',time.gmtime(t/1000))}  (no candles)"); continue
+    px=lambda tt: next((x[1] for x in d if x[0]<=tt), d[0][1])
+    p0=px(t); d7=px(t-7*86400*1000); d30=px(t-30*86400*1000)
+    lo=min(x[3] for x in d); hi=max(x[2] for x in d)
+    print(f"{c:<7}{time.strftime('%Y-%m-%d',time.gmtime(t/1000)):<12}{p0:>10.4f}{100*(p0/d7-1):>9.1f}%{100*(p0/d30-1):>10.1f}%{100*(p0-lo)/(hi-lo):>23.0f}%")
+EOF
+coin   first trade    px then  7d prior  30d prior    pctile of 122d range
+HYPE   2026-06-02     61.5200      0.0%       0.0%                     22%
+XMR    2026-08-25    354.3500      0.0%       0.0%                     18%
+ZEC    2026-08-31    547.4800      0.0%       0.0%                     21%
+JUP    2026-09-06      0.1756      0.0%       0.0%                     15%
+ETH    2026-09-06   2009.2000      0.0%       0.0%                     39%
+NEAR   2026-09-08      2.4199      0.0%       0.0%                     24%
+XLM    2026-09-08      0.2037      0.0%       0.0%                     35%
+ONDO   2026-09-09      0.3692      0.0%       0.0%                     26%
+UNI    2026-09-18      3.0524      0.0%       0.0%                      9%
+INJ    2026-09-18      5.4627      0.0%       0.0%                     32%
+ZRO    2026-09-21      1.1400      0.0%       0.0%                     44%
+[0m
+Only 1 losing cycle in 329. Final check: does coin selection follow momentum?
+a[0m$ [0mcd /tmp/opencode/hl && python3 - <<'EOF'
+import json,time,bisect
+F=json.load(open("fills_all.json")); C=json.load(open("candles.json"))
+print("candle sample type:",type(C["HYPE"][0][0]),C["HYPE"][0][:2])
+first={}
+for f in sorted(F,key=lambda z:z["time"]): first.setdefault(f["coin"],f["time"])
+def series(c):
+    d=sorted(C[c]); return [int(x[0]) for x in d],[float(x[1]) for x in d]
+print(f"{'coin':<7}{'firstTrade':<12}{'7dPrior':>9}{'14dPrior':>10}{'30dPrior':>10}{'entry pctile of PRIOR 30d range':>36}")
+rows=[]
+for c,t in sorted(first.items(),key=lambda kv:kv[1]):
+    if c not in C: continue
+    ts,cs=series(c)
+    def px(tt):
+        i=bisect.bisect_right(ts,tt)-1
+        return cs[max(0,i)]
+    p0=px(t); prior=[(ts[i],cs[i]) for i in range(len(ts)) if t-30*86400*1000<=ts[i]<=t]
+    r7=100*(p0/px(t-7*86400*1000)-1); r14=100*(p0/px(t-14*86400*1000)-1); r30=100*(p0/px(t-30*86400*1000)-1)
+    lo=min(v for _,v in prior); hi=max(v for _,v in prior)
+    pct=100*(p0-lo)/(hi-lo) if hi>lo else 50
+    rows.append(r7)
+    print(f"{c:<7}{time.strftime('%Y-%m-%d',time.gmtime(t/1000)):<12}{r7:>8.1f}%{r14:>9.1f}%{r30:>9.1f}%{pct:>35.0f}%")
+print("\nmedian 7d-prior return at entry: %+.1f%%"%sorted(rows)[len(rows)//2])
+EOF
+candle sample type: <class 'int'> [1779926400000, 61.52]
+coin   firstTrade    7dPrior  14dPrior  30dPrior     entry pctile of PRIOR 30d range
+HYPE   2026-06-02      13.5%     13.5%     13.5%                                 69%
+XMR    2026-08-25       6.4%     16.2%     24.1%                                 96%
+ZEC    2026-08-31       2.1%     65.0%     83.8%                                 98%
+JUP    2026-09-06      34.6%     27.2%     53.3%                                100%
+ETH    2026-09-06       4.0%      2.1%     31.5%                                100%
+NEAR   2026-09-08      23.0%     24.7%     45.0%                                 86%
+XLM    2026-09-08       6.8%      3.0%     15.6%                                 70%
+ONDO   2026-09-09       3.1%     -4.0%      5.8%                                 49%
+UNI    2026-09-18      47.7%     43.5%    144.4%                                100%
+INJ    2026-09-18      16.5%     39.2%     46.0%                                100%
+ZRO    2026-09-21      19.7%      3.6%      1.5%                                 91%
+
+median 7d-prior return at entry: +13.5%
+[0m
+## Data & method
+
+Hyperliquid `info` API on `0xe755…e578`: 2,000 fills (the `userFills` response cap) spanning **2026-06-02 → 2026-09-26**, 11 perps, $116,033 notional; plus `userFunding` (back to 2026-03-13) and `portfolio` equity curve (2026-01-28 → now: $0 → $2,194, lifetime volume $141,512).
+
+One API caveat that matters: the `dir` field always reads `Open Long`/`Close Long`, but the account **crosses through zero** (133 sign flips on HYPE alone) — position state must be reconstructed from `side`, not `dir`.
+
+## The strategy: two modules
+
+### Module A — "laddered long scalper" (the engine; 10 alt perps, live since 08-25)
+
+Long-only. 1,483 buys / 517 sells → **329 completed round-trips, 4.2/day, ~1h median hold**. Mechanics per trade:
+
+1. Place 2–8 **descending limit buys** below market. Rung spacing 4–123 bps, rung size grows **1.05–1.21× per rung** (mild pyramid).
+2. Let them fill (median build time 0.2–2.0h, ladder depth median 27–500 bps, p95 to 1,437 bps).
+3. Sell **100% of the accumulated size in a single resting limit at exactly VWAEP × (1+TP)**.
+
+TP is a fixed per-coin constant, and realized return matches it to an **IQR of 0.1 bp** — proof the exit is a *placed limit*, not a market order:
+
+| coin | TP bps | ladder depth (med) | size growth/rung | med hold | cycles | rung-0 $ |
+|---|---|---|---|---|---|---|
+| ZEC | 60 | 62 | 1.00 | 0.2h | 39 | 27 |
+| XMR | 70 | 27 | 1.05 | 0.5h | 66 | 29 |
+| INJ | 150 | 115 | 1.07 | 1.0h | 34 | 33 |
+| ZRO | 150 | 202 | 1.20 | 0.8h | 49 | 25 |
+| JUP | 155 | 500 | 1.11 | 1.0h | 18 | 19 |
+| XLM | 190 | 171 | 1.08 | 20h | 5 | 34 |
+| NEAR | 200 | 112 | 1.07 | 1.4h | 66 | 53 |
+| ONDO | 210 | 165 | 1.21 | 1.7h | 36 | 14 |
+| UNI | 210 | 135 | 1.08 | 2.6h | 15 | 22 |
+
+**Result: 328 of 329 cycles profitable.** Median cycle +$1.58, 97.9% win rate. The single loser: ZEC, −$2.21, 6 rungs, 231 bps deep, 24-min hold. Sizing is fixed in *base units* ($14–53), not equity-scaled.
+
+### Module B — "HYPE persistent long" (06-02 → 09-24, 114 days)
+
+259 adds ($17,803, median $60) / 114 trims ($17,881, median $92). Position oscillates around a small core: median notional **$21**, max $662, with brief excursions to −$92 (it does cross short). 98% of trims profitable, median +$1.6, max +$23.7 → **+$340.8**. Median 85 min between actions but gaps up to 22 days. Same "harvest above blended cost" discipline, just never fully de-risked.
+
+### Universe selection is momentum, not mean-reversion
+
+New coins are entered at the **median 96th percentile of their prior-30-day range** (+13.5% median 7-day prior return). It buys breakout leaders and grids the post-breakout chop.
+
+| UNI | ZEC | NEAR | JUP | XMR | HYPE | ONDO | INJ | ZRO | XLM | BTC | ETH |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| +218% | +184% | +100% | +98% | +57% | +50% | +48% | +44% | +43% | +8% | +14% | +34% |
+
+Alt daily vol 4.0–7.2% — that's what makes a 0.6–2.1% intraday target reliably reachable.
+
+## Economics
+
+| | |
+|---|---|
+| Gross trading P&L (116d) | +$868.72 |
+| Fees (74% maker @1.44bp, 26% taker @4.32bp) | −$24.40 |
+| Funding | −$20.91 |
+| **Net** | **+$823.41 on $116,033 vol = 71 bps of volume** |
+| Last 30d | $87,248 vol → **+$590 net (67.6 bps)**, ≈$19.7/day on $2.1k equity ≈ **0.94%/day (~28%/mo)** |
+| Peak position notional | $67–662/coin = **3–30% of equity**, ~50–70% gross |
+| Max equity drawdown (sampled curve) | **−9.1%** ($890 → $809, late July) |
+
+## Read on it
+
+The 99.7% cycle win rate is a **grid-mechanical artifact** — a limit resting at a fixed spread above a computed cost basis fills almost mechanically in a 4–7% daily-vol regime. It is not evidence of forecasting skill. The real edge is the *coin selection*: concentrating on high-beta alts with enough intraday range to pay 1.5–2% per cycle dozens of times a month, at 3–30% of equity per position.
+
+Main fragilities: (1) the exit only fills on an upward retracement, so a vol-crush leaves the ladder filled and the position stuck — visible as ~19 near-$0 days in Jun–Jul; (2) the ladder is buy-only, so a sustained downtrend means bounded-but-real averaging into a loser with an unreachable TP; (3) it's 100% long beta in a window when the universe went +43% to +218% — the same bot in a sustained alt downtrend has no rule in this data for it.
+
+Caveat: the 2,000-fill cap hides everything before 2026-06-02. Funding records and the equity curve (Jan 28: $0 → $496) prove at least one earlier, unobserved phase.

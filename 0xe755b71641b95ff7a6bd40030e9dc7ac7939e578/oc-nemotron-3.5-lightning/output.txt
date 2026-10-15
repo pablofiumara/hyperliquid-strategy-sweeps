@@ -1,0 +1,1 @@
+skipped: model opencode/nemotron-3.5-lightning-free has at least one negative rating in the rating app

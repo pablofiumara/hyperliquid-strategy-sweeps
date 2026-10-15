@@ -1,0 +1,1 @@
+skipped: model kilo/poolside/laguna-xs-2.1:free has at least one negative rating in the rating app

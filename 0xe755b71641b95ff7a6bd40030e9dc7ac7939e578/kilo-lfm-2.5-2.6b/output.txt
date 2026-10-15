@@ -1,0 +1,1 @@
+skipped: model kilo/liquid/lfm-2.5-2.6b:free has at least one negative rating in the rating app

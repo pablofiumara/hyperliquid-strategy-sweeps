@@ -1,0 +1,1 @@
+cline -P cline -m cline-free/muse-spark-1.3-contributor --auto-approve true -y -c /home/paf/Documents/code/misc/hyperliquid-strategy-sweeps/0xe755b71641b95ff7a6bd40030e9dc7ac7939e578/cline-muse-spark-1.3-contributor/work --thinking xhigh -p Reply\ with\ exactly:\ OK

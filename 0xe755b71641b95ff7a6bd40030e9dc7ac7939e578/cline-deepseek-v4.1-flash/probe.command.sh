@@ -1,0 +1,1 @@
+cline -P cline -m cline-free/deepseek-v4.1-flash --auto-approve true -y -c /home/paf/Documents/code/misc/hyperliquid-strategy-sweeps/0xe755b71641b95ff7a6bd40030e9dc7ac7939e578/cline-deepseek-v4.1-flash/work --thinking xhigh -p Reply\ with\ exactly:\ OK

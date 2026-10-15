@@ -1,0 +1,1 @@
+skipped: model kilo/cohere/north-mini-code:free has at least one negative rating in the rating app
