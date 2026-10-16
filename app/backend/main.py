@@ -40,6 +40,17 @@ app.add_middleware(
 _perf_stats = perf.install(app)
 
 
+@app.exception_handler(ApiError)
+async def api_error_handler(request: Request, exc: ApiError):
+    """Turn any deliberate ApiError into its structured envelope.
+
+    Registered globally so an ApiError raised deep inside db.py or ask.py
+    arrives at the caller as an actionable 429/503 instead of being swallowed
+    by FastAPI's default 500 handler.
+    """
+    return exc.to_response()
+
+
 class Rating(BaseModel):
     value: int  # +1 interesting, -1 not, 0 = undo (delete rating)
 
@@ -83,6 +94,34 @@ def perf_snapshot():
 def perf_reset():
     _perf_stats.clear()
     return {"ok": True}
+
+
+@app.get("/api/perf/queries")
+def perf_queries(limit: int = 15):
+    """Slowest queries Postgres has actually executed (pg_stat_statements).
+
+    Unlike the in-process request timer, this is measured by the database
+    itself, so it catches query cost the app never sees (e.g. a full-table
+    aggregate that happens to be fast only because the table is tiny today).
+    """
+    return db.query(
+        """
+        SELECT calls,
+               round(total_exec_time::numeric, 1)              AS total_ms,
+               round(mean_exec_time::numeric, 2)               AS mean_ms,
+               round(max_exec_time::numeric, 1)                AS max_ms,
+               rows,
+               left(query, 160)                               AS query
+        FROM pg_stat_statements
+        -- pattern is parameterised on purpose: a literal percent sign
+        -- anywhere in this SQL string (even in a comment) is parsed by
+        -- psycopg2 as a format placeholder and raises IndexError.
+        WHERE query NOT LIKE %s
+        ORDER BY total_exec_time DESC
+        LIMIT %s
+        """,
+        ("%" + "pg_stat_statements" + "%", limit),
+    )
 
 
 @app.get("/api/wallets")
@@ -301,9 +340,6 @@ def ask_run(run_id: int, body: AskRequest, request: Request):
     history = db.list_conversations(run_id)
     try:
         result = ask_report(text, question, history, tool, model)
-    except ApiError as exc:
-        # Structured 429/503 telling an autonomous caller what to do next.
-        return exc.to_response()
     except Exception as exc:
         raise HTTPException(502, f"ask failed: {exc}")
     # Only asks from the app UI are stored; scripts/tests may call the

@@ -1,27 +1,85 @@
 import os
+import threading
 
 import psycopg2
 import psycopg2.extras
-from psycopg2.pool import SimpleConnectionPool
+from psycopg2.pool import PoolError, SimpleConnectionPool
+
+from errors import ApiError
 
 DATABASE_URL = os.environ.get(
     "DATABASE_URL", "postgresql://hl:hl@db:5432/hl"
 )
 
+# Pool sizing. Starlette runs sync endpoints in a threadpool of 40, so at most
+# 40 requests can be inside query()/execute() at once; DB work is short, so a
+# pool smaller than that is pointless headroom reduction rather than a
+# resource cap. Bounded at 20 for now -- IMPORTANT: this must satisfy
+#   workers x POOL_MAX <= postgres max_connections (default 100)
+# so when Phase 3 adds multiple uvicorn workers, lower this accordingly.
+POOL_MIN = int(os.environ.get("DB_POOL_MIN", "2"))
+POOL_MAX = int(os.environ.get("DB_POOL_MAX", "20"))
+# Bounded wait. psycopg2's SimpleConnectionPool.getconn() blocks indefinitely
+# and offers no timeout, and psycopg2.pool.PoolError is only reachable once
+# the pool is full. A semaphore the same width as the pool gives us the two
+# things we actually want: a bounded wait, and a clean 503 instead of a thread
+# stuck forever or an opaque 500.
+POOL_MAXWAIT = float(os.environ.get("DB_POOL_MAXWAIT", "5"))
+
 _pool = None
+_slots = threading.Semaphore(POOL_MAX)
 
 
 def pool():
     global _pool
     if _pool is None:
         _pool = SimpleConnectionPool(
-            1, 10, DATABASE_URL, cursor_factory=psycopg2.extras.RealDictCursor
+            POOL_MIN,
+            POOL_MAX,
+            DATABASE_URL,
+            cursor_factory=psycopg2.extras.RealDictCursor,
         )
     return _pool
 
 
+def _acquire():
+    if not _slots.acquire(timeout=POOL_MAXWAIT):
+        raise ApiError(
+            503,
+            "db_pool_exhausted",
+            "The database is busy right now. Please retry shortly.",
+            what=(
+                f"All {POOL_MAX} pooled connections were in use for longer than "
+                f"the {POOL_MAXWAIT:g}s wait limit. Nothing was written and no "
+                f"transaction was started."
+            ),
+            fix="Wait a moment and retry the identical request.",
+            next_actions=[
+                "Retry after a short delay.",
+                "If this persists, the database is the bottleneck: compare "
+                "GET /api/perf (per-route latency) against GET /api/perf/queries "
+                "(slowest statements) to see whether queries or contention is "
+                "the cause.",
+            ],
+            headers={"Retry-After": "2"},
+            extra={"pool_max": POOL_MAX, "max_wait_s": POOL_MAXWAIT},
+        )
+    try:
+        return pool().getconn()
+    except PoolError as exc:  # pragma: no cover - semaphore should prevent this
+        _slots.release()
+        raise ApiError(
+            503,
+            "db_pool_exhausted",
+            "The database is busy right now. Please retry shortly.",
+            what=str(exc),
+            fix="Wait a moment and retry the identical request.",
+            headers={"Retry-After": "2"},
+        ) from exc
+
+
 def query(sql, args=None, one=False):
-    conn = pool().getconn()
+    conn = _acquire()
     try:
         with conn, conn.cursor() as cur:
             cur.execute(sql, args)
@@ -29,16 +87,18 @@ def query(sql, args=None, one=False):
             return (rows[0] if rows else None) if one else rows
     finally:
         pool().putconn(conn)
+        _slots.release()
 
 
 def execute(sql, args=None):
-    conn = pool().getconn()
+    conn = _acquire()
     try:
         with conn, conn.cursor() as cur:
             cur.execute(sql, args)
             conn.commit()
     finally:
         pool().putconn(conn)
+        _slots.release()
 
 
 def ensure_conversations_table() -> None:

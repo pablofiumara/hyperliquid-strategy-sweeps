@@ -5,6 +5,7 @@ services:
       POSTGRES_USER: hl
       POSTGRES_PASSWORD: hl
       POSTGRES_DB: hl
+    command: ["postgres", "-c", "shared_preload_libraries=pg_stat_statements", "-c", "pg_stat_statements.max=1000"]
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./app/backend/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
