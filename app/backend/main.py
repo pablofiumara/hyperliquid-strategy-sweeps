@@ -67,6 +67,13 @@ app.add_middleware(
 )
 _perf_stats = perf.install(app)
 
+# Origins the browser app can legitimately be served from. A question is only
+# persisted into visible history if it arrives from one of these AND declares
+# X-Client: ui -- see the /ask handler.
+_ALLOWED_UI_ORIGINS = {
+    f"http://localhost:{p}" for p in ("8080", "80")
+} | {f"http://127.0.0.1:{p}" for p in ("8080", "80")}
+
 
 @app.exception_handler(ApiError)
 async def api_error_handler(request: Request, exc: ApiError):
@@ -370,7 +377,15 @@ def ask_run(run_id: int, body: AskRequest, request: Request):
             raise HTTPException(503, "no free models available")
         tool = free[0]["tool"]
         model = free[0]["model"]
-    from_ui = request.headers.get("x-client") == "ui"
+    # Only questions raised by the app's own UI are persisted as visible
+    # conversation history. The X-Client header is caller-controlled, so a
+    # script that sets it (a test, a curl, another tool) must not be able to
+    # inject itself into the user's history -- we additionally require the
+    # request to come from our own origin. Everything else is treated as a
+    # non-UI caller and stored only as a job.
+    claimed_ui = request.headers.get("x-client") == "ui"
+    same_origin = (request.headers.get("origin") or "") in _ALLOWED_UI_ORIGINS
+    from_ui = claimed_ui and same_origin
 
     # Backpressure: refuse new work once the backlog is deep enough that the
     # answer would arrive long after the caller stopped caring. Better a
