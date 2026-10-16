@@ -3,6 +3,8 @@ import os
 import re
 import subprocess
 import tempfile
+import threading
+import time
 import urllib.error
 import urllib.request
 from typing import Any
@@ -11,6 +13,22 @@ CHUNK_SIZE = 900
 CHUNK_OVERLAP = 150
 
 ROUTER_RE = True
+
+# ---------------------------------------------------------------------------
+# Free-model list cache (TTL + single-flight).
+#
+# The free list is expensive to build: when the cached free_{tool}.txt files
+# are missing or empty, _generate_free_list shells out to each CLI (up to 180s
+# per tool). list_free_models() used to run that on EVERY request, twice per
+# /ask (main.py calls it directly, and is_free_model calls it again). A small
+# TTL cache plus a lock collapses concurrent callers onto one fetch and keeps
+# the hot path in microseconds. 300s is short enough that a model becoming
+# paid (or newly free) is picked up quickly.
+# ---------------------------------------------------------------------------
+_FREE_TTL_SECONDS = 300.0
+_free_cache: list[dict[str, Any]] | None = None
+_free_cache_at: float = 0.0
+_free_lock = threading.Lock()
 
 
 def _cli_env() -> dict:
@@ -69,9 +87,7 @@ def _generate_free_list(tool: str) -> list[str]:
         return []
 
 
-def list_free_models() -> list[dict[str, Any]]:
-    """Free $0 models exposed by kilo/opencode/cline."""
-    free_dir = _ask_jobs_dir()
+def _build_free_models() -> list[dict[str, Any]]:
     items: list[dict[str, Any]] = []
     seen = set()
     for tool in ("cline", "kilo", "opencode"):
@@ -95,6 +111,35 @@ def list_free_models() -> list[dict[str, Any]]:
                 }
             )
     return items
+
+
+def list_free_models() -> list[dict[str, Any]]:
+    """Free $0 models exposed by kilo/opencode/cline, TTL-cached.
+
+    Returns a shallow copy so callers cannot mutate the cached list. On a
+    transient build failure we deliberately do NOT cache the empty result --
+    we serve the stale list (if any) so one bad probe cannot disable /ask for
+    the whole TTL window.
+    """
+    global _free_cache, _free_cache_at
+    now = time.monotonic()
+    if _free_cache is not None and (now - _free_cache_at) < _FREE_TTL_SECONDS:
+        return list(_free_cache)
+    # Single-flight: only the first thread builds; the rest wait here and then
+    # hit the fresh cache.
+    with _free_lock:
+        now = time.monotonic()
+        if _free_cache is not None and (now - _free_cache_at) < _FREE_TTL_SECONDS:
+            return list(_free_cache)
+        items = _build_free_models()
+        if items:
+            _free_cache = items
+            _free_cache_at = time.monotonic()
+            return list(items)
+        # Build failed (e.g. CLIs not reachable). Serve stale if we have it.
+        if _free_cache is not None:
+            return list(_free_cache)
+        return []
 
 
 def is_free_model(tool: str | None, model: str | None) -> bool:

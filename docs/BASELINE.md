@@ -79,6 +79,26 @@ That is the clearest possible statement of the problem.
   shells out for up to **180 seconds**. Move or empty that directory and every
   `/ask` silently pays a 180-second tax, twice (`main.py:263` and again inside
   `is_free_model`). Fixing this is defensive, not speculative.
+
+  > **This then happened for real.** `free_cline.txt` was truncated to 0 bytes
+  > by the sibling project partway through the session (`ls -la` timestamped
+  > after the run; it held 121 bytes at the start). Re-measured with the cache
+  > files removed entirely:
+  >
+  > ```
+  > COLD  list_free_models(): 25 models in 4.1s
+  > WARM  list_free_models(): 25 models in 0.0000s
+  > ```
+  >
+  > 4.1 s is with the CLIs answering promptly; the per-tool timeout is 180 s,
+  > so under CPU contention it is far worse. Because `list_free_models()` ran
+  > on every request, and `is_free_model()` calls it again, a single `/ask`
+  > was paying **~8.2 s of pure overhead before doing any work**. Fixed in
+  > commit 2 by a 300 s TTL cache with single-flight locking.
+
+  A second, related quirk: `_generate_free_list("cline")` simply re-reads the
+  same file, so an empty `free_cline.txt` permanently drops cline from the
+  list (26 → 25 models here) until the sibling project repopulates it.
 * **Connection pool.** `db.py` uses `SimpleConnectionPool(1, 10)` with no
   `maxwait`; exhaustion surfaces as a raw `PoolError` → HTTP 500. It did not
   trip in this run because only 10 threads reached the DB concurrently, but it
