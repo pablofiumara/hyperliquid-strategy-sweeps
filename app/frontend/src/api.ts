@@ -54,8 +54,33 @@ async function api<T>(path: string): Promise<T> {
 }
 
 export const getWallets = () => api<Wallet[]>("/api/wallets");
-export const getRuns = (addr: string) =>
-  api<Run[]>(`/api/wallets/${addr}/runs`);
+export type PerfRoute = {
+  route: string;
+  count: number;
+  errors: number;
+  in_flight: number;
+  p50_ms: number;
+  p95_ms: number;
+  p99_ms: number;
+  max_ms: number;
+  avg_ms: number;
+  uptime_s: number;
+};
+export type PerfSnapshot = { routes: PerfRoute[]; window_samples: number };
+
+export async function getPerf(): Promise<PerfSnapshot> {
+  return api<PerfSnapshot>("/api/perf");
+}
+
+export async function resetPerf() {
+  const res = await fetch("/api/perf/reset", { method: "POST" });
+  if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+  return res.json() as Promise<{ ok: boolean }>;
+}
+
+export async function getRuns(addr: string) {
+  return api<Run[]>(`/api/wallets/${addr}/runs`);
+}
 export type WalletSummary = {
   wallet: string;
   consensus_strategy: string;

@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 import db
+import perf
 from importer import DATA_DIR, import_all
 from cleanup import cleanup_all, cleanup_wallet
 from ask import ask_report, is_free_model, list_free_models
@@ -35,6 +36,7 @@ app = FastAPI(title="Hyperliquid Strategy Sweep", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"]
 )
+_perf_stats = perf.install(app)
 
 
 class Rating(BaseModel):
@@ -55,6 +57,25 @@ def do_import():
 @app.get("/api/models/free")
 def free_models():
     return list_free_models()
+
+
+@app.get("/api/perf")
+def perf_snapshot():
+    """Rolling per-route latency, newest-worst-first.
+
+    Percentiles come from the retained sample buffer; ``in_flight`` is the
+    requests currently executing and is what shows the threadpool ceiling
+    while the k6 load test is running.
+    """
+    routes = [{ "route": k, **v.snapshot()} for k, v in _perf_stats.items()]
+    routes.sort(key=lambda r: r["p95_ms"], reverse=True)
+    return {"routes": routes, "window_samples": perf._MAX_SAMPLES}
+
+
+@app.post("/api/perf/reset")
+def perf_reset():
+    _perf_stats.clear()
+    return {"ok": True}
 
 
 @app.get("/api/wallets")

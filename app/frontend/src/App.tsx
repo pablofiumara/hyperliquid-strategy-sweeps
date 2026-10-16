@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import PerfPage from "./PerfPage";
 import {
   askRun,
   genSummary,
@@ -22,7 +23,8 @@ import {
 type View =
   | { page: "wallets" }
   | { page: "runs"; wallet: string }
-  | { page: "run"; wallet: string; label: string };
+  | { page: "run"; wallet: string; label: string }
+  | { page: "perf" };
 
 const POLL_MS = 5000;
 
@@ -114,6 +116,8 @@ const pathFor = (view: View): string => {
   switch (view.page) {
     case "wallets":
       return "/";
+    case "perf":
+      return "/perf";
     case "runs":
       return `/wallet/${view.wallet}`;
     case "run":
@@ -122,6 +126,7 @@ const pathFor = (view: View): string => {
 };
 
 function viewFromPath(path: string): View {
+  if (path === "/perf") return { page: "perf" };
   let m = path.match(/^\/wallet\/([^/]+)\/([^/]+)$/);
   if (m) return { page: "run", wallet: m[1], label: decodeURIComponent(m[2]) };
   m = path.match(/^\/wallet\/([^/]+)$/);
@@ -194,6 +199,7 @@ export default function App() {
           onBack={() => navigate({ page: "runs", wallet: view.wallet })}
         />
       )}
+      {view.page === "perf" && <PerfPage />}
       {view.page !== "run" && <BottomBar view={view} navigate={navigate} />}
     </div>
   );
@@ -589,12 +595,23 @@ function FixedRatingBar({
 
 /** Fixed bottom bar: always reachable, even deep in a long list. */
 function BottomBar({ view, navigate }: { view: View; navigate: (v: View) => void }) {
+  if (view.page === "perf") {
+    return (
+      <div className="bottombar">
+        <button onClick={() => navigate({ page: "wallets" })}>← Wallets</button>
+        <button className="primary" disabled>
+          ⚡ perf
+        </button>
+      </div>
+    );
+  }
   if (view.page === "wallets") {
     return (
       <div className="bottombar">
         <button className="primary" disabled>
           ⛓ wallets
         </button>
+        <button onClick={() => navigate({ page: "perf" })}>⚡ perf</button>
       </div>
     );
   }
