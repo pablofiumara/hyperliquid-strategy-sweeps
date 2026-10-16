@@ -6,14 +6,17 @@ import {
   getConversations,
   getFreeModels,
   getDurationRanking,
+  getJob,
   getRunByLabel,
   getRuns,
   getSummary,
   getWallets,
   rate,
+  streamJob,
   type Conversation,
   type DurationRank,
   type FreeModel,
+  type JobStatus,
   type Run,
   type RunDetail,
   type Wallet,
@@ -465,20 +468,65 @@ function RunPage({ wallet, label, onBack }: { wallet: string; label: string; onB
     return () => { cancelled = true; };
   }, []);
 
+  const closeStreamRef = useRef<(() => void) | null>(null);
+  const [askStatus, setAskStatus] = useState("");
+
+  useEffect(() => () => closeStreamRef.current?.(), []);
+
   async function ask() {
     if (!run || !question.trim() || askingRef.current) return;
     askingRef.current = true;
     setAsking(true);
     setAskErr("");
+    setAskStatus("queueing…");
+    let poller: ReturnType<typeof setInterval> | null = null;
     try {
       const fm = freeModels.find((x) => x.name === selected);
-      await askRun(run.id, question.trim(), fm?.tool, fm?.model);
+      const accepted = await askRun(run.id, question.trim(), fm?.tool, fm?.model);
       setQuestion("");
-      const c = await getConversations(run.id);
-      setConvos(c);
+      setAskStatus("agent thinking…");
+
+      await new Promise<void>((resolve) => {
+        let settled = false;
+        const finish = () => {
+          if (settled) return;
+          settled = true;
+          closeStreamRef.current?.();
+          closeStreamRef.current = null;
+          if (poller) clearInterval(poller);
+          resolve();
+        };
+        const onTerminal = (j: JobStatus) => {
+          if (j.status === "done") {
+            setAskStatus("");
+            getConversations(run.id).then(setConvos).catch(() => {});
+            finish();
+          } else if (j.status === "error") {
+            setAskErr(j.error || "agent failed");
+            setAskStatus("");
+            finish();
+          } else if (j.status === "pending") {
+            setAskStatus("queued…");
+          } else {
+            setAskStatus("agent thinking…");
+          }
+        };
+        closeStreamRef.current = streamJob(accepted.job_id, onTerminal);
+        // Safety net for when the SSE stream cannot be established.
+        poller = setInterval(async () => {
+          if (settled) return;
+          try {
+            onTerminal(await getJob(accepted.job_id));
+          } catch {
+            /* keep polling */
+          }
+        }, 2000);
+      });
     } catch (e) {
+      setAskStatus("");
       setAskErr(String(e));
     } finally {
+      if (poller) clearInterval(poller);
       askingRef.current = false;
       setAsking(false);
     }
@@ -546,6 +594,11 @@ function RunPage({ wallet, label, onBack }: { wallet: string; label: string; onB
               {asking ? "Asking…" : "Ask"}
             </button>
           </div>
+          {askStatus ? (
+            <p className="dim" style={{ fontSize: 12, marginBottom: 8 }}>
+              ⟳ {askStatus} (the agent can take up to 5 minutes)
+            </p>
+          ) : null}
           {askErr ? <p className="dim">{askErr}</p> : null}
           {(convos || []).map((c) => (
             <div key={c.id} style={{ marginBottom: 12 }}>

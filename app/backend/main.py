@@ -1,13 +1,18 @@
+import asyncio
+import contextlib
 import os
 import pathlib
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel
 
 import db
+import jobs
 import perf
+import worker
 from errors import ApiError
 from importer import DATA_DIR, import_all
 from cleanup import cleanup_all, cleanup_wallet
@@ -27,10 +32,19 @@ def _norm_summary(row):
 async def lifespan(app: FastAPI):
     try:
         db.ensure_conversations_table()
+        jobs.ensure_agent_jobs_table()
         import_all()
     except Exception as e:  # db not ready yet -> frontend still boots
         print(f"startup import skipped: {e}")
-    yield
+    # Drain the agent job queue for this process. Phase 3 promotes this to a
+    # dedicated worker service; the contract is identical either way.
+    worker_task = asyncio.create_task(worker.run(), name="agent-workers")
+    try:
+        yield
+    finally:
+        worker_task.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await worker_task
 
 
 app = FastAPI(title="Hyperliquid Strategy Sweep", lifespan=lifespan)
@@ -73,8 +87,11 @@ def free_models():
 
 @app.get("/api/capacity")
 def capacity():
-    """Agent slot usage -- lets a client check before it fires, not after a 429."""
-    return agent_capacity()
+    """Agent slot usage + queue depth -- lets a client check before it fires,
+    instead of discovering saturation via a 429."""
+    cap = agent_capacity()
+    depth = jobs.queue_depth()
+    return {**cap, "queue_pending": depth["pending"], "queue_running": depth["running"]}
 
 
 @app.get("/api/perf")
@@ -315,8 +332,19 @@ def conversations(run_id: int):
     return out
 
 
-@app.post("/api/runs/{run_id}/ask")
+@app.post("/api/runs/{run_id}/ask", status_code=202)
 def ask_run(run_id: int, body: AskRequest, request: Request):
+    """Queue a follow-up question for an AI agent.
+
+    Returns 202 immediately. The agent can take up to 300s, so the request
+    deliberately does NOT wait for it -- holding a server thread for that long
+    was what starved every other endpoint (docs/BASELINE.md). Subscribe to
+    /api/jobs/{id}/stream for the answer, or poll /api/jobs/{id}.
+
+    Validation still happens synchronously, so a caller still learns
+    immediately -- with a structured error -- whether the run exists, whether
+    it has a report, and whether the chosen model is really free.
+    """
     run = db.query("SELECT * FROM runs WHERE id = %s", (run_id,), one=True)
     if not run:
         raise HTTPException(404, "run not found")
@@ -326,7 +354,6 @@ def ask_run(run_id: int, body: AskRequest, request: Request):
     question = (body.question or "").strip()
     if not question:
         raise HTTPException(422, "question is empty")
-    text = open(path, encoding="utf-8", errors="replace").read()
     free = list_free_models()
     tool = body.tool
     model = body.model
@@ -337,20 +364,124 @@ def ask_run(run_id: int, body: AskRequest, request: Request):
             raise HTTPException(503, "no free models available")
         tool = free[0]["tool"]
         model = free[0]["model"]
-    history = db.list_conversations(run_id)
-    try:
-        result = ask_report(text, question, history, tool, model)
-    except Exception as exc:
-        raise HTTPException(502, f"ask failed: {exc}")
-    # Only asks from the app UI are stored; scripts/tests may call the
-    # endpoint but must never leave visible conversations behind.
-    if request.headers.get("x-client") == "ui":
-        db.add_conversation(run_id, question, result["answer"], result["model"], result["citations"])
-    return {
-        "answer": result["answer"],
-        "model": result["model"],
-        "citations": result["citations"],
+    from_ui = request.headers.get("x-client") == "ui"
+
+    # Backpressure: refuse new work once the backlog is deep enough that the
+    # answer would arrive long after the caller stopped caring. Better a
+    # clear 429 with a position than an answer in three hours.
+    depth = jobs.queue_depth()
+    if depth["pending"] >= jobs.MAX_QUEUE_DEPTH:
+        raise ApiError(
+            429,
+            "agent_queue_full",
+            "The agent queue is full. Too many questions are already waiting.",
+            what=(
+                f"{depth['pending']} job(s) pending, limit is "
+                f"{jobs.MAX_QUEUE_DEPTH}. {depth['running']} agent(s) running."
+            ),
+            fix=(
+                "Wait until the backlog drains and retry. Nothing was queued "
+                "by this request and no state changed."
+            ),
+            next_actions=[
+                "Retry after a delay.",
+                "GET /api/capacity to watch queue_pending fall before retrying.",
+                "Ask fewer follow-ups concurrently.",
+            ],
+            headers={"Retry-After": "15"},
+            extra={
+                "pending": depth["pending"],
+                "running": depth["running"],
+                "limit": jobs.MAX_QUEUE_DEPTH,
+            },
+        )
+
+    job_id = jobs.enqueue(run_id, question, tool, model, from_ui)
+    return JSONResponse(
+        status_code=202,
+        content={
+            "job_id": job_id,
+            "status": "pending",
+            "poll_url": f"/api/jobs/{job_id}",
+            "stream_url": f"/api/jobs/{job_id}/stream",
+        },
+    )
+
+
+def _job_view(job: dict) -> dict:
+    out = {
+        "job_id": job["id"],
+        "status": job["status"],
+        "tool": job["tool"],
+        "model": job["model"],
+        "created_at": job["created_at"].isoformat() if job.get("created_at") else None,
     }
+    if job["status"] == "done":
+        out["answer"] = job["answer"]
+        out["citations"] = job.get("citations") or []
+    if job["status"] == "error":
+        out["error"] = job.get("error") or "agent failed"
+    return out
+
+
+@app.get("/api/jobs/{job_id}")
+def job_status(job_id: int):
+    job = jobs.get(job_id)
+    if not job:
+        raise ApiError(
+            404,
+            "job_not_found",
+            f"No agent job with id {job_id}.",
+            fix="Use the job_id returned when you POSTed to /api/runs/{id}/ask.",
+            next_actions=["POST /api/runs/{run_id}/ask to create a new job."],
+        )
+    return _job_view(job)
+
+
+@app.get("/api/jobs/{job_id}/stream")
+async def job_stream(job_id: int, request: Request):
+    """Server-Sent Events: pending -> running -> done|error.
+
+    One event per state change, then the stream closes. A client that only
+    wants the answer can ignore the intermediate events and read the terminal
+    one.
+    """
+    job = jobs.get(job_id)
+    if not job:
+        raise ApiError(
+            404,
+            "job_not_found",
+            f"No agent job with id {job_id}.",
+            fix="Use the job_id returned when you POSTed to /api/runs/{id}/ask.",
+            next_actions=["POST /api/runs/{run_id}/ask to create a new job."],
+        )
+
+    async def events():
+        import json as _json
+
+        seen = None
+        while True:
+            if await request.is_disconnected():
+                return
+            current = jobs.get(job_id)
+            if current is None:
+                return
+            status = current["status"]
+            if status != seen:
+                seen = status
+                yield f"event: {status}\ndata: {_json.dumps(_job_view(current))}\n\n"
+            if status in ("done", "error"):
+                return
+            await asyncio.sleep(0.5)
+
+    return StreamingResponse(
+        events(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-store",
+            "X-Accel-Buffering": "no",  # stop nginx from buffering the stream
+        },
+    )
 
 
 @app.get("/api/wallets/{address}/summary")

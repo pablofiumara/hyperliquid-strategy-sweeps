@@ -64,3 +64,26 @@ CREATE TABLE IF NOT EXISTS conversations (
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS conversations_run_idx ON conversations(run_id);
+
+-- Asynchronous agent jobs. A POST /ask returns 202 + job_id immediately and a
+-- worker claims rows with FOR UPDATE SKIP LOCKED, so a request never holds a
+-- server thread for the (up to 300s) lifetime of an AI CLI subprocess.
+-- status: pending -> running -> done | error
+CREATE TABLE IF NOT EXISTS agent_jobs (
+    id          SERIAL PRIMARY KEY,
+    run_id      INT NOT NULL REFERENCES runs(id) ON DELETE CASCADE,
+    question    TEXT NOT NULL,
+    tool        TEXT NOT NULL,
+    model       TEXT NOT NULL,
+    status      TEXT NOT NULL DEFAULT 'pending'
+                CHECK (status IN ('pending','running','done','error')),
+    answer      TEXT,
+    citations   JSONB,
+    error       TEXT,
+    from_ui     BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    started_at  TIMESTAMPTZ,
+    finished_at TIMESTAMPTZ
+);
+CREATE INDEX IF NOT EXISTS agent_jobs_status_idx ON agent_jobs(status);
+CREATE INDEX IF NOT EXISTS agent_jobs_run_idx ON agent_jobs(run_id);

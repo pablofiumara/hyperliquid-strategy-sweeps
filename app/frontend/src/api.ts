@@ -32,14 +32,72 @@ export async function getConversations(runId: number) {
   return api<Conversation[]>(`/api/runs/${runId}/conversations`);
 }
 
-export async function askRun(runId: number, question: string, tool?: string | null, model?: string | null) {
+export type AskAccepted = {
+  job_id: number;
+  status: string;
+  poll_url: string;
+  stream_url: string;
+};
+
+/** POST an ask. The server answers 202 immediately and does the work in the
+ *  background -- an agent can take up to 300s, so we must not wait inline. */
+export async function askRun(
+  runId: number,
+  question: string,
+  tool?: string | null,
+  model?: string | null,
+): Promise<AskAccepted> {
   const res = await fetch(`/api/runs/${runId}/ask`, {
     method: "POST",
     headers: { "Content-Type": "application/json", "X-Client": "ui" },
     body: JSON.stringify({ question, tool: tool || null, model: model || null }),
   });
-  if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
-  return (await res.json()) as { answer: string; tool?: string; model: string; citations: number[] };
+  if (!res.ok) {
+    // Surface the structured error envelope when the server provides one.
+    let detail = `${res.status} ${res.statusText}`;
+    try {
+      const body = await res.json();
+      if (body?.error?.message) detail = body.error.message;
+    } catch {
+      /* keep the status line */
+    }
+    throw new Error(detail);
+  }
+  return (await res.json()) as AskAccepted;
+}
+
+export type JobStatus = {
+  job_id: number;
+  status: "pending" | "running" | "done" | "error";
+  tool: string;
+  model: string;
+  answer?: string;
+  citations?: number[] | null;
+  error?: string;
+};
+
+export const getJob = (jobId: number) => api<JobStatus>(`/api/jobs/${jobId}`);
+
+/** Follow a job to completion over SSE, reporting each state change.
+ *  Falls back silently to nothing if the stream cannot be opened; callers
+ *  should poll getJob as a safety net. */
+export function streamJob(
+  jobId: number,
+  onUpdate: (j: JobStatus) => void,
+): () => void {
+  const es = new EventSource(`/api/jobs/${jobId}/stream`);
+  const handle = (e: MessageEvent) => {
+    try {
+      onUpdate(JSON.parse(e.data) as JobStatus);
+    } catch {
+      /* ignore malformed frame */
+    }
+  };
+  for (const ev of ["pending", "running", "done", "error"]) {
+    es.addEventListener(ev, handle as EventListener);
+  }
+  es.onmessage = handle;
+  return () => es.close();
 }
 
 export type FreeModel = { tool: string; model: string; name: string; free: boolean; price: string };
