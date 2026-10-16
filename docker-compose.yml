@@ -39,6 +39,35 @@ services:
     ports:
       - "8002:8000"
 
+  # Dedicated agent worker. It drains the same agent_jobs table the API writes
+  # to, using FOR UPDATE SKIP LOCKED. Running it separately from the API means
+  # the concurrency cap is GLOBAL: if the API scaled to N uvicorn workers each
+  # spawning in-process workers, the effective agent parallelism would be
+  # N * AGENT_CONCURRENCY, and each process would hold its own semaphore --
+  # a cap that silently multiplies with horizontal scaling.
+  agent-worker:
+    build: ./app/backend
+    command: ["python3", "/srv/worker.py"]
+    environment:
+      DATABASE_URL: postgresql://hl:hl@db:5432/hl
+      DATA_DIR: /data
+      ASK_JOBS_DIR: /pv_ask_jobs
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - .:/data:rw
+      - /home/paf/Documents/code/misc/prompt-viewer/ask_jobs:/pv_ask_jobs:ro
+      - /home/paf/.npm-global:/root/.npm-global
+      - /home/paf/.kilo:/root/.kilo
+      - /home/paf/.opencode:/root/.opencode
+      - /home/paf/.cline:/root/.cline
+    depends_on:
+      db:
+        condition: service_healthy
+    deploy:
+      replicas: 1
+    restart: unless-stopped
+
   frontend:
     build: ./app/frontend
     depends_on:

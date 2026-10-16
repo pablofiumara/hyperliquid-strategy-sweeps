@@ -36,15 +36,22 @@ async def lifespan(app: FastAPI):
         import_all()
     except Exception as e:  # db not ready yet -> frontend still boots
         print(f"startup import skipped: {e}")
-    # Drain the agent job queue for this process. Phase 3 promotes this to a
-    # dedicated worker service; the contract is identical either way.
-    worker_task = asyncio.create_task(worker.run(), name="agent-workers")
+    # Drain the agent job queue in-process ONLY when no dedicated worker
+    # service is running. With the agent-worker service up, the backend must
+    # stay a pure API tier: two sets of workers would double the number of
+    # live agent subprocesses. Set RUN_WORKER_IN_API=1 to run them inline
+    # (useful for a single-container dev run).
+    run_inline = os.environ.get("RUN_WORKER_IN_API", "0") == "1"
+    worker_task = None
+    if run_inline:
+        worker_task = asyncio.create_task(worker.run(), name="agent-workers")
     try:
         yield
     finally:
-        worker_task.cancel()
-        with contextlib.suppress(asyncio.CancelledError):
-            await worker_task
+        if worker_task is not None:
+            worker_task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await worker_task
 
 
 app = FastAPI(title="Hyperliquid Strategy Sweep", lifespan=lifespan)
