@@ -8,9 +8,10 @@ from pydantic import BaseModel
 
 import db
 import perf
+from errors import ApiError
 from importer import DATA_DIR, import_all
 from cleanup import cleanup_all, cleanup_wallet
-from ask import ask_report, is_free_model, list_free_models
+from ask import ask_report, agent_capacity, is_free_model, list_free_models
 
 
 def _norm_summary(row):
@@ -57,6 +58,12 @@ def do_import():
 @app.get("/api/models/free")
 def free_models():
     return list_free_models()
+
+
+@app.get("/api/capacity")
+def capacity():
+    """Agent slot usage -- lets a client check before it fires, not after a 429."""
+    return agent_capacity()
 
 
 @app.get("/api/perf")
@@ -294,6 +301,9 @@ def ask_run(run_id: int, body: AskRequest, request: Request):
     history = db.list_conversations(run_id)
     try:
         result = ask_report(text, question, history, tool, model)
+    except ApiError as exc:
+        # Structured 429/503 telling an autonomous caller what to do next.
+        return exc.to_response()
     except Exception as exc:
         raise HTTPException(502, f"ask failed: {exc}")
     # Only asks from the app UI are stored; scripts/tests may call the

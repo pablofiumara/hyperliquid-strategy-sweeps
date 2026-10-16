@@ -9,10 +9,68 @@ import urllib.error
 import urllib.request
 from typing import Any
 
+from errors import capacity_exhausted
+
 CHUNK_SIZE = 900
 CHUNK_OVERLAP = 150
 
 ROUTER_RE = True
+
+# ---------------------------------------------------------------------------
+# Agent concurrency cap.
+#
+# Every agent call runs a Node CLI subprocess that can live for 300s. Without a
+# cap, N concurrent asks spawn N of those processes and the box thrashes. The
+# cap makes overload explicit: a caller waits briefly for a slot, then gets a
+# structured 429 telling it exactly when to come back.
+#
+# This is a threading (not asyncio) semaphore because ask_report/_run_cli are
+# synchronous and run inside Starlette's threadpool.
+# ---------------------------------------------------------------------------
+AGENT_CONCURRENCY = int(os.environ.get("AGENT_CONCURRENCY", "6"))
+AGENT_SLOT_WAIT_SECONDS = float(os.environ.get("AGENT_SLOT_WAIT_SECONDS", "5"))
+AGENT_RETRY_AFTER_SECONDS = int(os.environ.get("AGENT_RETRY_AFTER_SECONDS", "10"))
+
+_agent_slots = threading.BoundedSemaphore(AGENT_CONCURRENCY)
+_agent_lock = threading.Lock()
+_agent_in_use = 0
+
+
+def agent_capacity() -> dict[str, int]:
+    with _agent_lock:
+        return {
+            "capacity": AGENT_CONCURRENCY,
+            "in_use": _agent_in_use,
+            "free": max(0, AGENT_CONCURRENCY - _agent_in_use),
+        }
+
+
+class _AgentSlot:
+    """Context manager that holds one of the agent slots or raises a 429."""
+
+    def __enter__(self):
+        waited = time.monotonic()
+        if not _agent_slots.acquire(timeout=AGENT_SLOT_WAIT_SECONDS):
+            waited_s = time.monotonic() - waited
+            cap = agent_capacity()
+            raise capacity_exhausted(
+                capacity=cap["capacity"],
+                in_use=cap["in_use"],
+                waited_s=waited_s,
+                retry_after_s=AGENT_RETRY_AFTER_SECONDS,
+            )
+        self.waited_s = time.monotonic() - waited
+        global _agent_in_use
+        with _agent_lock:
+            _agent_in_use += 1
+        return self
+
+    def __exit__(self, *exc):
+        global _agent_in_use
+        with _agent_lock:
+            _agent_in_use -= 1
+        _agent_slots.release()
+        return False
 
 # ---------------------------------------------------------------------------
 # Free-model list cache (TTL + single-flight).
@@ -204,14 +262,17 @@ def _run_cli(tool: str, model: str, prompt: str, timeout: int = 300) -> str:
             cmd = ["kilo", "run", "-m", model, "--auto", "--dir", work, prompt]
         else:
             cmd = ["opencode", "run", "-m", model, "--auto", "--dir", work, prompt]
-        proc = subprocess.run(
-            cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            text=True,
-            timeout=timeout,
-            env=_cli_env(),
-        )
+        # Hold a slot only around the actual subprocess execution -- that is
+        # the expensive, resource-hungry part. Prompt assembly happens outside.
+        with _AgentSlot():
+            proc = subprocess.run(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                timeout=timeout,
+                env=_cli_env(),
+            )
         out = proc.stdout or ""
         if tool == "cline":
             tpath = os.path.join(work, "transcript.jsonl")
