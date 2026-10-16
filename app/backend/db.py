@@ -120,6 +120,66 @@ def ensure_conversations_table() -> None:
     )
 
 
+def ensure_global_score() -> None:
+    """Runtime migration for the denormalised model score.
+
+    init.sql only runs on first database creation, so the column, function and
+    trigger must also be applied idempotently at startup against an existing
+    volume, then backfilled once.
+    """
+    execute("ALTER TABLE runs ADD COLUMN IF NOT EXISTS global_score INT NOT NULL DEFAULT 0")
+    # Two functions on purpose: Postgres requires anything invoked by CREATE
+    # TRIGGER to return `trigger`, but we also want to call the recalculation
+    # directly for the one-off backfill. A single VOID function satisfies the
+    # second need and silently breaks the first.
+    execute(
+        """
+        CREATE OR REPLACE FUNCTION runs_recalc_global_scores() RETURNS VOID AS $$
+        BEGIN
+            UPDATE runs r SET global_score = COALESCE(s.score, 0)
+            FROM (
+                SELECT r2.model, SUM(COALESCE(rt.value, 0)) AS score
+                FROM runs r2
+                LEFT JOIN ratings rt ON rt.run_id = r2.id
+                WHERE r2.model IS NOT NULL
+                GROUP BY r2.model
+            ) s
+            WHERE r.model = s.model;
+        END;
+        $$ LANGUAGE plpgsql
+        """
+    )
+    execute(
+        """
+        CREATE OR REPLACE FUNCTION runs_recalc_global_scores_trg() RETURNS trigger AS $$
+        BEGIN
+            PERFORM runs_recalc_global_scores();
+            RETURN NULL;
+        END;
+        $$ LANGUAGE plpgsql
+        """
+    )
+    execute("DROP TRIGGER IF EXISTS ratings_recalc_global_scores ON ratings")
+    execute(
+        """
+        CREATE TRIGGER ratings_recalc_global_scores
+        AFTER INSERT OR UPDATE OR DELETE ON ratings
+        FOR EACH STATEMENT EXECUTE FUNCTION runs_recalc_global_scores_trg()
+        """
+    )
+    # Backfill any rows the trigger did not see (predates the column).
+    execute("SELECT runs_recalc_global_scores()")
+
+
+def get_run_global_score(model: str) -> int:
+    row = query(
+        "SELECT global_score FROM runs WHERE model = %s LIMIT 1",
+        (model,),
+        one=True,
+    )
+    return int(row["global_score"]) if row else 0
+
+
 def list_conversations(run_id: int):
     return query(
         "SELECT id, question, answer, model, citations, created_at "

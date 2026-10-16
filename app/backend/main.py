@@ -30,11 +30,18 @@ def _norm_summary(row):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Schema migrations are NOT soft-fail. A partially applied migration used
+    # to be swallowed by the same try/except as the optional filesystem import,
+    # which left the app running with a missing trigger and silently wrong
+    # scores. Fail fast and loudly instead.
+    db.ensure_conversations_table()
+    db.ensure_global_score()
+    jobs.ensure_agent_jobs_table()
+    # The filesystem import is genuinely optional: the UI should still boot if
+    # the data directory is unavailable, so it degrades on its own.
     try:
-        db.ensure_conversations_table()
-        jobs.ensure_agent_jobs_table()
         import_all()
-    except Exception as e:  # db not ready yet -> frontend still boots
+    except Exception as e:
         print(f"startup import skipped: {e}")
     # Drain the agent job queue in-process ONLY when no dedicated worker
     # service is running. With the agent-worker service up, the backend must
@@ -162,12 +169,19 @@ def wallets():
 
 @app.get("/api/wallets/{address}/runs")
 def wallet_runs(address: str):
+    """Runs for one wallet.
+
+    global_score comes straight off the runs row (maintained by a trigger on
+    ratings). It used to be a correlated subquery that re-aggregated every
+    rating for the model on every row, which made this the hottest query in the
+    app for no benefit -- see docs/BASELINE.md.
+    """
     return db.query(
         """
         SELECT r.id, r.label, r.tool, r.model, r.variant, r.status,
                r.duration_s, r.bytes, r.context_size,
                COALESCE(rt.value, 0)  AS my_rating,
-               COALESCE(g.total, 0)   AS global_score,
+               r.global_score,
                 r.has_real_report      AS has_report,
                 CASE
                     WHEN r.has_real_report THEN 'DONE'
@@ -176,13 +190,8 @@ def wallet_runs(address: str):
                 END                    AS display_status
         FROM runs r
         LEFT JOIN ratings rt ON rt.run_id = r.id
-        LEFT JOIN (
-            SELECT r2.model, SUM(COALESCE(rt2.value, 0)) AS total
-            FROM runs r2 LEFT JOIN ratings rt2 ON rt2.run_id = r2.id
-            WHERE r2.model IS NOT NULL GROUP BY r2.model
-        ) g ON g.model = r.model
         WHERE r.wallet = %s
-        ORDER BY global_score DESC, COALESCE(r.context_size, 0) DESC,
+        ORDER BY r.global_score DESC, COALESCE(r.context_size, 0) DESC,
               (r.status = 'DONE') DESC, r.label
         """,
         (address,),
@@ -190,18 +199,13 @@ def wallet_runs(address: str):
 
 
 def _enrich_run(run):
-    """Attach the model's global score across all wallets to a run row."""
-    score = db.query(
-        """
-        SELECT COALESCE(SUM(COALESCE(rt.value, 0)), 0) AS total
-        FROM runs r LEFT JOIN ratings rt ON rt.run_id = r.id
-        WHERE r.model = %s
-        """,
-        (run["model"],),
-        one=True,
-    )
+    """Attach the model's global score across all wallets to a run row.
+
+    The score is now denormalised onto runs by a trigger on ratings, so this
+    is a plain column read rather than a per-call aggregation.
+    """
     run = dict(run)
-    run["global_score"] = score["total"] if score else 0
+    run["global_score"] = run.get("global_score") or 0
     # DONE requires a real strategy report; a DONE run without one is
     # surfaced as FAILED so the UI never shows DONE with "No report".
     status = run.get("status")
@@ -273,16 +277,11 @@ def rate(run_id: int, body: Rating):
             """,
             (run_id, body.value),
         )
-    score = db.query(
-        """
-        SELECT COALESCE(SUM(COALESCE(rt.value, 0)), 0) AS total
-        FROM runs r LEFT JOIN ratings rt ON rt.run_id = r.id
-        WHERE r.model = (SELECT model FROM runs WHERE id = %s)
-        """,
-        (run_id,),
-        one=True,
-    )
-    return {"ok": True, "model_global_score": score["total"]}
+    # global_score is refreshed by the ratings trigger, so read it back rather
+    # than re-aggregating here.
+    model_row = db.query("SELECT model FROM runs WHERE id = %s", (run_id,), one=True)
+    score = db.get_run_global_score(model_row["model"]) if model_row else 0
+    return {"ok": True, "model_global_score": score}
 
 
 @app.get("/api/duration-ranking")

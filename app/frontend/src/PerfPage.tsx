@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { getPerf, resetPerf, type PerfRoute } from "./api";
+import { getPerf, getSlowQueries, resetPerf, type PerfRoute, type SlowQuery } from "./api";
 
 function ms(v: number): string {
   if (v >= 1000) return (v / 1000).toFixed(2) + "s";
@@ -19,6 +19,7 @@ function p95Cell(v: number) {
 
 export default function PerfPage() {
   const [rows, setRows] = useState<PerfRoute[] | null>(null);
+  const [queries, setQueries] = useState<SlowQuery[] | null>(null);
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -27,6 +28,7 @@ export default function PerfPage() {
     try {
       const snap = await getPerf();
       setRows(snap.routes);
+      setQueries(await getSlowQueries(10).catch(() => []));
       setErr("");
     } catch (e) {
       setErr(String(e));
@@ -38,6 +40,7 @@ export default function PerfPage() {
   async function reset() {
     await resetPerf();
     setRows([]);
+    setQueries([]);
   }
 
   return (
@@ -107,6 +110,62 @@ export default function PerfPage() {
         server). <b>inflight</b> is the number of requests executing right now
         — during a load test it reveals the worker/thread ceiling.
       </p>
+
+      {queries !== null && queries.length > 0 && (
+        <>
+          <div
+            style={{
+              fontWeight: 700,
+              fontSize: 13,
+              marginTop: 20,
+              marginBottom: 8,
+            }}
+          >
+            Slowest queries (measured by Postgres, pg_stat_statements)
+          </div>
+          <table style={{ width: "100%", fontSize: 12 }}>
+            <thead>
+              <tr style={{ textAlign: "left", color: "var(--dim)" }}>
+                <th>calls</th>
+                <th>total</th>
+                <th>mean</th>
+                <th>rows</th>
+                <th>statement</th>
+              </tr>
+            </thead>
+            <tbody>
+              {queries.map((q, i) => (
+                <tr
+                  key={i}
+                  style={{ borderTop: "1px solid var(--border)", verticalAlign: "top" }}
+                >
+                  <td>{q.calls}</td>
+                  <td style={{ fontVariantNumeric: "tabular-nums" }}>{q.total_ms}ms</td>
+                  <td style={{ fontVariantNumeric: "tabular-nums" }}>{q.mean_ms}ms</td>
+                  <td>{q.rows}</td>
+                  <td
+                    style={{
+                      fontFamily: "monospace",
+                      fontSize: 11,
+                      maxWidth: 460,
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}
+                    title={q.query}
+                  >
+                    {q.query}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <p className="dim" style={{ fontSize: 12, marginTop: 8 }}>
+            This half is measured by the database, not the app, so it catches
+            query cost the in-process timer cannot see.
+          </p>
+        </>
+      )}
     </div>
   );
 }

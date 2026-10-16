@@ -126,6 +126,18 @@ export type PerfRoute = {
 };
 export type PerfSnapshot = { routes: PerfRoute[]; window_samples: number };
 
+export type SlowQuery = {
+  calls: number;
+  total_ms: number;
+  mean_ms: number;
+  max_ms: number;
+  rows: number;
+  query: string;
+};
+
+export const getSlowQueries = (limit = 10) =>
+  api<SlowQuery[]>(`/api/perf/queries?limit=${limit}`);
+
 export async function getPerf(): Promise<PerfSnapshot> {
   return api<PerfSnapshot>("/api/perf");
 }
