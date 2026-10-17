@@ -66,6 +66,27 @@ CREATE TABLE IF NOT EXISTS conversations (
 );
 CREATE INDEX IF NOT EXISTS conversations_run_idx ON conversations(run_id);
 
+-- Semantic index over strategy reports: report_chunks is the document store
+-- (ask.py retrieves context from it) and embedding_cache keeps each text's
+-- vector keyed by (sha1(text), model). Both are derived data -- safe to drop
+-- and rebuild from the report files (see vector_index.py).
+CREATE TABLE IF NOT EXISTS report_chunks (
+    id          SERIAL PRIMARY KEY,
+    run_id      INT NOT NULL REFERENCES runs(id) ON DELETE CASCADE,
+    chunk_index INT NOT NULL,
+    text        TEXT NOT NULL,
+    UNIQUE (run_id, chunk_index)
+);
+CREATE INDEX IF NOT EXISTS report_chunks_run_idx ON report_chunks(run_id);
+
+CREATE TABLE IF NOT EXISTS embedding_cache (
+    text_hash  TEXT NOT NULL,
+    model      TEXT NOT NULL,
+    embedding  JSONB NOT NULL,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (text_hash, model)
+);
+
 -- Asynchronous agent jobs. A POST /ask returns 202 + job_id immediately and a
 -- worker claims rows with FOR UPDATE SKIP LOCKED, so a request never holds a
 -- server thread for the (up to 300s) lifetime of an AI CLI subprocess.

@@ -52,6 +52,9 @@ services:
       DATABASE_URL: postgresql://hl:hl@db:5432/hl
       DATA_DIR: /data
       ASK_JOBS_DIR: /pv_ask_jobs
+      # vector_index.py embeds the report being asked about (keyword fallback
+      # if this host is unreachable).
+      OLLAMA_BASE_URL: http://host.docker.internal:11434/v1
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:

@@ -12,6 +12,7 @@ from pydantic import BaseModel
 import db
 import jobs
 import perf
+import vector_index
 import worker
 from errors import ApiError
 from importer import DATA_DIR, import_all
@@ -37,12 +38,17 @@ async def lifespan(app: FastAPI):
     db.ensure_conversations_table()
     db.ensure_global_score()
     jobs.ensure_agent_jobs_table()
+    vector_index.ensure_tables()
     # The filesystem import is genuinely optional: the UI should still boot if
     # the data directory is unavailable, so it degrades on its own.
     try:
         import_all()
     except Exception as e:
         print(f"startup import skipped: {e}")
+    # Embed any report not in the index yet -- off the request path, because a
+    # fresh sweep is minutes of Ollama work. Every ask stays correct without
+    # this; it only makes the first one fast.
+    vector_index.warm_async()
     # Drain the agent job queue in-process ONLY when no dedicated worker
     # service is running. With the agent-worker service up, the backend must
     # stay a pure API tier: two sets of workers would double the number of
@@ -98,7 +104,10 @@ class AskRequest(BaseModel):
 
 @app.post("/api/import")
 def do_import():
-    return import_all()
+    result = import_all()
+    # New reports appear here; index them in the background for the next ask.
+    result["index_warm_started"] = vector_index.warm_async()
+    return result
 
 
 @app.get("/api/models/free")

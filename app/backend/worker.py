@@ -23,6 +23,7 @@ import signal
 
 import db
 import jobs
+import vector_index
 from ask import AGENT_CONCURRENCY, ask_report
 
 # How often an idle worker checks for new work. Short enough to feel instant,
@@ -44,7 +45,14 @@ def _run_one(job: dict) -> None:
         with open(path, encoding="utf-8", errors="replace") as fh:
             text = fh.read()
         history = db.list_conversations(job["run_id"])
-        result = ask_report(text, job["question"], history, job["tool"], job["model"])
+        result = ask_report(
+            text,
+            job["question"],
+            history,
+            job["tool"],
+            job["model"],
+            run_id=job["run_id"],
+        )
         jobs.complete(job_id, result["answer"], result["citations"])
         # Mirror the old inline behaviour: only questions raised from the UI
         # become visible conversation history.
@@ -110,4 +118,5 @@ async def run() -> None:
 if __name__ == "__main__":
     # Standalone worker process (used by the Phase 3 compose service).
     jobs.ensure_agent_jobs_table()
+    vector_index.ensure_tables()
     asyncio.run(run())

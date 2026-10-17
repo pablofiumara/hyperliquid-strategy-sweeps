@@ -9,6 +9,7 @@ import urllib.error
 import urllib.request
 from typing import Any
 
+import vector_index
 from errors import capacity_exhausted
 
 CHUNK_SIZE = 900
@@ -299,9 +300,21 @@ def _run_cli(tool: str, model: str, prompt: str, timeout: int = 300) -> str:
 
 
 def ask_report(
-    report: str, question: str, history: list[dict], tool: str, model: str
+    report: str,
+    question: str,
+    history: list[dict],
+    tool: str,
+    model: str,
+    run_id: int | None = None,
 ) -> dict[str, Any]:
-    retrieved = _retrieve(report, question)
+    # Semantic retrieval when the index is available; the keyword retriever is
+    # the always-available fallback (retrieve returns None on any index
+    # failure, e.g. Ollama unreachable).
+    retrieved = None
+    if run_id is not None:
+        retrieved = vector_index.retrieve(run_id, report, question)
+    if retrieved is None:
+        retrieved = _retrieve(report, question)
     excerpts = "\n\n".join(
         f"--- Excerpt {i} ---\n{c}" for i, (_, c) in enumerate(retrieved, 1)
     )

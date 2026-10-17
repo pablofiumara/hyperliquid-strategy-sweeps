@@ -66,6 +66,12 @@ Data model: `wallets`, `runs (wallet,label unique)`, `ratings (-1|+1)`.
 A model with ≥1 negative rating is excluded from future sweeps by
 `run-models.sh`'s rating gate (no prompts, not even free-check probes).
 
+Follow-up questions on a report ("Ask") retrieve its most relevant passages by
+embedding similarity — local Ollama `nomic-embed-text`, vectors cached in
+`embedding_cache` (`report_chunks` holds the chunked reports) — and fall back
+to keyword overlap when Ollama is unavailable. Reports are indexed off the
+request path: at startup and after `make import` (`app/backend/vector_index.py`).
+
 ## Notes & caveats
 
 - Free tiers are rate-limited: daily caps (cline), idle timeouts, and

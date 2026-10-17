@@ -305,7 +305,11 @@ work via `make import` or a restart).
                         /api/runs/{id}, POST /api/runs/{id}/rating,
                         /api/leaderboard, POST /api/import), db.py (psycopg2
                         pool), importer.py (scans all wallet dirs; idempotent),
-                        init.sql (wallets, runs, ratings tables)
+                        vector_index.py (chunks reports, embeds them with local
+                        Ollama `nomic-embed-text`, cosine retrieval for Ask,
+                        warm pass at startup/import; falls back to keyword
+                        retrieval), init.sql (wallets, runs, ratings,
+                        report_chunks, embedding_cache tables)
 - `app/frontend/`       React 18 + TypeScript + Vite (job-market standard),
                         three views in App.tsx, API client api.ts
 - Import runs automatically on backend startup and via `make import`.
