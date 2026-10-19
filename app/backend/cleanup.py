@@ -21,6 +21,7 @@ import shutil
 import db
 
 DATA_DIR = pathlib.Path(__import__("os").environ.get("DATA_DIR", "/data"))
+WALLETS_DIR = pathlib.Path(__import__("os").environ.get("WALLETS_DIR", str(DATA_DIR / "wallets")))
 WALLET_RX = re.compile(r"^(0x)?[0-9a-fA-F]{40}$")
 
 DISPOSABLE = ("wallet.txt", "probe.txt")
@@ -64,7 +65,7 @@ def cleanup_all() -> dict:
     dirs_touched = 0
     bytes_freed = 0
     details: list[dict] = []
-    for wdir in sorted(DATA_DIR.iterdir()):
+    for wdir in sorted(WALLETS_DIR.iterdir()):
         if not (wdir.is_dir() and WALLET_RX.match(wdir.name)):
             continue
         for mdir in sorted(wdir.iterdir()):
@@ -82,7 +83,7 @@ def cleanup_all() -> dict:
                 details.append({**res, "bytes_freed": freed})
     return {
         "wallets_scanned": sum(
-            1 for w in DATA_DIR.iterdir()
+            1 for w in WALLETS_DIR.iterdir()
             if w.is_dir() and WALLET_RX.match(w.name)
         ),
         "dirs_cleaned": dirs_touched,
@@ -93,7 +94,7 @@ def cleanup_all() -> dict:
 
 def cleanup_wallet(address: str) -> dict:
     """Cleanup for a single wallet dir (used by the per-wallet endpoint)."""
-    wdir = DATA_DIR / address
+    wdir = WALLETS_DIR / address
     if not wdir.is_dir():
         return {"wallet": address, "error": "not found"}
     dirs_touched = 0

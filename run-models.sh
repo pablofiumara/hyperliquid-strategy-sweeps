@@ -74,7 +74,7 @@ done
 
 [ -f "$MODELS_FILE" ] || { echo "missing $MODELS_FILE" >&2; exit 1; }
 [ -n "$WALLET" ] || { echo "missing --wallet <address> (runs land in <wallet>/<label>/)" >&2; exit 1; }
-RUN_ROOT="$ROOT/$WALLET"
+RUN_ROOT="$ROOT/wallets/$WALLET"
 mkdir -p "$RUN_ROOT"
 # per-wallet prompt by default (<wallet>/prompt.txt); --prompt-file overrides
 if [ "$PROMPT_FILE_SET" = 0 ] && [ -f "$RUN_ROOT/prompt.txt" ]; then

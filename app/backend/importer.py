@@ -10,6 +10,7 @@ import re
 import db
 
 DATA_DIR = pathlib.Path(os.environ.get("DATA_DIR", "/data"))
+WALLETS_DIR = pathlib.Path(os.environ.get("WALLETS_DIR", str(DATA_DIR / "wallets")))
 WALLET_RX = re.compile(r"^(0x)?[0-9a-fA-F]{40}$")
 
 # model_id -> context window (tokens). One fact, one place: see
@@ -68,7 +69,7 @@ def _is_real_report(p: pathlib.Path) -> bool:
 
 def import_all() -> dict:
     wallets = runs = 0
-    for wdir in sorted(DATA_DIR.iterdir()):
+    for wdir in sorted(WALLETS_DIR.iterdir()):
         if not (wdir.is_dir() and WALLET_RX.match(wdir.name)):
             continue
         db.execute(

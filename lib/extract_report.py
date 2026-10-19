@@ -253,7 +253,7 @@ def main() -> None:
             dirs.append(p if p.is_absolute() else ROOT / x)
     else:
         dirs = []
-        for wallet in sorted(p for p in ROOT.iterdir()
+        for wallet in sorted(p for p in (ROOT / "wallets").iterdir()
                              if p.is_dir() and WALLET_RX.match(p.name)):
             for d in sorted(wallet.iterdir()):
                 if d.is_dir() and ((d / "output.txt").is_file()
