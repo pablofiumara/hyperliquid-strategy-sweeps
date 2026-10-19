@@ -1,121 +1,70 @@
-"""Semantic retrieval over strategy reports: chunk -> embed -> cosine top-k.
+"""Semantic retrieval over strategy reports, backed by LangChain.
 
-Ask used to rank report chunks by keyword overlap alone, so a question phrased
-in different words than the report ("stop loss" vs "protective exit") retrieved
-poor context. Here every report is chunked once and each chunk is embedded with
-the local Ollama model (nomic-embed-text by default), cached in Postgres by
-(text sha1, model) so a text is embedded exactly once; a question then costs
-one embed call plus a cosine scan over the run's handful of chunk vectors.
-
-This is prompt-viewer's LangChain index without the dependency: report_chunks
-is the document store, embedding_cache is the only place vectors live, and the
-report files stay the source of truth -- both tables are derived data that can
-be rebuilt at any time.
+Chunking uses LangChain's ``RecursiveCharacterTextSplitter``, embeddings come
+from LangChain's ``OllamaEmbeddings`` (local Ollama, free), and ranking is
+done by LangChain's ``InMemoryVectorStore``. Vectors are still cached in
+Postgres by (text sha1, model) so a text is embedded exactly once.
 
 Best-effort by design: retrieve() returns None instead of raising when Ollama
-is unreachable or the model is not pulled, and the caller falls back to the
-keyword retriever, so /ask never breaks because the index is cold.
+is unreachable or the model is not pulled, so the caller falls back to the
+keyword retriever and /ask never breaks because the index is cold.
 """
 from __future__ import annotations
 
 import hashlib
 import json
-import math
 import os
 import re
 import threading
 import time
-import urllib.request
 from pathlib import Path
 from typing import Optional
 
+from langchain_core.documents import Document
+from langchain_core.embeddings import Embeddings
+from langchain_core.vectorstores import InMemoryVectorStore
+from langchain_ollama import OllamaEmbeddings
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+
 import db
 
-# Same host as the summary model: one local Ollama, no external API.
+# Same host as the summary model: one local Ollama, no external API. The env
+# value is OpenAI-compatible (/v1); LangChain's Ollama client wants the root.
 OLLAMA_BASE_URL = os.environ.get(
     "OLLAMA_BASE_URL", "http://host.docker.internal:11434/v1"
 )
+OLLAMA_ROOT = OLLAMA_BASE_URL.removesuffix("/v1").rstrip("/")
 EMBED_MODEL = os.environ.get("EMBED_MODEL", "nomic-embed-text")
-# One batch embedding 32 x ~900 chars is a few seconds on CPU; 60s is headroom,
-# not an expectation.
 EMBED_TIMEOUT_S = float(os.environ.get("EMBED_TIMEOUT_S", "60"))
-
-EMBED_URL = OLLAMA_BASE_URL.rstrip("/") + "/embeddings"
-
-# nomic-embed-text is trained with these task prefixes; without them document
-# and query vectors live in different spaces and scores are meaningless.
-DOC_PREFIX = "search_document: "
-QUERY_PREFIX = "search_query: "
 
 # Chunk sizes match the keyword retriever in ask.py so semantic and fallback
 # excerpts are comparable.
 CHUNK_SIZE = 900
 CHUNK_OVERLAP = 150
 
-# One HTTP round-trip per this many texts. A fresh sweep is hundreds of
-# chunks; one request per chunk would add minutes of round-trip overhead.
-EMBED_BATCH = 32
+# nomic-embed-text is trained with these task prefixes; without them document
+# and query vectors live in different spaces and scores are meaningless.
+DOC_PREFIX = "search_document: "
+QUERY_PREFIX = "search_query: "
 
-
-# ---------------------------------------------------------------------------
-# Chunking: paragraph -> line -> sentence -> raw slice, then pack.
-#
-# Fixed-size slicing (the old keyword retriever) cuts mid-word; embeddings are
-# robust to that but a chunk that starts halfway through a sentence carries
-# less meaning. Keep each unit whole when it fits and pack units up to
-# CHUNK_SIZE with CHUNK_OVERLAP carried between chunks.
-# ---------------------------------------------------------------------------
-
-def _units(text: str) -> list[str]:
-    units: list[str] = []
-    for para in re.split(r"\n\s*\n", text):
-        para = para.strip()
-        if not para:
-            continue
-        pieces = para.split("\n") if len(para) > CHUNK_SIZE else [para]
-        for line in pieces:
-            line = line.strip()
-            if not line:
-                continue
-            if len(line) <= CHUNK_SIZE:
-                units.append(line)
-                continue
-            for sent in re.split(r"(?<=[.!?])\s+", line):
-                if len(sent) <= CHUNK_SIZE:
-                    units.append(sent)
-                else:
-                    step = CHUNK_SIZE - CHUNK_OVERLAP
-                    units.extend(
-                        sent[i : i + CHUNK_SIZE] for i in range(0, len(sent), step)
-                    )
-    return units
+_splitter = RecursiveCharacterTextSplitter(
+    chunk_size=CHUNK_SIZE,
+    chunk_overlap=CHUNK_OVERLAP,
+    separators=["\n\n", "\n", ". ", " ", ""],
+)
 
 
 def chunk_text(text: str) -> list[str]:
     """Split a report into overlapping chunks that respect boundaries."""
     text = (text or "").replace("\r\n", "\n").replace("\r", "\n")
-    out: list[str] = []
-    cur = ""
-    for unit in _units(text):
-        if cur and len(cur) + len(unit) + 1 > CHUNK_SIZE:
-            out.append(cur)
-            tail = cur[-CHUNK_OVERLAP:]
-            cur = (
-                f"{tail}\n{unit}" if len(tail) + len(unit) + 1 <= CHUNK_SIZE else unit
-            )
-        else:
-            cur = f"{cur}\n{unit}" if cur else unit
-    if cur.strip():
-        out.append(cur)
-    return out
+    return [c for c in _splitter.split_text(text) if c.strip()]
 
 
 # ---------------------------------------------------------------------------
-# Storage.
+# Storage (unchanged schema).
 # ---------------------------------------------------------------------------
 
 def ensure_tables() -> None:
-    """Runtime migration: init.sql only runs on first database creation."""
     db.execute(
         """
         CREATE TABLE IF NOT EXISTS report_chunks (
@@ -156,11 +105,6 @@ def _stored_chunks(run_id: int) -> list[str]:
 
 
 def sync_chunks(run_id: int, chunks: list[str]) -> bool:
-    """Store `chunks` as the index documents of one run; write only on change.
-
-    A shrink is handled too: rows beyond the new chunk count are deleted, so a
-    shortened report can never keep answering out of stale tail chunks.
-    """
     if _stored_chunks(run_id) == chunks:
         return False
     for i, text in enumerate(chunks):
@@ -180,65 +124,80 @@ def sync_chunks(run_id: int, chunks: list[str]) -> bool:
 
 
 # ---------------------------------------------------------------------------
-# Embeddings.
+# Embeddings (LangChain + Postgres cache).
 # ---------------------------------------------------------------------------
 
-def _cached_vectors(hashes: list[str]) -> dict[str, list[float]]:
-    if not hashes:
-        return {}
-    rows = db.query(
-        "SELECT text_hash, embedding FROM embedding_cache "
-        "WHERE model = %s AND text_hash = ANY(%s)",
-        (EMBED_MODEL, hashes),
-    )
-    out: dict[str, list[float]] = {}
-    for r in rows:
-        emb = r["embedding"]
-        out[r["text_hash"]] = json.loads(emb) if isinstance(emb, str) else emb
-    return out
+_raw_embedder: Optional[OllamaEmbeddings] = None
 
 
-def _embed_http(texts: list[str]) -> list[list[float]]:
-    body = json.dumps({"model": EMBED_MODEL, "input": texts}).encode()
-    req = urllib.request.Request(
-        EMBED_URL, data=body, headers={"Content-Type": "application/json"}, method="POST"
-    )
-    with urllib.request.urlopen(req, timeout=EMBED_TIMEOUT_S) as resp:
-        payload = json.load(resp)
-    data = sorted(payload["data"], key=lambda d: d.get("index", 0))
-    return [d["embedding"] for d in data]
+def _raw_embeddings() -> OllamaEmbeddings:
+    global _raw_embedder
+    if _raw_embedder is None:
+        _raw_embedder = OllamaEmbeddings(
+            model=EMBED_MODEL, base_url=OLLAMA_ROOT, validate_model_on_init=False
+        )
+    return _raw_embedder
+
+
+class CachedEmbeddings(Embeddings):
+    def __init__(self, embedder: Optional[Embeddings] = None) -> None:
+        self.embedder = embedder if embedder is not None else _raw_embeddings()
+
+    def cached(self, hashes: list[str]) -> dict[str, list[float]]:
+        if not hashes:
+            return {}
+        rows = db.query(
+            "SELECT text_hash, embedding FROM embedding_cache "
+            "WHERE model = %s AND text_hash = ANY(%s)",
+            (EMBED_MODEL, hashes),
+        )
+        out: dict[str, list[float]] = {}
+        for r in rows:
+            emb = r["embedding"]
+            out[r["text_hash"]] = json.loads(emb) if isinstance(emb, str) else emb
+        return out
+
+    def embed_documents(self, texts: list[str]) -> list[list[float]]:
+        hashes = [text_hash(t) for t in texts]
+        cache = self.cached(hashes)
+        missing = [(h, t) for h, t in zip(hashes, texts) if h not in cache]
+        if missing:
+            fresh = self.embedder.embed_documents(
+                [f"{DOC_PREFIX}{t}" for _, t in missing]
+            )
+            for (h, _), vec in zip(missing, fresh):
+                cache[h] = vec
+                db.execute(
+                    """
+                    INSERT INTO embedding_cache (text_hash, model, embedding)
+                    VALUES (%s, %s, %s)
+                    ON CONFLICT (text_hash, model) DO UPDATE SET
+                        embedding = EXCLUDED.embedding, updated_at = now()
+                    """,
+                    (h, EMBED_MODEL, json.dumps(vec)),
+                )
+        return [cache[h] for h in hashes]
+
+    def embed_query(self, text: str) -> list[float]:
+        return self.embedder.embed_query(f"{QUERY_PREFIX}{text}")
+
+
+def embeddings() -> CachedEmbeddings:
+    return CachedEmbeddings()
 
 
 def embed_texts(texts: list[str], prefix: str) -> tuple[list[list[float]], int]:
-    """Embed `texts` (in input order), caching documents by (sha1, model).
-
-    An edited chunk re-embeds only its changed text, and switching EMBED_MODEL
-    can never mix vector spaces. Returns the vectors and how many were newly
-    computed.
-    """
+    # `prefix` is retained for API compatibility; prefixes are applied inside
+    # CachedEmbeddings based on document vs. query.
     hashes = [text_hash(t) for t in texts]
-    cache = _cached_vectors(hashes)
+    cache = CachedEmbeddings().cached(hashes)
     missing = [(h, t) for h, t in zip(hashes, texts) if h not in cache]
-    for i in range(0, len(missing), EMBED_BATCH):
-        batch = missing[i : i + EMBED_BATCH]
-        fresh = _embed_http([f"{prefix}{t}" for _, t in batch])
-        for (h, _), vec in zip(batch, fresh):
-            cache[h] = vec
-            db.execute(
-                """
-                INSERT INTO embedding_cache (text_hash, model, embedding)
-                VALUES (%s, %s, %s)
-                ON CONFLICT (text_hash, model) DO UPDATE SET
-                    embedding = EXCLUDED.embedding, updated_at = now()
-                """,
-                (h, EMBED_MODEL, json.dumps(vec)),
-            )
-    return [cache[h] for h in hashes], len(missing)
+    vectors = CachedEmbeddings().embed_documents(texts)
+    return vectors, len(missing)
 
 
 def embed_query(text: str) -> list[float]:
-    """Embed a question; never cached (queries are cheap and must stay fresh)."""
-    return _embed_http([f"{QUERY_PREFIX}{text}"])[0]
+    return embeddings().embed_query(text)
 
 
 # ---------------------------------------------------------------------------
@@ -246,7 +205,6 @@ def embed_query(text: str) -> list[float]:
 # ---------------------------------------------------------------------------
 
 def index_report(run_id: int, text: str) -> dict[str, int]:
-    """Make one report retrievable: chunk, sync, embed whatever is missing."""
     chunks = chunk_text(text)
     changed = sync_chunks(run_id, chunks)
     embedded = 0
@@ -255,51 +213,28 @@ def index_report(run_id: int, text: str) -> dict[str, int]:
     return {"chunks": len(chunks), "changed": int(changed), "embedded": embedded}
 
 
-def _cosine(a: list[float], b: list[float]) -> float:
-    dot = sum(x * y for x, y in zip(a, b))
-    na = math.sqrt(sum(x * x for x in a))
-    nb = math.sqrt(sum(y * y for y in b))
-    return dot / (na * nb) if na and nb else 0.0
-
-
 def retrieve(
     run_id: int, text: str, question: str, k: int = 6
 ) -> Optional[list[tuple[int, str]]]:
-    """Top-k chunks of one report by cosine similarity, as (index, text).
-
-    Returns None -- never raises -- when the index is unavailable (Ollama
-    down, model missing, DB trouble), so the caller can fall back to keyword
-    retrieval instead of failing the ask.
-    """
     try:
         chunks = chunk_text(text)
         if not chunks:
             return []
         sync_chunks(run_id, chunks)
-        vectors, _ = embed_texts(chunks, DOC_PREFIX)
-        query_vec = embed_query(question)
+        docs = [Document(page_content=c, metadata={"index": i}) for i, c in enumerate(chunks)]
+        store = InMemoryVectorStore.from_documents(docs, embeddings())
+        hits = store.similarity_search(question, k=k)
     except Exception as exc:  # noqa: BLE001 - fallback is the whole point
         print(f"[index] semantic retrieval unavailable ({exc}); keyword fallback", flush=True)
         return None
-    scored = sorted(
-        ((_cosine(query_vec, v), i) for i, v in enumerate(vectors)),
-        key=lambda sv: (-sv[0], sv[1]),
-    )
-    return [(i, chunks[i]) for _, i in scored[:k]]
+    return [(d.metadata["index"], d.page_content) for d in hits]
 
 
 # ---------------------------------------------------------------------------
-# Warm pass: embed every stored report off the request path.
+# Warm pass.
 # ---------------------------------------------------------------------------
 
 def warm() -> dict[str, int]:
-    """Index every real report that lacks chunks or vectors.
-
-    A fresh sweep is hundreds of embeddings (minutes of CPU Ollama work), so
-    this runs in a daemon thread, not in a request. Safe to run twice: chunk
-    sync writes nothing when unchanged and the sha1 cache skips every vector
-    already computed.
-    """
     rows = db.query(
         "SELECT id, report_path FROM runs "
         "WHERE has_real_report AND report_path IS NOT NULL"
@@ -319,11 +254,14 @@ def warm() -> dict[str, int]:
 
 
 def _available_models() -> Optional[list[str]]:
-    """Model ids Ollama currently serves; None when it is unreachable."""
-    url = OLLAMA_BASE_URL.rstrip("/") + "/models"
+    url = OLLAMA_ROOT + "/v1/models"
     try:
+        import urllib.request
+
         with urllib.request.urlopen(url, timeout=5) as resp:
-            return [m.get("id", "") for m in json.load(resp).get("data", [])]
+            import json as _json
+
+            return [m.get("id", "") for m in _json.load(resp).get("data", [])]
     except Exception:  # noqa: BLE001
         return None
 
@@ -338,7 +276,6 @@ _warm_running = False
 
 
 def warm_async() -> bool:
-    """Kick a background warm pass (single-flight). False if one is running."""
     global _warm_running
     with _warm_lock:
         if _warm_running:
@@ -362,7 +299,7 @@ def warm_async() -> bool:
                 stats = warm()
                 dt = time.monotonic() - t0
                 print(f"[index] warm done in {dt:.1f}s: {stats}", flush=True)
-        except Exception as exc:  # noqa: BLE001 - a failed warm must never kill the app
+        except Exception as exc:  # noqa: BLE001
             print(f"[index] warm failed: {exc}", flush=True)
         finally:
             with _warm_lock:

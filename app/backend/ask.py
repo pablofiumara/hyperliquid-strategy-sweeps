@@ -212,15 +212,7 @@ def is_free_model(tool: str | None, model: str | None) -> bool:
 
 
 def _chunks(text: str) -> list[str]:
-    out: list[str] = []
-    i = 0
-    n = len(text)
-    while i < n:
-        out.append(text[i : i + CHUNK_SIZE])
-        if i + CHUNK_SIZE >= n:
-            break
-        i += CHUNK_SIZE - CHUNK_OVERLAP
-    return [c for c in out if c.strip()]
+    return vector_index.chunk_text(text)
 
 
 def _retrieve(text: str, question: str, k: int = 6) -> list[tuple[int, str]]:
