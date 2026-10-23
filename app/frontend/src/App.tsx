@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import PerfPage from "./PerfPage";
 import {
   askRun,
+  connectJobSocket,
   genSummary,
   getConversations,
   getFreeModels,
@@ -469,6 +470,7 @@ function RunPage({ wallet, label, onBack }: { wallet: string; label: string; onB
   }, []);
 
   const closeStreamRef = useRef<(() => void) | null>(null);
+  const cancelRef = useRef<(() => void) | null>(null);
   const [askStatus, setAskStatus] = useState("");
 
   useEffect(() => () => closeStreamRef.current?.(), []);
@@ -493,6 +495,7 @@ function RunPage({ wallet, label, onBack }: { wallet: string; label: string; onB
           settled = true;
           closeStreamRef.current?.();
           closeStreamRef.current = null;
+          cancelRef.current = null;
           if (poller) clearInterval(poller);
           resolve();
         };
@@ -505,14 +508,26 @@ function RunPage({ wallet, label, onBack }: { wallet: string; label: string; onB
             setAskErr(j.error || "agent failed");
             setAskStatus("");
             finish();
+          } else if (j.status === "cancelled") {
+            setAskStatus("cancelled");
+            finish();
           } else if (j.status === "pending") {
             setAskStatus("queued…");
           } else {
             setAskStatus("agent thinking…");
           }
         };
-        closeStreamRef.current = streamJob(accepted.job_id, onTerminal);
-        // Safety net for when the SSE stream cannot be established.
+        // Prefer the WebSocket transport; fall back to SSE if it never opens.
+        const sock = connectJobSocket(accepted.job_id, {
+          onJob: onTerminal,
+          onClose: () => {
+            /* fall back to polling */
+          },
+        });
+        closeStreamRef.current = sock.close;
+        // keep a cancel handle for the Cancel button
+        cancelRef.current = () => sock.send({ type: "cancel" });
+        // Safety net for when the WS cannot be established.
         poller = setInterval(async () => {
           if (settled) return;
           try {
@@ -527,6 +542,7 @@ function RunPage({ wallet, label, onBack }: { wallet: string; label: string; onB
       setAskErr(String(e));
     } finally {
       if (poller) clearInterval(poller);
+      cancelRef.current = null;
       askingRef.current = false;
       setAsking(false);
     }
@@ -593,6 +609,16 @@ function RunPage({ wallet, label, onBack }: { wallet: string; label: string; onB
             <button className="primary" onClick={ask} disabled={asking || !question.trim() || !selected}>
               {asking ? "Asking…" : "Ask"}
             </button>
+            {asking ? (
+              <button
+                onClick={() => {
+                  cancelRef.current?.();
+                  setAskStatus("cancelling…");
+                }}
+              >
+                Cancel
+              </button>
+            ) : null}
           </div>
           {askStatus ? (
             <p className="dim" style={{ fontSize: 12, marginBottom: 8 }}>

@@ -24,7 +24,7 @@ import signal
 import db
 import jobs
 import vector_index
-from ask import AGENT_CONCURRENCY, ask_report
+from ask import AGENT_CONCURRENCY, ask_report, terminate_cancelled_live
 
 # How often an idle worker checks for new work. Short enough to feel instant,
 # long enough not to spin the database.
@@ -52,7 +52,12 @@ def _run_one(job: dict) -> None:
             job["tool"],
             job["model"],
             run_id=job["run_id"],
+            job_id=job_id,
         )
+        # If the job was cancelled while running, do not store a (partial)
+        # answer; the row is already in its terminal 'cancelled' state.
+        if jobs.get(job_id) is not None and jobs.get(job_id).get("status") == "cancelled":
+            return
         jobs.complete(job_id, result["answer"], result["citations"])
         # Mirror the old inline behaviour: only questions raised from the UI
         # become visible conversation history.
@@ -64,6 +69,9 @@ def _run_one(job: dict) -> None:
                 result["model"],
                 result["citations"],
             )
+    except jobs.JobCancelled:
+        # Already marked cancelled in the DB; leave it terminal.
+        return
     except Exception as exc:  # noqa: BLE001 - the job must never die silently
         jobs.fail(job_id, f"{type(exc).__name__}: {exc}")
 
@@ -93,6 +101,16 @@ async def _reaper_loop(stop: asyncio.Event) -> None:
             print(f"[worker] reap failed: {exc}", flush=True)
 
 
+async def _cancel_watcher(stop: asyncio.Event) -> None:
+    """Terminate subprocesses of jobs that were cancelled via the API."""
+    while not stop.is_set():
+        try:
+            await asyncio.sleep(0.5)
+            await asyncio.to_thread(terminate_cancelled_live)
+        except Exception as exc:  # noqa: BLE001
+            print(f"[worker] cancel watcher failed: {exc}", flush=True)
+
+
 async def run() -> None:
     """Start the worker set. Returns once tasks are scheduled."""
     stop = asyncio.Event()
@@ -107,6 +125,7 @@ async def run() -> None:
     for i in range(AGENT_CONCURRENCY):
         tasks.append(asyncio.create_task(_worker_loop(stop), name=f"agent-worker-{i}"))
     tasks.append(asyncio.create_task(_reaper_loop(stop), name="job-reaper"))
+    tasks.append(asyncio.create_task(_cancel_watcher(stop), name="job-cancel-watcher"))
     print(f"[worker] {AGENT_CONCURRENCY} agent workers started", flush=True)
 
     await stop.wait()

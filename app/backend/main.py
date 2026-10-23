@@ -4,13 +4,14 @@ import os
 import pathlib
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException, Request, Response
+from fastapi import FastAPI, HTTPException, Request, Response, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel
 
 import db
 import jobs
+import ws as wsmod
 import perf
 import vector_index
 import worker
@@ -72,6 +73,7 @@ app.add_middleware(
     CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"]
 )
 _perf_stats = perf.install(app)
+_ws_rooms = wsmod.JobRoomManager()
 
 # Origins the browser app can legitimately be served from. A question is only
 # persisted into visible history if it arrives from one of these AND declares
@@ -512,6 +514,90 @@ async def job_stream(job_id: int, request: Request):
             "X-Accel-Buffering": "no",  # stop nginx from buffering the stream
         },
     )
+
+
+@app.post("/api/jobs/{job_id}/cancel")
+def cancel_job(job_id: int):
+    job = jobs.get(job_id)
+    if not job:
+        raise ApiError(
+            404,
+            "job_not_found",
+            f"No agent job with id {job_id}.",
+            fix="Use the job_id returned when you POSTed to /api/runs/{id}/ask.",
+        )
+    if job["status"] in ("done", "error", "cancelled"):
+        return {"ok": True, "status": job["status"]}
+    cancelled = jobs.cancel(job_id)
+    if cancelled:
+        try:
+            import ask as _ask
+
+            _ask.terminate_job(job_id)
+        except Exception:
+            pass
+    return {"ok": cancelled, "status": "cancelled" if cancelled else job["status"]}
+
+
+@app.websocket("/ws/jobs/{job_id}")
+async def job_ws(websocket: WebSocket, job_id: int):
+    """WebSocket transport for a single agent job.
+
+    Complements /api/jobs/{id}/stream (SSE). Supports bidirectional control:
+    a client may send {"type":"cancel"} to stop the running agent, and
+    {"type":"ping"} for a keepalive. Server pushes {"type":"job",...} on every
+    state change and closes on a terminal state.
+    """
+    await websocket.accept()
+    job = jobs.get(job_id)
+    if not job:
+        await websocket.send_json({"type": "error", "error": "job not found"})
+        await websocket.close()
+        return
+    viewers = await _ws_rooms.connect(job_id, websocket)
+    await _ws_rooms.broadcast(job_id, {"type": "presence", "viewers": viewers})
+    try:
+        seen = job["status"]
+        await websocket.send_json({"type": "job", "job": _job_view(job)})
+        await websocket.send_json({"type": "presence", "viewers": viewers})
+        while True:
+            try:
+                msg = await asyncio.wait_for(websocket.receive_json(), timeout=0.5)
+            except asyncio.TimeoutError:
+                msg = None
+            except WebSocketDisconnect:
+                break
+            if msg is not None:
+                mtype = msg.get("type")
+                if mtype == "cancel":
+                    if jobs.get(job_id) and jobs.get(job_id).get("status") in ("pending", "running"):
+                        jobs.cancel(job_id)
+                        try:
+                            import ask as _ask
+
+                            await asyncio.to_thread(_ask.terminate_job, job_id)
+                        except Exception:
+                            pass
+                    cur = jobs.get(job_id)
+                    if cur is not None:
+                        await websocket.send_json({"type": "job", "job": _job_view(cur)})
+                elif mtype == "ping":
+                    await websocket.send_json({"type": "pong"})
+            current = jobs.get(job_id)
+            if current is None:
+                await websocket.send_json({"type": "error", "error": "job gone"})
+                break
+            status = current["status"]
+            if status != seen:
+                seen = status
+                await websocket.send_json({"type": "job", "job": _job_view(current)})
+            if status in ("done", "error", "cancelled"):
+                break
+    except WebSocketDisconnect:
+        pass
+    finally:
+        viewers = await _ws_rooms.disconnect(job_id, websocket)
+        await _ws_rooms.broadcast(job_id, {"type": "presence", "viewers": viewers})
 
 
 @app.get("/api/wallets/{address}/summary")

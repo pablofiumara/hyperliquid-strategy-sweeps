@@ -68,13 +68,42 @@ export async function askRun(
 
 export type JobStatus = {
   job_id: number;
-  status: "pending" | "running" | "done" | "error";
+  status: "pending" | "running" | "done" | "error" | "cancelled";
   tool: string;
   model: string;
   answer?: string;
   citations?: number[] | null;
   error?: string;
 };
+
+/** Connect to a job over WebSocket. Returns a handle with send/close. */
+export function connectJobSocket(
+  jobId: number,
+  handlers: {
+    onJob?: (j: JobStatus) => void;
+    onPresence?: (viewers: number) => void;
+    onClose?: () => void;
+  },
+): { send: (msg: any) => void; close: () => void } {
+  const proto = location.protocol === "https:" ? "wss:" : "ws:";
+  const ws = new WebSocket(`${proto}//${location.host}/ws/jobs/${jobId}`);
+  ws.onmessage = (e) => {
+    try {
+      const m = JSON.parse(e.data);
+      if (m.type === "job" && m.job) handlers.onJob?.(m.job as JobStatus);
+      else if (m.type === "presence") handlers.onPresence?.(m.viewers ?? 0);
+    } catch {
+      /* ignore */
+    }
+  };
+  ws.onclose = () => handlers.onClose?.();
+  return {
+    send: (msg) => {
+      if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg));
+    },
+    close: () => ws.close(),
+  };
+}
 
 export const getJob = (jobId: number) => api<JobStatus>(`/api/jobs/${jobId}`);
 

@@ -98,7 +98,7 @@ CREATE TABLE IF NOT EXISTS agent_jobs (
     tool        TEXT NOT NULL,
     model       TEXT NOT NULL,
     status      TEXT NOT NULL DEFAULT 'pending'
-                CHECK (status IN ('pending','running','done','error')),
+                CHECK (status IN ('pending','running','done','error','cancelled')),"
     answer      TEXT,
     citations   JSONB,
     error       TEXT,

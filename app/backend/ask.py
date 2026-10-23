@@ -15,6 +15,11 @@ from errors import capacity_exhausted
 CHUNK_SIZE = 900
 CHUNK_OVERLAP = 150
 
+# Live subprocess registry, keyed by job id. Used to terminate a job when it
+# is cancelled (the worker polls this against the DB flag).
+_live_procs: dict[int, "subprocess.Popen[str]"] = {}
+_live_procs_lock = threading.Lock()
+
 ROUTER_RE = True
 
 # ---------------------------------------------------------------------------
@@ -233,7 +238,7 @@ def _retrieve(text: str, question: str, k: int = 6) -> list[tuple[int, str]]:
     return [(idx, c) for _, idx, c in chosen]
 
 
-def _run_cli(tool: str, model: str, prompt: str, timeout: int = 300) -> str:
+def _run_cli(tool: str, model: str, prompt: str, timeout: int = 300, job_id: int | None = None) -> str:
     work = tempfile.mkdtemp(prefix=f"ask-{tool}-", dir="/tmp")
     try:
         if tool == "cline":
@@ -258,15 +263,42 @@ def _run_cli(tool: str, model: str, prompt: str, timeout: int = 300) -> str:
         # Hold a slot only around the actual subprocess execution -- that is
         # the expensive, resource-hungry part. Prompt assembly happens outside.
         with _AgentSlot():
-            proc = subprocess.run(
+            proc = subprocess.Popen(
                 cmd,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 text=True,
-                timeout=timeout,
                 env=_cli_env(),
             )
-        out = proc.stdout or ""
+            if job_id is not None:
+                with _live_procs_lock:
+                    _live_procs[job_id] = proc
+            try:
+                try:
+                    out, _ = proc.communicate(timeout=timeout)
+                except subprocess.TimeoutExpired:
+                    proc.kill()
+                    out, _ = proc.communicate()
+                    raise subprocess.TimeoutExpired(cmd, timeout, output=out)
+            finally:
+                if job_id is not None:
+                    with _live_procs_lock:
+                        _live_procs.pop(job_id, None)
+            # If the job was cancelled while running, the subprocess was
+            # terminated by the worker's cancel watcher; surface it as a
+            # cancellation rather than a (partial) answer.
+            if job_id is not None:
+                try:
+                    import jobs as _jobs
+
+                    j = _jobs.get(job_id)
+                    if j is not None and j.get("status") == "cancelled":
+                        raise _jobs.JobCancelled()
+                except _jobs.JobCancelled:
+                    raise
+                except Exception:
+                    pass
+        out = out or ""
         if tool == "cline":
             tpath = os.path.join(work, "transcript.jsonl")
             with open(tpath, "w", encoding="utf-8") as f:
@@ -291,6 +323,45 @@ def _run_cli(tool: str, model: str, prompt: str, timeout: int = 300) -> str:
         shutil.rmtree(work, ignore_errors=True)
 
 
+def terminate_job(job_id: int) -> bool:
+    """Terminate a running job's subprocess, if it is still alive."""
+    with _live_procs_lock:
+        proc = _live_procs.get(job_id)
+    if proc is None:
+        return False
+    try:
+        proc.terminate()
+        try:
+            proc.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            proc.wait(timeout=5)
+    except Exception:
+        try:
+            proc.kill()
+        except Exception:
+            pass
+    return True
+
+
+def terminate_cancelled_live() -> int:
+    """Terminate any live subprocess whose job has been marked cancelled."""
+    with _live_procs_lock:
+        ids = list(_live_procs.keys())
+    killed = 0
+    for jid in ids:
+        try:
+            import jobs as _jobs
+
+            j = _jobs.get(jid)
+            if j is not None and j.get("status") == "cancelled":
+                if terminate_job(jid):
+                    killed += 1
+        except Exception:
+            pass
+    return killed
+
+
 def ask_report(
     report: str,
     question: str,
@@ -298,6 +369,7 @@ def ask_report(
     tool: str,
     model: str,
     run_id: int | None = None,
+    job_id: int | None = None,
 ) -> dict[str, Any]:
     # Semantic retrieval when the index is available; the keyword retriever is
     # the always-available fallback (retrieve returns None on any index
@@ -320,7 +392,7 @@ def ask_report(
         "is not in the excerpts, say so clearly. Answer in stdout only; do not create files.\n\n"
         f"{hist}Relevant report excerpts:\n{excerpts}\n\nQuestion: {question}"
     )
-    answer = _run_cli(tool, model, prompt)
+    answer = _run_cli(tool, model, prompt, job_id=job_id)
     # strip ANSI escapes
     answer = re.sub(r"\x1b\[[0-9;?]*[a-zA-Z]", "", answer).strip()
     if not answer:

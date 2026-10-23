@@ -31,6 +31,10 @@ from typing import Any
 
 import db
 
+
+class JobCancelled(Exception):
+    """Raised when an agent job is cancelled while it is running."""
+
 # If a job has been `running` longer than this, the worker is presumed dead.
 AGENT_JOB_TIMEOUT_S = int(os.environ.get("AGENT_JOB_TIMEOUT_S", "360"))
 
@@ -55,7 +59,7 @@ def ensure_agent_jobs_table() -> None:
             tool        TEXT NOT NULL,
             model       TEXT NOT NULL,
             status      TEXT NOT NULL DEFAULT 'pending'
-                        CHECK (status IN ('pending','running','done','error')),
+                        CHECK (status IN ('pending','running','done','error','cancelled')),
             answer      TEXT,
             citations   JSONB,
             error       TEXT,
@@ -68,6 +72,15 @@ def ensure_agent_jobs_table() -> None:
     )
     db.execute("CREATE INDEX IF NOT EXISTS agent_jobs_status_idx ON agent_jobs(status)")
     db.execute("CREATE INDEX IF NOT EXISTS agent_jobs_run_idx ON agent_jobs(run_id)")
+    # Migrate older deployments whose CHECK constraint predates 'cancelled'.
+    try:
+        db.execute("ALTER TABLE agent_jobs DROP CONSTRAINT IF EXISTS agent_jobs_status_check")
+        db.execute(
+            "ALTER TABLE agent_jobs ADD CONSTRAINT agent_jobs_status_check "
+            "CHECK (status IN ('pending','running','done','error','cancelled'))"
+        )
+    except Exception:
+        pass
 
 
 def enqueue(run_id: int, question: str, tool: str, model: str, from_ui: bool) -> int:
@@ -127,6 +140,21 @@ def fail(job_id: int, error: str) -> None:
         "UPDATE agent_jobs SET status = 'error', error = %s, finished_at = now() WHERE id = %s",
         (error, job_id),
     )
+
+
+def cancel(job_id: int) -> bool:
+    """Mark a pending or running job as cancelled. Returns True if it changed state."""
+    row = db.query(
+        """
+        UPDATE agent_jobs
+           SET status = 'cancelled', error = 'cancelled by user', finished_at = now()
+         WHERE id = %s AND status IN ('pending', 'running')
+        RETURNING id
+        """,
+        (job_id,),
+        one=True,
+    )
+    return row is not None
 
 
 def reap_stale() -> int:
